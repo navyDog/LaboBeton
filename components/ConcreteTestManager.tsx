@@ -401,10 +401,12 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
         
         resetForm();
       } else {
-        alert("Erreur lors de l'enregistrement.");
+        const errorData = await res.json();
+        alert(`Erreur: ${errorData.message || "Impossible d'enregistrer la fiche."}`);
       }
     } catch (error) {
       console.error(error);
+      alert("Erreur de connexion au serveur.");
     }
   };
 

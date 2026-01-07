@@ -40,6 +40,30 @@ const connectDB = async () => {
     await mongoose.connect(uri, clientOptions);
     console.log(`✅ MongoDB Connecté à la base: labobeton`);
 
+    // --- MIGRATION CRITIQUE : Suppression des index conflictuels ---
+    // Cette étape est nécessaire car l'ancien schéma imposait une référence unique globale.
+    // Nous devons supprimer cet index pour permettre l'unicité PAR utilisateur.
+    try {
+      // Attendre que la connexion soit bien établie
+      if (mongoose.connection.readyState === 1) {
+        const collection = mongoose.connection.collection('concretetests');
+        const indexes = await collection.indexes();
+        
+        // On cherche l'index qui pose problème (souvent nommé 'reference_1')
+        const oldIndex = indexes.find(idx => idx.name === 'reference_1');
+        
+        if (oldIndex) {
+          console.log("🛠️  MIGRATION: Suppression de l'ancien index global 'reference_1'...");
+          await collection.dropIndex('reference_1');
+          console.log("✅ Index supprimé. Chaque utilisateur peut maintenant avoir ses propres chronos (2025-B-0001).");
+        }
+      }
+    } catch (err) {
+      // Erreur non bloquante (index déjà supprimé ou collection inexistante)
+      // console.log("Info migration index:", err.message);
+    }
+    // ---------------------------------------------------------
+
     await seedUsers();
 
   } catch (error) {
@@ -162,6 +186,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
+    // SECURITY: Isolation Logique - On filtre toujours par userId
     const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 });
     res.json(companies);
   } catch (error) {
@@ -244,9 +269,10 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
+    // SECURITY: On ne renvoie que les tests de l'utilisateur connecté
     const tests = await ConcreteTest.find({ userId: req.user.id })
       .sort({ sequenceNumber: -1 }) // Le plus récent en premier
-      .populate('projectId', 'name'); // Optionnel, si on veut peupler
+      .populate('projectId', 'name'); 
     res.json(tests);
   } catch (error) {
     res.status(500).json({ message: "Erreur récupération fiches" });
@@ -256,11 +282,16 @@ app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
 app.post('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
     // On laisse le pre-save hook gérer 'reference', 'sequenceNumber', 'year'
+    // SECURITY: On force le userId du token
     const newTest = new ConcreteTest({ ...req.body, userId: req.user.id });
     await newTest.save();
     res.status(201).json(newTest);
   } catch (error) {
     console.error(error);
+    // Gestion propre de l'erreur Duplicate Key
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Erreur de numérotation (Doublon). Réessayez." });
+    }
     res.status(400).json({ message: "Erreur création fiche", error: error.message });
   }
 });
@@ -270,11 +301,10 @@ app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
     const test = await ConcreteTest.findOne({ _id: req.params.id, userId: req.user.id });
     if (!test) return res.status(404).json({ message: "Fiche non trouvée" });
 
-    // Mise à jour des champs
+    // Mise à jour des champs avec Object.assign pour déclencher les hooks Mongoose au save()
     Object.assign(test, req.body);
     
     // Le pre-save hook recalcule la consistance et les séquences si nécessaire
-    // Note: Mongoose save() déclenche les hooks
     await test.save();
     
     res.json(test);
