@@ -340,6 +340,30 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setIsModalOpen(true);
   };
 
+  // Inline Change Handler
+  const handleInlineChange = (index: number, field: keyof Specimen, value: string) => {
+    const numValue = value === '' ? undefined : parseFloat(value);
+    const updatedSpecimens = [...formData.specimens];
+    const specimen = { ...updatedSpecimens[index], [field]: numValue };
+
+    // Recalculations automatiques
+    if (specimen.force !== undefined && specimen.force !== null && specimen.surface > 0) {
+       specimen.stress = (specimen.force * 1000) / specimen.surface;
+    } else {
+       specimen.stress = undefined;
+    }
+
+    const volume = specimen.surface * specimen.height;
+    if (specimen.weight !== undefined && specimen.weight !== null && volume > 0) {
+       specimen.density = (specimen.weight / volume) * 1000000;
+    } else {
+       specimen.density = undefined;
+    }
+
+    updatedSpecimens[index] = specimen;
+    setFormData({ ...formData, specimens: updatedSpecimens });
+  };
+
   // Save Modal
   const handleSaveSpecimen = (updated: Specimen) => {
     if (selectedSpecimenIdx === null) return;
@@ -354,8 +378,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
   // Prepare Edit
   const handleEdit = (test: ConcreteTest) => {
-    // FIX: Le projectId venant du backend est un objet (populate). 
-    // Il faut extraire l'_id pour que le select fonctionne.
     const projectValue = (test.projectId && typeof test.projectId === 'object') 
       ? (test.projectId as any)._id 
       : test.projectId;
@@ -715,13 +737,14 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                   <table className="w-full text-left text-xs md:text-sm">
                     <thead className="bg-concrete-50 text-concrete-500 font-semibold border-b border-concrete-200">
                       <tr>
-                        <th className="px-3 py-2">N°</th>
-                        <th className="px-3 py-2">Âge</th>
-                        <th className="px-3 py-2">Date Écrasement</th>
-                        <th className="px-3 py-2">Dimensions (mm)</th>
+                        <th className="px-3 py-2 w-10">N°</th>
+                        <th className="px-3 py-2 w-16">Âge</th>
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2">Dimensions</th>
+                        <th className="px-3 py-2 text-right">Masse (g)</th>
                         <th className="px-3 py-2 text-right">Force (kN)</th>
-                        <th className="px-3 py-2 text-right">Contrainte (MPa)</th>
-                        <th className="px-3 py-2 text-right">Action</th>
+                        <th className="px-3 py-2 text-right">MPa</th>
+                        <th className="px-3 py-2 text-right w-20"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-concrete-100 bg-white">
@@ -733,42 +756,63 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                         >
                           <td className="px-3 py-2 font-mono text-concrete-600 font-bold group-hover:text-blue-600">#{s.number}</td>
                           <td className="px-3 py-2 font-bold text-concrete-800">{s.age}j</td>
-                          <td className="px-3 py-2 text-concrete-600">
+                          <td className="px-3 py-2 text-concrete-600 text-xs">
                             {new Date(s.crushingDate).toLocaleDateString('fr-FR')}
                           </td>
-                          <td className="px-3 py-2">{s.diameter} x {s.height}</td>
+                          <td className="px-3 py-2 text-xs text-concrete-500">{s.diameter}x{s.height}</td>
                           
-                          {/* Force */}
-                          <td className="px-3 py-2 text-right font-mono">
-                            {s.force ? <span className="font-bold text-concrete-900">{s.force}</span> : <span className="text-concrete-300">-</span>}
+                          {/* INLINE EDIT: Masse */}
+                          <td className="px-3 py-2 text-right">
+                            <input 
+                              type="number"
+                              step="1"
+                              className="w-20 p-1 text-right border border-transparent hover:border-concrete-300 focus:border-safety-orange rounded bg-transparent focus:bg-white text-concrete-900 font-bold outline-none"
+                              placeholder="-"
+                              value={s.weight || ''}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => handleInlineChange(idx, 'weight', e.target.value)}
+                            />
                           </td>
 
-                          {/* Contrainte (Calculée côté client si dispo, sinon backend) */}
+                          {/* INLINE EDIT: Force */}
+                          <td className="px-3 py-2 text-right">
+                            <input 
+                              type="number"
+                              step="0.1"
+                              className="w-20 p-1 text-right border border-transparent hover:border-concrete-300 focus:border-safety-orange rounded bg-transparent focus:bg-white text-concrete-900 font-bold outline-none"
+                              placeholder="-"
+                              value={s.force || ''}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => handleInlineChange(idx, 'force', e.target.value)}
+                            />
+                          </td>
+
+                          {/* Contrainte (Calculée) */}
                           <td className="px-3 py-2 text-right font-mono">
                              {s.stress ? (
                                <span className="font-bold text-safety-orange">{s.stress.toFixed(1)}</span>
                              ) : (
-                                s.force ? <span className="text-concrete-400 italic">...</span> : <span className="text-concrete-300">-</span>
+                                <span className="text-concrete-300">-</span>
                              )}
                           </td>
 
                           <td className="px-3 py-2 text-right">
-                             <div className="flex items-center justify-end gap-2">
+                             <div className="flex items-center justify-end gap-1">
                                <button 
                                  type="button" 
                                  onClick={(e) => { e.stopPropagation(); handleSpecimenClick(idx); }}
-                                 className="text-concrete-400 hover:text-safety-orange p-1"
-                                 title="Modifier"
+                                 className="text-concrete-400 hover:text-safety-orange p-1.5 rounded hover:bg-orange-50"
+                                 title="Détails complets"
                                >
-                                 <Pencil className="w-4 h-4" />
+                                 <Pencil className="w-3 h-3" />
                                </button>
                                <button 
                                  type="button" 
                                  onClick={(e) => handleRemoveSpecimen(idx, e)} 
-                                 className="text-concrete-300 hover:text-red-600 p-1"
+                                 className="text-concrete-300 hover:text-red-600 p-1.5 rounded hover:bg-red-50"
                                  title="Supprimer"
                                >
-                                 <Trash2 className="w-4 h-4" />
+                                 <Trash2 className="w-3 h-3" />
                                </button>
                              </div>
                           </td>
@@ -777,7 +821,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     </tbody>
                   </table>
                   <div className="bg-blue-50 px-3 py-2 text-xs text-blue-700 text-center border-t border-blue-100">
-                    💡 Cliquez sur une ligne ou sur le crayon pour saisir la Masse et la Force de rupture.
+                    💡 Saisissez directement la Masse et la Force dans le tableau ou cliquez sur le crayon pour plus de détails.
                   </div>
                 </div>
               ) : (
