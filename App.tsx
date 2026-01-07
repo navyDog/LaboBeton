@@ -3,17 +3,17 @@ import { ConnectionStatus, User } from './types';
 import { StatusBadge } from './components/StatusBadge';
 import { MenuCard } from './components/MenuCard';
 import { LoginScreen } from './components/LoginScreen';
-import { AdminUserForm } from './components/AdminUserForm';
+import { AdminDashboard } from './components/AdminDashboard'; // Import du Dashboard Admin
 import { CompanyManager } from './components/CompanyManager';
 import { ProjectManager } from './components/ProjectManager';
-import { Building2, FlaskConical, LogOut, ShieldCheck, Users, ChevronLeft, Building, Briefcase, LayoutGrid } from 'lucide-react';
+import { SettingsManager } from './components/SettingsManager';
+import { Building2, FlaskConical, LogOut, ShieldCheck, ChevronLeft, Building, Briefcase, LayoutGrid, Settings } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // Vue principale : 'dashboard' | 'admin' | 'companies' | 'projects'
+  // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings'
   const [view, setView] = useState<string>('dashboard');
 
   // Vérification connexion DB
@@ -25,7 +25,6 @@ const App: React.FC = () => {
         const data = await response.json();
         if (response.ok && data.status === 'CONNECTED') {
           setDbStatus(ConnectionStatus.CONNECTED);
-          setLastChecked(new Date(data.timestamp));
         } else {
           setDbStatus(ConnectionStatus.ERROR);
         }
@@ -52,14 +51,47 @@ const App: React.FC = () => {
     console.log(`Navigation vers le module : ${module}`);
   };
 
-  // Si pas connecté, afficher Login
+  // 1. Si pas connecté, afficher Login
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
+  // 2. Si ADMIN : Affichage spécifique Admin
+  if (currentUser.role === 'admin') {
+    return (
+      <div className="min-h-screen bg-concrete-100 flex flex-col">
+        <header className="bg-concrete-900 border-b border-concrete-800 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/10 text-white p-2 rounded-lg">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h1 className="text-xl font-bold text-white">LaboBéton <span className="text-concrete-400 font-normal">| Administration</span></h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-concrete-400">Connecté en tant que <strong>{currentUser.username}</strong></span>
+              <button 
+                onClick={handleLogout}
+                className="p-2 text-concrete-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                title="Déconnexion"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-grow flex p-6 md:p-10">
+           <AdminDashboard currentUser={currentUser} />
+        </main>
+      </div>
+    );
+  }
+
+  // 3. Si UTILISATEUR STANDARD : Affichage Application
   return (
     <div className="min-h-screen bg-concrete-50 flex flex-col">
-      {/* Header */}
+      {/* Header Standard */}
       <header className="bg-white border-b border-concrete-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -69,12 +101,7 @@ const App: React.FC = () => {
             <div>
               <h1 className="text-xl font-bold text-concrete-900 leading-tight cursor-pointer" onClick={() => setView('dashboard')}>LaboBéton</h1>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-concrete-500 font-medium">Connecté en tant que <strong>{currentUser.username}</strong></span>
-                {currentUser.role === 'admin' && (
-                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-bold uppercase tracking-wide border border-purple-200">
-                    <ShieldCheck className="w-3 h-3" /> Admin
-                  </span>
-                )}
+                <span className="text-xs text-concrete-500 font-medium"><strong>{currentUser.companyName || currentUser.username}</strong></span>
               </div>
             </div>
           </div>
@@ -102,16 +129,14 @@ const App: React.FC = () => {
                 </button>
              </div>
 
-             {/* Bouton Admin */}
-             {currentUser.role === 'admin' && (
-               <button 
-                onClick={() => setView(view === 'admin' ? 'dashboard' : 'admin')}
-                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded transition-colors ${view === 'admin' ? 'bg-concrete-800 text-white' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}
-               >
-                 <Users className="w-4 h-4" />
-                 <span className="hidden sm:inline">Gestion Clients</span>
-               </button>
-             )}
+             {/* Bouton Settings */}
+             <button
+               onClick={() => setView('settings')}
+               className={`p-2 rounded-full transition-colors ${view === 'settings' ? 'bg-concrete-800 text-white' : 'text-concrete-500 hover:bg-concrete-100 hover:text-concrete-900'}`}
+               title="Réglages"
+             >
+               <Settings className="w-5 h-5" />
+             </button>
 
              <div className="hidden lg:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
                <StatusBadge status={dbStatus} />
@@ -143,11 +168,6 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* View: ADMIN PANEL */}
-          {view === 'admin' && currentUser.role === 'admin' && (
-             <AdminUserForm currentUser={currentUser} onClose={() => setView('dashboard')} />
-          )}
-
           {/* View: ENTREPRISES */}
           {view === 'companies' && (
             <CompanyManager token={currentUser.token || ''} />
@@ -158,22 +178,30 @@ const App: React.FC = () => {
             <ProjectManager token={currentUser.token || ''} />
           )}
 
+          {/* View: SETTINGS */}
+          {view === 'settings' && (
+            <SettingsManager token={currentUser.token || ''} />
+          )}
+
           {/* View: DASHBOARD */}
           {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
              <>
                <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="text-3xl font-bold text-concrete-900 mb-4">Tableau de Bord Laboratoire</h2>
                   <p className="text-concrete-500 max-w-2xl mx-auto text-lg">
-                    Bienvenue, {currentUser.companyName ? currentUser.companyName : currentUser.username}. 
+                    Gestion des essais et rapports.
                   </p>
                   
                   {/* Mobile Navigation Links */}
-                  <div className="md:hidden flex justify-center gap-4 mt-6">
+                  <div className="md:hidden flex justify-center gap-4 mt-6 flex-wrap">
                     <button onClick={() => setView('projects')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
                       <Briefcase className="w-4 h-4" /> Mes Affaires
                     </button>
                     <button onClick={() => setView('companies')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
                       <Building className="w-4 h-4" /> Mes Entreprises
+                    </button>
+                    <button onClick={() => setView('settings')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
+                      <Settings className="w-4 h-4" /> Réglages
                     </button>
                   </div>
                 </div>

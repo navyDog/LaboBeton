@@ -34,7 +34,16 @@ export interface Project {
   phone: string;
   moa: string;
   moe: string;
-  // status supprimé
+}
+
+export interface Settings {
+  _id: string;
+  specimenTypes: string[];
+  deliveryMethods: string[];
+  manufacturingPlaces: string[];
+  mixTypes: string[];
+  concreteClasses: string[];
+  nfStandards: string[];
 }
 
 export interface MenuItem {

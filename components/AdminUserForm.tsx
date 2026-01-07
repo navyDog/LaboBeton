@@ -5,9 +5,10 @@ import { User as UserType } from '../types';
 interface AdminUserFormProps {
   currentUser: UserType;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClose }) => {
+export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -29,7 +30,7 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${currentUser.token}` // Envoi du token JWT
+          'Authorization': `Bearer ${currentUser.token}`
         },
         body: JSON.stringify(formData)
       });
@@ -38,7 +39,6 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'Utilisateur créé avec succès !' });
-        // Reset form
         setFormData({
           username: '',
           password: '',
@@ -47,6 +47,10 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
           address: '',
           contact: ''
         });
+        // Notifier le parent après un court délai pour laisser lire le message
+        setTimeout(() => {
+          onSuccess();
+        }, 1500);
       } else {
         setMessage({ type: 'error', text: data.message || 'Erreur lors de la création.' });
       }
@@ -62,7 +66,7 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden mb-6 animate-in fade-in slide-in-from-top-4">
       <div className="bg-concrete-800 px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <UserPlus className="text-white w-5 h-5" />
@@ -75,7 +79,6 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
 
       <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Feedback Message */}
         {message && (
           <div className={`md:col-span-2 p-3 rounded-lg text-sm font-medium ${
             message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'

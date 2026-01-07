@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import User from './models/User.js';
 import Company from './models/Company.js';
 import Project from './models/Project.js';
+import Settings from './models/Settings.js';
 
 // Configuration des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -158,7 +159,6 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
 // --- Routes API Entreprises (Companies) ---
 
-// Lister les entreprises
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
     const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 });
@@ -168,13 +168,9 @@ app.get('/api/companies', authenticateToken, async (req, res) => {
   }
 });
 
-// Ajouter une entreprise
 app.post('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const newCompany = new Company({
-      ...req.body,
-      userId: req.user.id
-    });
+    const newCompany = new Company({ ...req.body, userId: req.user.id });
     await newCompany.save();
     res.status(201).json(newCompany);
   } catch (error) {
@@ -182,14 +178,9 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
   }
 });
 
-// Modifier une entreprise
 app.put('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = await Company.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      req.body,
-      { new: true } // Retourne l'objet modifié
-    );
+    const updated = await Company.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, req.body, { new: true });
     if (!updated) return res.status(404).json({ message: "Entreprise non trouvée" });
     res.json(updated);
   } catch (error) {
@@ -197,7 +188,6 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Supprimer une entreprise
 app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
     const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
@@ -210,7 +200,6 @@ app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
 
 // --- Routes API Affaires (Projects) ---
 
-// Lister les affaires
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
     const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -220,13 +209,9 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
   }
 });
 
-// Ajouter une affaire
 app.post('/api/projects', authenticateToken, async (req, res) => {
   try {
-    const newProject = new Project({
-      ...req.body,
-      userId: req.user.id
-    });
+    const newProject = new Project({ ...req.body, userId: req.user.id });
     await newProject.save();
     res.status(201).json(newProject);
   } catch (error) {
@@ -234,14 +219,9 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
   }
 });
 
-// Modifier une affaire
 app.put('/api/projects/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = await Project.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      req.body,
-      { new: true }
-    );
+    const updated = await Project.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, req.body, { new: true });
     if (!updated) return res.status(404).json({ message: "Affaire non trouvée" });
     res.json(updated);
   } catch (error) {
@@ -249,7 +229,6 @@ app.put('/api/projects/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Supprimer une affaire
 app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
   try {
     const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
@@ -260,6 +239,44 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// --- Routes API Réglages (Settings) ---
+
+app.get('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    let settings = await Settings.findOne({ userId: req.user.id });
+    
+    // Créer des réglages par défaut si inexistant
+    if (!settings) {
+      settings = new Settings({
+        userId: req.user.id,
+        specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15', 'Cubique 10x10'],
+        deliveryMethods: ['Toupie', 'Benne', 'Mixer', 'Sur site'],
+        manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier', 'Préfabrication'],
+        mixTypes: ['C25/30 XF1', 'C30/37 XF1', 'C35/45'],
+        concreteClasses: ['S1', 'S2', 'S3', 'S4', 'S5'],
+        nfStandards: ['NF EN 206/CN', 'NF EN 12350', 'NF EN 12390']
+      });
+      await settings.save();
+    }
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération réglages" });
+  }
+});
+
+app.put('/api/settings', authenticateToken, async (req, res) => {
+  try {
+    // Upsert (update or create)
+    const settings = await Settings.findOneAndUpdate(
+      { userId: req.user.id },
+      req.body,
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+    res.json(settings);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur sauvegarde réglages" });
+  }
+});
 
 // --- Health & Static ---
 app.get('/api/health', (req, res) => {
