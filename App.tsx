@@ -9,7 +9,8 @@ import { CalendarView } from './components/CalendarView';
 import { DashboardHome } from './components/DashboardHome';
 import { CompanyManager } from './components/CompanyManager';
 import { ProjectManager } from './components/ProjectManager';
-import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Briefcase } from 'lucide-react';
+import { UserProfile } from './components/UserProfile';
+import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Briefcase, User as UserIcon } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
@@ -47,6 +48,11 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setView('dashboard');
+  };
+
+  // Callback pour mettre à jour les données de l'utilisateur courant sans relogin
+  const handleUserUpdate = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
   };
 
   // 1. Si pas connecté, afficher Login
@@ -140,6 +146,14 @@ const App: React.FC = () => {
                 >
                   <Settings className="w-4 h-4" /> Paramètres Labo
                 </button>
+
+                 <button
+                  onClick={() => setView('profile')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'profile' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  title="Mon Profil & Entête"
+                >
+                  <UserIcon className="w-4 h-4" /> Mon Profil
+                </button>
              </div>
 
              <div className="hidden lg:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
@@ -192,9 +206,22 @@ const App: React.FC = () => {
             <SettingsManager token={currentUser.token || ''} />
           )}
 
+          {/* View: USER PROFILE */}
+          {view === 'profile' && (
+            <UserProfile 
+              token={currentUser.token || ''} 
+              currentUser={currentUser}
+              onUpdate={handleUserUpdate}
+            />
+          )}
+
           {/* View: FRESH CONCRETE TESTS (PRÉLÈVEMENTS) */}
           {view === 'fresh_tests' && (
-            <ConcreteTestManager token={currentUser.token || ''} onBack={() => setView('dashboard')} />
+            <ConcreteTestManager 
+              token={currentUser.token || ''} 
+              user={currentUser}
+              onBack={() => setView('dashboard')} 
+            />
           )}
 
           {/* View: DASHBOARD HOME */}

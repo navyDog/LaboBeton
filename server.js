@@ -41,26 +41,20 @@ const connectDB = async () => {
     console.log(`✅ MongoDB Connecté à la base: labobeton`);
 
     // --- MIGRATION CRITIQUE : Suppression des index conflictuels ---
-    // Cette étape est nécessaire car l'ancien schéma imposait une référence unique globale.
-    // Nous devons supprimer cet index pour permettre l'unicité PAR utilisateur.
     try {
-      // Attendre que la connexion soit bien établie
       if (mongoose.connection.readyState === 1) {
         const collection = mongoose.connection.collection('concretetests');
         const indexes = await collection.indexes();
-        
-        // On cherche l'index qui pose problème (souvent nommé 'reference_1')
         const oldIndex = indexes.find(idx => idx.name === 'reference_1');
         
         if (oldIndex) {
           console.log("🛠️  MIGRATION: Suppression de l'ancien index global 'reference_1'...");
           await collection.dropIndex('reference_1');
-          console.log("✅ Index supprimé. Chaque utilisateur peut maintenant avoir ses propres chronos (2025-B-0001).");
+          console.log("✅ Index supprimé. Chaque utilisateur peut maintenant avoir ses propres chronos.");
         }
       }
     } catch (err) {
-      // Erreur non bloquante (index déjà supprimé ou collection inexistante)
-      // console.log("Info migration index:", err.message);
+      // Ignorer si déjà fait
     }
     // ---------------------------------------------------------
 
@@ -131,11 +125,55 @@ app.post('/api/auth/login', async (req, res) => {
         id: user._id, 
         username: user.username, 
         role: user.role,
-        companyName: user.companyName 
+        companyName: user.companyName,
+        address: user.address,
+        contact: user.contact
       }
     });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+// Récupérer le profil actuel
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id, '-password'); // On exclut le mot de passe
+    if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération profil" });
+  }
+});
+
+// Mettre à jour le profil actuel
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { companyName, address, contact, password } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
+
+    // Mise à jour des champs informatifs
+    if (companyName !== undefined) user.companyName = companyName;
+    if (address !== undefined) user.address = address;
+    if (contact !== undefined) user.contact = contact;
+
+    // Mise à jour du mot de passe si fourni
+    if (password && password.trim() !== "") {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
+
+    await user.save();
+    
+    // On renvoie l'utilisateur sans le hash du mot de passe
+    const userObj = user.toObject();
+    delete userObj.password;
+    
+    res.json(userObj);
+  } catch (error) {
+    res.status(400).json({ message: "Erreur mise à jour profil", error: error.message });
   }
 });
 

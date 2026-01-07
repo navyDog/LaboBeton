@@ -1,14 +1,15 @@
 import React from 'react';
 import { X, Printer, FileText, CheckCircle2 } from 'lucide-react';
-import { ConcreteTest, Specimen } from '../types';
+import { ConcreteTest, Specimen, User } from '../types';
 
 interface ReportPreviewProps {
   test: ConcreteTest;
+  user?: User; // Utilisateur courant pour l'entête
   type: 'PV' | 'RP'; // PV = 7 jours (Provisoire), RP = 28 jours (Final)
   onClose: () => void;
 }
 
-export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, type, onClose }) => {
+export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, onClose }) => {
   
   // Filtrage des éprouvettes selon le type de rapport
   const filteredSpecimens = test.specimens.filter(s => {
@@ -21,6 +22,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, type, onClos
     : "RAPPORT D'ESSAIS SUR BÉTON DURCI";
 
   const reportDate = new Date().toLocaleDateString('fr-FR');
+
+  // Données de l'en-tête (Défaut si non configuré)
+  const headerName = user?.companyName || "Nom du Laboratoire";
+  const headerAddress = user?.address || "Adresse non renseignée";
+  const headerContact = user?.contact || "Contact non renseigné";
 
   const handlePrint = () => {
     const printContent = document.getElementById('report-content');
@@ -98,13 +104,13 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, type, onClos
              className="bg-white w-[210mm] min-h-[297mm] p-[15mm] shadow-xl text-black text-sm relative"
              style={{ fontFamily: 'Arial, sans-serif' }}
            >
-              {/* HEADER LABO */}
+              {/* HEADER LABO - DYNAMIQUE */}
               <div className="flex justify-between items-start mb-8 border-b-2 border-black pb-4">
                  <div>
-                    <h1 className="text-2xl font-black uppercase tracking-wider mb-1">LaboBéton</h1>
+                    <h1 className="text-2xl font-black uppercase tracking-wider mb-1">{headerName}</h1>
                     <p className="text-xs text-gray-600">Laboratoire de Contrôle des Matériaux</p>
-                    <p className="text-xs text-gray-600">12 Rue de l'Industrie, 75000 Paris</p>
-                    <p className="text-xs text-gray-600">Tél: 01 23 45 67 89 | Email: contact@labobeton.fr</p>
+                    <p className="text-xs text-gray-600">{headerAddress}</p>
+                    <p className="text-xs text-gray-600">{headerContact}</p>
                  </div>
                  <div className="text-right">
                     <h2 className="text-xl font-bold uppercase text-safety-orange">{type === 'PV' ? 'PROCÈS VERBAL' : 'RAPPORT FINAL'}</h2>
@@ -227,9 +233,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, type, onClos
                  </div>
               </div>
 
-              {/* FOOTER PAGE */}
+              {/* FOOTER PAGE - DYNAMIQUE */}
               <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] text-gray-400 px-8">
-                 LaboBéton SAS - Capital 50.000€ - SIRET 123 456 789 00012 - Document généré informatiquement le {reportDate}.
+                 {headerName} - Document généré informatiquement le {reportDate}.
               </div>
            </div>
 

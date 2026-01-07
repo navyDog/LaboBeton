@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer } from 'lucide-react';
-import { ConcreteTest, Project, Settings, Specimen } from '../types';
+import { ConcreteTest, Project, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 
 interface ConcreteTestManagerProps {
   token: string;
+  user?: User; // Ajout de l'utilisateur courant pour les infos PDF
   onBack: () => void;
 }
 
@@ -199,7 +199,7 @@ const addDays = (dateStr: string, days: number): string => {
 };
 
 // --- MAIN COMPONENT ---
-export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token, onBack }) => {
+export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token, user, onBack }) => {
   const [tests, setTests] = useState<ConcreteTest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -840,6 +840,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
        {reportState && (
          <ReportPreview 
            test={reportState.test} 
+           user={user} // Transmission des données utilisateur (Company name, etc.)
            type={reportState.type} 
            onClose={() => setReportState(null)} 
          />
