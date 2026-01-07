@@ -126,14 +126,14 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
       <div className="grid lg:grid-cols-2 gap-8 items-stretch">
         
         {/* COLONNE GAUCHE : CENTRE DE NOTIFICATIONS */}
-        <div className="space-y-4 flex flex-col">
+        <div className="space-y-4 flex flex-col h-full">
           
           <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider flex items-center gap-2 h-6">
             <Bell className="w-4 h-4" /> Centre de Tâches
           </h3>
 
           <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden flex-grow flex flex-col">
-            <div className="px-6 py-4 border-b border-concrete-100 bg-concrete-50 flex items-center justify-between">
+            <div className="px-6 py-4 border-b border-concrete-100 bg-concrete-50 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-concrete-800">Échéances & Rappels</span>
               </div>
@@ -151,11 +151,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
               </div>
             </div>
 
-            <div className="p-0 flex-grow">
+            <div className="p-0 flex-grow relative">
               {loading ? (
                 <div className="p-8 text-center text-concrete-400">Analyse des échéances...</div>
               ) : tasks.length === 0 ? (
-                <div className="p-12 text-center flex flex-col items-center justify-center h-full">
+                <div className="absolute inset-0 p-12 text-center flex flex-col items-center justify-center">
                    <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4">
                      <CheckCircle2 className="w-8 h-8 text-green-600" />
                    </div>
@@ -214,7 +214,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
         </div>
 
         {/* COLONNE DROITE : ACTIONS RAPIDES (MENU) */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 h-full">
            <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider h-6 flex items-center">
              Accès Rapides
            </h3>
@@ -228,9 +228,6 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                 onClick={() => onNavigate('fresh_tests')}
               />
            </div>
-            
-           {/* Les autres cartes ont été supprimées selon la demande */}
-
         </div>
 
       </div>
