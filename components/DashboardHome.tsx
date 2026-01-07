@@ -60,7 +60,6 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
           const dateStr = cDate.toISOString();
 
           // On ne traite que les dates <= aujourd'hui (Urgent) ou Demain (A venir)
-          // (On simplifie pour ne pas spammer avec des trucs dans 28 jours)
           const diffTime = cDate.getTime() - today.getTime();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
@@ -75,10 +74,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                groups[dateStr] = { count: 0, age: s.age, dateStr: s.crushingDate };
              }
              groups[dateStr].count++;
-             // On ajoute le type directement dans l'objet temporaire pour le tri plus tard si besoin
-             // Mais ici on va pousser dans la liste principale
              list.push({
-               id: `${test._id}-${s.number}`, // Un peu hacky, idéalement grouper par test/date
+               id: `${test._id}-${s.number}`,
                type,
                testRef: test.reference,
                projectName: test.projectName || 'Projet Inconnu',
@@ -91,7 +88,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
       });
     });
 
-    // Consolider par Test + Date + Type pour éviter d'avoir 3 notifs pour 3 éprouvettes du même pack
+    // Consolider par Test + Date + Type
     const consolidated: NotificationTask[] = [];
     list.forEach(item => {
       const existing = consolidated.find(c => c.testRef === item.testRef && c.type === item.type && c.age === item.age);
@@ -168,7 +165,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                   {tasks.map((task, idx) => (
                     <div 
                       key={idx} 
-                      onClick={() => onNavigate('fresh_tests')} // Pour l'instant on redirige vers la liste, idéalement vers le détail
+                      onClick={() => onNavigate('fresh_tests')} 
                       className={`p-4 flex items-center gap-4 hover:bg-concrete-50 transition-colors cursor-pointer group border-l-4 ${
                         task.type === 'overdue' ? 'border-l-red-500 bg-red-50/10' : 
                         task.type === 'today' ? 'border-l-safety-orange bg-orange-50/10' : 
@@ -226,24 +223,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
               onClick={() => onNavigate('fresh_tests')}
             />
             
-            <MenuCard 
-              title="Résultats Durcis" 
-              standard="NF EN 12390"
-              description="Saisie des ruptures et édition PV."
-              iconType="hardened"
-              onClick={() => onNavigate('fresh_tests')} // Redirige vers la même liste pour l'instant
-            />
+           {/* Les autres cartes ont été supprimées selon la demande */}
 
-            <div className="bg-concrete-900 text-white p-6 rounded-xl shadow-lg mt-auto">
-              <h4 className="font-bold text-lg mb-2">Planning Global</h4>
-              <p className="text-concrete-400 text-sm mb-4">Visualisez la charge de travail du mois.</p>
-              <button 
-                onClick={() => onNavigate('calendar')}
-                className="w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
-              >
-                <Calendar className="w-4 h-4" /> Ouvrir le Calendrier
-              </button>
-            </div>
         </div>
 
       </div>

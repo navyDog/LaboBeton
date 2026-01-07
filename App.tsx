@@ -7,8 +7,9 @@ import { SettingsManager } from './components/SettingsManager';
 import { ConcreteTestManager } from './components/ConcreteTestManager';
 import { CalendarView } from './components/CalendarView'; 
 import { DashboardHome } from './components/DashboardHome';
-import { RelationsManager } from './components/RelationsManager'; // NEW IMPORT
-import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Users, Briefcase } from 'lucide-react';
+import { CompanyManager } from './components/CompanyManager';
+import { ProjectManager } from './components/ProjectManager';
+import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Briefcase } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
@@ -118,12 +119,21 @@ const App: React.FC = () => {
                 >
                   <Calendar className="w-4 h-4" /> Planning
                 </button>
+                
+                {/* Onglets séparés pour Entreprises et Affaires */}
                 <button 
-                  onClick={() => setView('relations')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'relations' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  onClick={() => setView('companies')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
                 >
-                  <Users className="w-4 h-4" /> Clients & Affaires
+                  <Building className="w-4 h-4" /> Entreprises
                 </button>
+                <button 
+                  onClick={() => setView('projects')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                >
+                  <Briefcase className="w-4 h-4" /> Affaires
+                </button>
+
                 <button
                   onClick={() => setView('settings')}
                   className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
@@ -167,9 +177,14 @@ const App: React.FC = () => {
             <CalendarView token={currentUser.token || ''} />
           )}
 
-          {/* View: CLIENTS & AFFAIRES (RELATIONS) */}
-          {view === 'relations' && (
-            <RelationsManager token={currentUser.token || ''} />
+          {/* View: CLIENTS / ENTREPRISES */}
+          {view === 'companies' && (
+            <CompanyManager token={currentUser.token || ''} />
+          )}
+
+          {/* View: AFFAIRES / CHANTIERS */}
+          {view === 'projects' && (
+            <ProjectManager token={currentUser.token || ''} />
           )}
 
           {/* View: SETTINGS */}
@@ -182,7 +197,7 @@ const App: React.FC = () => {
             <ConcreteTestManager token={currentUser.token || ''} onBack={() => setView('dashboard')} />
           )}
 
-          {/* View: DASHBOARD HOME (NOUVELLE VUE) */}
+          {/* View: DASHBOARD HOME */}
           {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
              <DashboardHome 
                token={currentUser.token || ''} 
