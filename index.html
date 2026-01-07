@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LaboBéton - Gestion des Essais</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              concrete: {
+                50: '#f8f9fa',
+                100: '#e9ecef',
+                200: '#dee2e6',
+                300: '#ced4da',
+                400: '#adb5bd',
+                500: '#6c757d',
+                600: '#495057',
+                700: '#343a40',
+                800: '#212529',
+                900: '#15181b',
+              },
+              safety: {
+                orange: '#ff6b00',
+                yellow: '#ffcc00',
+              }
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "express": "https://esm.sh/express@^5.2.1",
+    "mongoose": "https://esm.sh/mongoose@^9.1.2",
+    "cors": "https://esm.sh/cors@^2.8.5",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
+    "bcryptjs": "https://esm.sh/bcryptjs@^3.0.3",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3"
+  }
+}
+</script>
+</head>
+  <body class="bg-concrete-50 text-concrete-900 font-sans antialiased">
+    <div id="root"></div>
+  </body>
+</html>

@@ -1,0 +1,5 @@
+{
+  "name": "LaboBéton",
+  "description": "Application de gestion pour laboratoire d'essais béton (Normes NF EN 12350 et 12390).",
+  "requestFramePermissions": []
+}
