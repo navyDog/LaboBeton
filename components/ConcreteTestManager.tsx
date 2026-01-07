@@ -38,6 +38,26 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
     setData({ ...data, [field]: isNaN(numValue) ? undefined : numValue });
   };
 
+  const handleSaveClick = () => {
+    // On calcule les valeurs dérivées (Stress/Density) AVANT de renvoyer au parent
+    // pour que l'affichage dans le tableau soit immédiat
+    const finalSurface = data.specimenType.toLowerCase().includes('cube') 
+      ? data.diameter * data.diameter 
+      : Math.PI * Math.pow(data.diameter / 2, 2);
+      
+    const finalStress = (data.force && data.force > 0) ? (data.force * 1000) / finalSurface : null;
+    
+    const finalVolume = finalSurface * data.height;
+    const finalDensity = (data.weight && data.weight > 0) ? (data.weight / finalVolume) * 1000000 : null;
+
+    onSave({
+      ...data,
+      surface: finalSurface,
+      stress: finalStress || undefined,
+      density: finalDensity || undefined
+    });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-concrete-200">
@@ -147,7 +167,7 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
              Annuler
            </button>
            <button 
-             onClick={() => onSave(data)}
+             onClick={handleSaveClick}
              className="px-6 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 font-bold flex items-center gap-2 shadow-sm"
            >
              <Save className="w-4 h-4" /> Enregistrer
@@ -329,8 +349,14 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
   // Prepare Edit
   const handleEdit = (test: ConcreteTest) => {
+    // FIX: Le projectId venant du backend est un objet (populate). 
+    // Il faut extraire l'_id pour que le select fonctionne.
+    const projectValue = (test.projectId && typeof test.projectId === 'object') 
+      ? (test.projectId as any)._id 
+      : test.projectId;
+
     setFormData({
-      projectId: test.projectId,
+      projectId: projectValue || '',
       structureName: test.structureName || '',
       elementName: test.elementName || '',
       receptionDate: test.receptionDate ? new Date(test.receptionDate).toISOString().split('T')[0] : initialFormState.receptionDate,
