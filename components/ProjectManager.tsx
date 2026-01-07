@@ -71,6 +71,23 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
     setShowForm(false);
   };
 
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    const selectedCompany = companies.find(c => c._id === selectedId);
+
+    if (selectedCompany) {
+        setFormData({
+            ...formData,
+            companyId: selectedId,
+            contactName: selectedCompany.contactName || formData.contactName,
+            email: selectedCompany.email || formData.email,
+            phone: selectedCompany.phone || formData.phone
+        });
+    } else {
+        setFormData({ ...formData, companyId: selectedId });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -155,7 +172,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
                  <select
                     className="w-full pl-9 p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange bg-white"
                     value={formData.companyId}
-                    onChange={e => setFormData({...formData, companyId: e.target.value})}
+                    onChange={handleCompanyChange}
                  >
                     <option value="">-- Aucune entreprise liée --</option>
                     {companies.map(c => (

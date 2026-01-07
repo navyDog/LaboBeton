@@ -681,7 +681,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                      <span className="text-xs text-concrete-400 mb-1 block">Quantité</span>
                      <input 
                         type="number" min="1"
-                        className="w-20 p-1.5 border border-concrete-300 rounded text-center"
+                        className="w-20 p-1.5 border border-concrete-300 rounded text-center text-sm"
                         value={packCount}
                         onChange={e => setPackCount(parseInt(e.target.value))}
                      />
@@ -753,16 +753,31 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                           </td>
 
                           <td className="px-3 py-2 text-right">
-                             <button type="button" onClick={(e) => handleRemoveSpecimen(idx, e)} className="text-concrete-300 hover:text-red-600 p-1">
-                               <Trash2 className="w-4 h-4" />
-                             </button>
+                             <div className="flex items-center justify-end gap-2">
+                               <button 
+                                 type="button" 
+                                 onClick={(e) => { e.stopPropagation(); handleSpecimenClick(idx); }}
+                                 className="text-concrete-400 hover:text-safety-orange p-1"
+                                 title="Modifier"
+                               >
+                                 <Pencil className="w-4 h-4" />
+                               </button>
+                               <button 
+                                 type="button" 
+                                 onClick={(e) => handleRemoveSpecimen(idx, e)} 
+                                 className="text-concrete-300 hover:text-red-600 p-1"
+                                 title="Supprimer"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                             </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                   <div className="bg-blue-50 px-3 py-2 text-xs text-blue-700 text-center border-t border-blue-100">
-                    💡 Cliquez sur une ligne pour saisir la Masse et la Force de rupture.
+                    💡 Cliquez sur une ligne ou sur le crayon pour saisir la Masse et la Force de rupture.
                   </div>
                 </div>
               ) : (

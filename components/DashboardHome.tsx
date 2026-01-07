@@ -123,17 +123,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-8 items-start">
         
         {/* COLONNE GAUCHE : CENTRE DE NOTIFICATIONS */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           
-          {/* Section Notifications */}
+          <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider flex items-center gap-2 h-6">
+            <Bell className="w-4 h-4" /> Centre de Tâches
+          </h3>
+
           <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-concrete-100 bg-concrete-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-concrete-600" />
-                <h3 className="font-bold text-concrete-800">Centre de Tâches</h3>
+                <span className="font-bold text-concrete-800">Échéances & Rappels</span>
               </div>
               <div className="flex gap-2 text-xs font-bold">
                  {overdueCount > 0 && (
@@ -212,8 +214,10 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
         </div>
 
         {/* COLONNE DROITE : ACTIONS RAPIDES (MENU) */}
-        <div className="flex flex-col gap-6">
-           <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider">Accès Rapides</h3>
+        <div className="flex flex-col gap-4">
+           <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider h-6 flex items-center">
+             Accès Rapides
+           </h3>
            
            <MenuCard 
               title="Prélèvements" 

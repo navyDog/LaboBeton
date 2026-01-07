@@ -142,6 +142,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                     <p className="font-bold text-lg">{test.companyName}</p>
                     <p>{test.projectName}</p>
                     <p className="text-xs mt-1">MOE: {test.moe || 'Non renseigné'}</p>
+                    <p className="text-xs">MOA: {test.moa || 'Non renseigné'}</p>
                  </div>
                  <div className="p-3">
                     <h4 className="font-bold uppercase text-xs text-gray-500 mb-1">Localisation Ouvrage</h4>
