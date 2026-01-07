@@ -8,7 +8,7 @@ import { ConcreteTestManager } from './components/ConcreteTestManager';
 import { CalendarView } from './components/CalendarView'; 
 import { DashboardHome } from './components/DashboardHome';
 import { RelationsManager } from './components/RelationsManager'; // NEW IMPORT
-import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Users } from 'lucide-react';
+import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Users, Briefcase } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
@@ -124,16 +124,13 @@ const App: React.FC = () => {
                 >
                   <Users className="w-4 h-4" /> Clients & Affaires
                 </button>
+                <button
+                  onClick={() => setView('settings')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                >
+                  <Settings className="w-4 h-4" /> Paramètres Labo
+                </button>
              </div>
-
-             {/* Bouton Settings */}
-             <button
-               onClick={() => setView('settings')}
-               className={`p-2 rounded-full transition-colors ${view === 'settings' ? 'bg-concrete-800 text-white' : 'text-concrete-500 hover:bg-concrete-100 hover:text-concrete-900'}`}
-               title="Réglages"
-             >
-               <Settings className="w-5 h-5" />
-             </button>
 
              <div className="hidden lg:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
                <StatusBadge status={dbStatus} />
