@@ -3,7 +3,7 @@ import { User, Lock, AlertCircle, Loader2, Building2 } from 'lucide-react';
 import { User as UserType } from '../types';
 
 interface LoginScreenProps {
-  onLogin: (user: UserType) => void;
+  onLogin: (user: UserType, token: string) => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
@@ -27,7 +27,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       const data = await response.json();
 
       if (response.ok) {
-        onLogin(data.user);
+        onLogin(data.user, data.token);
       } else {
         setError(data.message || 'Erreur de connexion');
       }

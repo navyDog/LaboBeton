@@ -11,6 +11,10 @@ export interface User {
   username: string;
   role: UserRole;
   token?: string;
+  // Nouveaux champs
+  companyName?: string;
+  address?: string;
+  contact?: string;
 }
 
 export interface MenuItem {

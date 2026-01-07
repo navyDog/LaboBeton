@@ -3,12 +3,14 @@ import { ConnectionStatus, User } from './types';
 import { StatusBadge } from './components/StatusBadge';
 import { MenuCard } from './components/MenuCard';
 import { LoginScreen } from './components/LoginScreen';
-import { Building2, FlaskConical, LogOut, ShieldCheck } from 'lucide-react';
+import { AdminUserForm } from './components/AdminUserForm';
+import { Building2, FlaskConical, LogOut, ShieldCheck, Users, ChevronLeft } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [view, setView] = useState<'dashboard' | 'admin'>('dashboard');
 
   // Vérification connexion DB
   useEffect(() => {
@@ -33,13 +35,13 @@ const App: React.FC = () => {
   }, []);
 
   // Gestion Connexion / Déconnexion
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    // Dans une vraie app, on stockerait le token dans localStorage ici
+  const handleLogin = (user: User, token: string) => {
+    setCurrentUser({ ...user, token }); 
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    setView('dashboard');
   };
 
   const handleModuleClick = (module: string) => {
@@ -74,7 +76,29 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
-             <div className="hidden md:block text-xs text-concrete-400">
+             {/* Bouton Admin Dashboard */}
+             {currentUser.role === 'admin' && view === 'dashboard' && (
+               <button 
+                onClick={() => setView('admin')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-concrete-800 text-white text-xs font-semibold rounded hover:bg-concrete-700 transition-colors"
+               >
+                 <Users className="w-4 h-4" />
+                 Gestion Clients
+               </button>
+             )}
+
+            {/* Bouton Retour Dashboard */}
+            {view === 'admin' && (
+               <button 
+                onClick={() => setView('dashboard')}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-concrete-300 text-concrete-700 text-xs font-semibold rounded hover:bg-concrete-50 transition-colors"
+               >
+                 <ChevronLeft className="w-4 h-4" />
+                 Retour Menu
+               </button>
+             )}
+
+             <div className="hidden md:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
                {lastChecked && `Synchro: ${lastChecked.toLocaleTimeString()}`}
              </div>
              <StatusBadge status={dbStatus} />
@@ -93,13 +117,6 @@ const App: React.FC = () => {
       <main className="flex-grow flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-5xl">
           
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-concrete-900 mb-4">Tableau de Bord Laboratoire</h2>
-            <p className="text-concrete-500 max-w-2xl mx-auto text-lg">
-              Bienvenue, {currentUser.username}. Sélectionnez un module ci-dessous.
-            </p>
-          </div>
-
           {/* Connection Error State */}
           {dbStatus === ConnectionStatus.ERROR && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center max-w-2xl mx-auto mb-8">
@@ -111,25 +128,39 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Menu Grid */}
-          {dbStatus !== ConnectionStatus.ERROR && (
-             <div className="grid md:grid-cols-2 gap-6">
-              <MenuCard 
-                title="Essais Béton Frais" 
-                standard="NF EN 12350"
-                description="Saisie des essais sur béton frais : affaissement (slump), teneur en air, masse volumique..."
-                iconType="fresh"
-                onClick={() => handleModuleClick('fresh')}
-              />
-              
-              <MenuCard 
-                title="Essais Béton Durci" 
-                standard="NF EN 12390"
-                description="Suivi de la cure, surfaçage et essais de résistance à la compression."
-                iconType="hardened"
-                onClick={() => handleModuleClick('hardened')}
-              />
-            </div>
+          {/* View: ADMIN PANEL */}
+          {view === 'admin' && currentUser.role === 'admin' && (
+             <AdminUserForm currentUser={currentUser} onClose={() => setView('dashboard')} />
+          )}
+
+          {/* View: DASHBOARD */}
+          {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
+             <>
+               <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <h2 className="text-3xl font-bold text-concrete-900 mb-4">Tableau de Bord Laboratoire</h2>
+                  <p className="text-concrete-500 max-w-2xl mx-auto text-lg">
+                    Bienvenue, {currentUser.companyName ? currentUser.companyName : currentUser.username}. Sélectionnez un module ci-dessous.
+                  </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                  <MenuCard 
+                    title="Essais Béton Frais" 
+                    standard="NF EN 12350"
+                    description="Saisie des essais sur béton frais : affaissement (slump), teneur en air, masse volumique..."
+                    iconType="fresh"
+                    onClick={() => handleModuleClick('fresh')}
+                  />
+                  
+                  <MenuCard 
+                    title="Essais Béton Durci" 
+                    standard="NF EN 12390"
+                    description="Suivi de la cure, surfaçage et essais de résistance à la compression."
+                    iconType="hardened"
+                    onClick={() => handleModuleClick('hardened')}
+                  />
+                </div>
+             </>
           )}
         </div>
       </main>

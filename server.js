@@ -29,7 +29,7 @@ const connectDB = async () => {
     }
 
     const clientOptions = { 
-      dbName: 'labobeton', // Force le nom de la BDD ici
+      dbName: 'labobeton',
       serverApi: { version: '1', strict: true, deprecationErrors: true } 
     };
     
@@ -53,10 +53,10 @@ const seedUsers = async () => {
       const salt = await bcrypt.genSalt(10);
       
       const adminPass = await bcrypt.hash('admin123', salt);
-      await User.create({ username: 'admin', password: adminPass, role: 'admin' });
+      await User.create({ username: 'admin', password: adminPass, role: 'admin', companyName: 'Laboratoire Central' });
       
       const userPass = await bcrypt.hash('labo123', salt);
-      await User.create({ username: 'labo', password: userPass, role: 'standard' });
+      await User.create({ username: 'labo', password: userPass, role: 'standard', companyName: 'Interne' });
 
       console.log("✅ Comptes créés : admin/admin123 et labo/labo123");
     }
@@ -65,7 +65,23 @@ const seedUsers = async () => {
   }
 };
 
+// --- Middleware d'authentification ---
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) return res.status(401).json({ message: "Accès refusé. Token manquant." });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: "Token invalide." });
+    req.user = user;
+    next();
+  });
+};
+
 // --- Routes API ---
+
+// Login
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -80,14 +96,60 @@ app.post('/api/auth/login', async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign({ id: user._id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '8h' });
 
     res.json({
       token,
-      user: { id: user._id, username: user.username, role: user.role }
+      user: { 
+        id: user._id, 
+        username: user.username, 
+        role: user.role,
+        companyName: user.companyName 
+      }
     });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+// Création utilisateur (ADMIN SEULEMENT)
+app.post('/api/users', authenticateToken, async (req, res) => {
+  // Vérification rôle admin
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: "Accès réservé aux administrateurs." });
+  }
+
+  const { username, password, role, companyName, address, contact } = req.body;
+
+  try {
+    // Vérifier si user existe déjà
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: "Ce nom d'utilisateur existe déjà." });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      role: role || 'standard',
+      companyName,
+      address,
+      contact
+    });
+
+    await newUser.save();
+
+    res.status(201).json({ 
+      message: "Utilisateur créé avec succès",
+      user: { username: newUser.username, role: newUser.role, companyName: newUser.companyName }
+    });
+
+  } catch (error) {
+    console.error("Erreur création user:", error);
+    res.status(500).json({ message: "Erreur lors de la création de l'utilisateur." });
   }
 });
 
@@ -101,30 +163,21 @@ app.get('/api/health', (req, res) => {
 });
 
 // --- Gestion Frontend (Production & Fallback) ---
-// Sert les fichiers statiques du build Vite (si présents)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Toutes les autres requêtes renvoient l'index.html (pour le routing React)
 app.get('*', (req, res) => {
-  // Vérifie si c'est une requête API qui a échoué (404 API)
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ message: "Route API non trouvée" });
   }
 
-  // Si on demande du HTML (navigateur), on essaie de servir l'app React
   if (req.accepts('html')) {
     const indexPath = path.join(__dirname, 'dist', 'index.html');
     res.sendFile(indexPath, (err) => {
       if (err) {
-        // Si le build n'existe pas (Mode DEV), on affiche un message d'aide
         res.status(200).send(`
           <div style="font-family: sans-serif; padding: 2rem; text-align: center;">
             <h1>API Backend LaboBéton En Ligne 🚀</h1>
-            <p>Le serveur backend tourne correctement sur le port ${PORT}.</p>
-            <hr style="margin: 2rem 0; opacity: 0.2"/>
-            <p><strong>Pour voir l'application :</strong></p>
-            <p>Utilisez le port Frontend (généralement 5173 avec Vite).</p>
-            <p>Si vous êtes en production, assurez-vous d'avoir exécuté <code>npm run build</code>.</p>
+            <p>Le serveur backend tourne sur le port ${PORT}.</p>
           </div>
         `);
       }
