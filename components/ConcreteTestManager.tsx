@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen } from '../types';
 
 interface ConcreteTestManagerProps {
@@ -7,7 +7,159 @@ interface ConcreteTestManagerProps {
   onBack: () => void;
 }
 
-// Helper pour calculer la consistance
+// --- MODALE SAISIE RESULTATS ---
+interface SpecimenModalProps {
+  specimen: Specimen;
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (updated: Specimen) => void;
+}
+
+const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose, onSave }) => {
+  const [data, setData] = useState<Specimen>(specimen);
+
+  useEffect(() => {
+    setData(specimen);
+  }, [specimen]);
+
+  if (!isOpen) return null;
+
+  // Calculs dynamiques pour prévisualisation
+  const surface = data.specimenType.toLowerCase().includes('cube') 
+    ? data.diameter * data.diameter 
+    : Math.PI * Math.pow(data.diameter / 2, 2);
+    
+  const stress = (data.force && data.force > 0) ? (data.force * 1000) / surface : 0;
+  const volume = surface * data.height;
+  const density = (data.weight && data.weight > 0) ? (data.weight / volume) * 1000000 : 0;
+
+  const handleChange = (field: keyof Specimen, value: string) => {
+    const numValue = parseFloat(value);
+    setData({ ...data, [field]: isNaN(numValue) ? undefined : numValue });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-concrete-200">
+        <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center">
+          <h3 className="text-white font-bold text-lg flex items-center gap-2">
+            <Hammer className="w-5 h-5 text-safety-orange" />
+            Saisie Résultats Éprouvette
+          </h3>
+          <button onClick={onClose} className="text-concrete-400 hover:text-white">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <div className="flex justify-between items-center bg-concrete-50 p-3 rounded-lg border border-concrete-100">
+             <div className="text-sm">
+               <span className="block text-concrete-500 text-xs uppercase font-bold">Numéro</span>
+               <span className="font-mono font-bold text-lg">#{data.number}</span>
+             </div>
+             <div className="text-sm text-right">
+               <span className="block text-concrete-500 text-xs uppercase font-bold">Âge</span>
+               <span className="font-bold">{data.age} Jours</span>
+             </div>
+             <div className="text-sm text-right">
+               <span className="block text-concrete-500 text-xs uppercase font-bold">Type</span>
+               <span>{data.specimenType}</span>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-6">
+            {/* DIMENSIONS */}
+            <div className="space-y-4">
+               <h4 className="text-xs font-bold text-concrete-500 uppercase border-b border-concrete-100 pb-1">Géométrie</h4>
+               <div>
+                 <label className="block text-sm font-medium mb-1">Diamètre / Côté (mm)</label>
+                 <input 
+                   type="number" step="0.1"
+                   className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
+                   value={data.diameter || ''}
+                   onChange={e => handleChange('diameter', e.target.value)}
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium mb-1">Hauteur (mm)</label>
+                 <input 
+                   type="number" step="0.1"
+                   className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
+                   value={data.height || ''}
+                   onChange={e => handleChange('height', e.target.value)}
+                 />
+               </div>
+               <div className="text-right">
+                 <span className="text-xs text-concrete-400">Surface: </span>
+                 <span className="font-mono text-sm font-bold text-concrete-700">{surface.toFixed(1)} mm²</span>
+               </div>
+            </div>
+
+            {/* RESULTATS */}
+            <div className="space-y-4">
+               <h4 className="text-xs font-bold text-safety-orange uppercase border-b border-orange-100 pb-1">Mesures Labo</h4>
+               <div>
+                 <label className="block text-sm font-medium mb-1 flex items-center gap-2">
+                   <Scale className="w-4 h-4 text-concrete-400" /> Masse (g)
+                 </label>
+                 <input 
+                   type="number" step="1"
+                   className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900"
+                   value={data.weight || ''}
+                   onChange={e => handleChange('weight', e.target.value)}
+                   placeholder="ex: 2350"
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium mb-1 flex items-center gap-2">
+                   <Hammer className="w-4 h-4 text-concrete-400" /> Force (kN)
+                 </label>
+                 <input 
+                   type="number" step="0.1"
+                   className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900"
+                   value={data.force || ''}
+                   onChange={e => handleChange('force', e.target.value)}
+                   placeholder="ex: 650.5"
+                 />
+               </div>
+            </div>
+          </div>
+
+          {/* CALCULS PREVISUALISATION */}
+          <div className="bg-concrete-900 text-white rounded-lg p-4 grid grid-cols-2 gap-4">
+             <div>
+               <span className="block text-concrete-400 text-xs uppercase">Résistance (MPa)</span>
+               <span className="text-2xl font-bold text-safety-orange font-mono">
+                 {stress > 0 ? stress.toFixed(1) : '-.--'}
+               </span>
+             </div>
+             <div className="text-right">
+               <span className="block text-concrete-400 text-xs uppercase">Masse Volumique</span>
+               <span className="text-lg font-bold font-mono">
+                 {density > 0 ? density.toFixed(0) : '---'} <span className="text-sm text-concrete-500">kg/m³</span>
+               </span>
+             </div>
+          </div>
+        </div>
+
+        <div className="p-4 bg-concrete-50 border-t border-concrete-200 flex justify-end gap-3">
+           <button onClick={onClose} className="px-4 py-2 text-concrete-600 hover:bg-concrete-200 rounded-lg transition-colors">
+             Annuler
+           </button>
+           <button 
+             onClick={() => onSave(data)}
+             className="px-6 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 font-bold flex items-center gap-2 shadow-sm"
+           >
+             <Save className="w-4 h-4" /> Enregistrer
+           </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- HELPERS ---
 const calculateConsistency = (slump: number): string => {
   if (!slump && slump !== 0) return '';
   if (slump < 10) return 'Indet.';
@@ -18,13 +170,13 @@ const calculateConsistency = (slump: number): string => {
   return 'S5';
 };
 
-// Helper pour calculer la date d'écrasement
 const addDays = (dateStr: string, days: number): string => {
   const date = new Date(dateStr);
   date.setDate(date.getDate() + days);
   return date.toISOString().split('T')[0];
 };
 
+// --- MAIN COMPONENT ---
 export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token, onBack }) => {
   const [tests, setTests] = useState<ConcreteTest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -36,6 +188,10 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Specimen Modal State
+  const [selectedSpecimenIdx, setSelectedSpecimenIdx] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Initial Form State
   const initialFormState = {
@@ -104,6 +260,8 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setFormData(initialFormState);
     setEditingId(null);
     setViewMode('list');
+    setSelectedSpecimenIdx(null);
+    setIsModalOpen(false);
   };
 
   // Gestion des packs d'éprouvettes
@@ -120,7 +278,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     if (packDim === '150x150') { diameter = 150; height = 150; } // Cube
     
     // Calcul Surface (mm2)
-    // Cube: côté * côté, Cylindre: PI * r^2
     const isCube = packDim.includes('Cube') || packDim === '150x150';
     const surface = isCube 
       ? diameter * diameter 
@@ -135,7 +292,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
         specimenType: isCube ? 'Cubique' : 'Cylindrique',
         diameter,
         height,
-        surface: Math.round(surface * 100) / 100 // Arrondi 2 décimales
+        surface: Math.round(surface * 100) / 100
       });
     }
 
@@ -145,11 +302,29 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     });
   };
 
-  const handleRemoveSpecimen = (index: number) => {
+  const handleRemoveSpecimen = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher l'ouverture de la modale
     const updated = formData.specimens.filter((_, i) => i !== index);
-    // Renumérotation
     const renumbered = updated.map((s, i) => ({ ...s, number: i + 1 }));
     setFormData({ ...formData, specimens: renumbered });
+  };
+
+  // Open Modal
+  const handleSpecimenClick = (index: number) => {
+    setSelectedSpecimenIdx(index);
+    setIsModalOpen(true);
+  };
+
+  // Save Modal
+  const handleSaveSpecimen = (updated: Specimen) => {
+    if (selectedSpecimenIdx === null) return;
+    
+    const updatedSpecimens = [...formData.specimens];
+    updatedSpecimens[selectedSpecimenIdx] = updated;
+    
+    setFormData({ ...formData, specimens: updatedSpecimens });
+    setIsModalOpen(false);
+    setSelectedSpecimenIdx(null);
   };
 
   // Prepare Edit
@@ -199,7 +374,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       ...formData,
       projectName: selectedProject?.name || '',
       companyName: selectedProject?.companyName || '',
-      specimenCount: formData.specimens.length // Total calculé
+      specimenCount: formData.specimens.length 
     };
 
     try {
@@ -257,14 +432,24 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     const calculatedConsistency = calculateConsistency(formData.slump);
 
     return (
-      <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+      <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
+        {/* Modale */}
+        {isModalOpen && selectedSpecimenIdx !== null && (
+          <SpecimenModal 
+            specimen={formData.specimens[selectedSpecimenIdx]}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSave={handleSaveSpecimen}
+          />
+        )}
+
         <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
           <div className="flex items-center gap-3">
-             <button onClick={resetForm} className="text-concrete-400 hover:text-white transition-colors">
+             <button type="button" onClick={resetForm} className="text-concrete-400 hover:text-white transition-colors">
                <ArrowLeft className="w-5 h-5" />
              </button>
              <h2 className="text-xl font-bold text-white">
-               {editingId ? 'Modifier Prélèvement Béton' : 'Nouveau Prélèvement Béton'}
+               {editingId ? 'Modifier Prélèvement & Résultats' : 'Nouveau Prélèvement Béton'}
              </h2>
           </div>
         </div>
@@ -326,7 +511,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       value={formData.samplingDate}
                       onChange={e => {
                         setFormData({...formData, samplingDate: e.target.value});
-                        // Mettre à jour les dates des éprouvettes existantes si on change la date de prélèvement
                         const updatedSpecimens = formData.specimens.map(s => ({
                            ...s,
                            castingDate: e.target.value,
@@ -357,7 +541,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     </select>
                  </div>
                  
-                 {/* SLUMP AVEC CALCUL AUTO */}
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Slump Mesuré (mm)</label>
                     <div className="relative">
@@ -432,7 +615,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
            {/* SECTION 3: PLANIFICATION EPROUVETTES */}
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
-                <Boxes className="w-5 h-5 text-safety-orange" /> Planification Éprouvettes
+                <Boxes className="w-5 h-5 text-safety-orange" /> Planification & Résultats
               </h3>
               
               <div className="bg-concrete-50 p-4 rounded-lg border border-concrete-200">
@@ -491,39 +674,59 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               </div>
 
               {formData.specimens.length > 0 ? (
-                <div className="overflow-x-auto border border-concrete-200 rounded-lg">
+                <div className="overflow-x-auto border border-concrete-200 rounded-lg shadow-sm">
                   <table className="w-full text-left text-xs md:text-sm">
                     <thead className="bg-concrete-50 text-concrete-500 font-semibold border-b border-concrete-200">
                       <tr>
                         <th className="px-3 py-2">N°</th>
                         <th className="px-3 py-2">Âge</th>
                         <th className="px-3 py-2">Date Écrasement</th>
-                        <th className="px-3 py-2">Type</th>
                         <th className="px-3 py-2">Dimensions (mm)</th>
-                        <th className="px-3 py-2">Surface (mm²)</th>
+                        <th className="px-3 py-2 text-right">Force (kN)</th>
+                        <th className="px-3 py-2 text-right">Contrainte (MPa)</th>
                         <th className="px-3 py-2 text-right">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-concrete-100 bg-white">
                       {formData.specimens.map((s, idx) => (
-                        <tr key={idx} className="hover:bg-concrete-50">
-                          <td className="px-3 py-2 font-mono text-concrete-600">{s.number}</td>
-                          <td className="px-3 py-2 font-bold text-concrete-800">{s.age} jours</td>
-                          <td className="px-3 py-2 text-safety-orange font-medium">
+                        <tr 
+                          key={idx} 
+                          onClick={() => handleSpecimenClick(idx)}
+                          className="hover:bg-blue-50 cursor-pointer transition-colors group"
+                        >
+                          <td className="px-3 py-2 font-mono text-concrete-600 font-bold group-hover:text-blue-600">#{s.number}</td>
+                          <td className="px-3 py-2 font-bold text-concrete-800">{s.age}j</td>
+                          <td className="px-3 py-2 text-concrete-600">
                             {new Date(s.crushingDate).toLocaleDateString('fr-FR')}
                           </td>
-                          <td className="px-3 py-2">{s.specimenType}</td>
                           <td className="px-3 py-2">{s.diameter} x {s.height}</td>
-                          <td className="px-3 py-2 font-mono text-concrete-500">{s.surface.toFixed(1)}</td>
+                          
+                          {/* Force */}
+                          <td className="px-3 py-2 text-right font-mono">
+                            {s.force ? <span className="font-bold text-concrete-900">{s.force}</span> : <span className="text-concrete-300">-</span>}
+                          </td>
+
+                          {/* Contrainte (Calculée côté client si dispo, sinon backend) */}
+                          <td className="px-3 py-2 text-right font-mono">
+                             {s.stress ? (
+                               <span className="font-bold text-safety-orange">{s.stress.toFixed(1)}</span>
+                             ) : (
+                                s.force ? <span className="text-concrete-400 italic">...</span> : <span className="text-concrete-300">-</span>
+                             )}
+                          </td>
+
                           <td className="px-3 py-2 text-right">
-                             <button type="button" onClick={() => handleRemoveSpecimen(idx)} className="text-red-400 hover:text-red-600">
-                               <Trash2 className="w-3 h-3" />
+                             <button type="button" onClick={(e) => handleRemoveSpecimen(idx, e)} className="text-concrete-300 hover:text-red-600 p-1">
+                               <Trash2 className="w-4 h-4" />
                              </button>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  <div className="bg-blue-50 px-3 py-2 text-xs text-blue-700 text-center border-t border-blue-100">
+                    💡 Cliquez sur une ligne pour saisir la Masse et la Force de rupture.
+                  </div>
                 </div>
               ) : (
                 <div className="text-center p-4 border border-dashed border-concrete-300 rounded text-concrete-400 text-sm">

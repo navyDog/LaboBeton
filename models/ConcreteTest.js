@@ -41,9 +41,6 @@ const concreteTestSchema = new mongoose.Schema({
   volume: { type: Number },
 
   concreteClass: { type: String },
-  // consistencyClass est supprimé en tant que champ stocké manuellement, 
-  // on pourra le déduire du slump ou le stocker calculé. 
-  // Ici on le garde pour le cache si besoin, mais il sera piloté par le slump.
   consistencyClass: { type: String }, 
   
   mixType: { type: String },
@@ -55,7 +52,7 @@ const concreteTestSchema = new mongoose.Schema({
   slump: { type: Number },
   samplingPlace: { type: String },
   
-  // Info globale pour la méthode de confection (reste utile pour les rapports)
+  // Info globale pour la méthode de confection
   specimenCount: { type: Number, default: 0 }, 
   
   tightening: { type: String },
@@ -74,6 +71,7 @@ const concreteTestSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 concreteTestSchema.pre('save', async function(next) {
+  // 1. Génération de référence si nouveau
   if (this.isNew) {
     const currentYear = new Date().getFullYear();
     this.year = currentYear;
@@ -90,7 +88,7 @@ concreteTestSchema.pre('save', async function(next) {
     this.reference = `${currentYear}-B-${seqString}`;
   }
 
-  // Calcul automatique de la consistance basé sur le Slump (NF EN 206)
+  // 2. Calcul automatique de la consistance basé sur le Slump (NF EN 206)
   if (this.slump !== undefined) {
     if (this.slump < 10) this.consistencyClass = 'Indétérminé';
     else if (this.slump <= 40) this.consistencyClass = 'S1';
@@ -98,6 +96,41 @@ concreteTestSchema.pre('save', async function(next) {
     else if (this.slump <= 150) this.consistencyClass = 'S3';
     else if (this.slump <= 210) this.consistencyClass = 'S4';
     else this.consistencyClass = 'S5';
+  }
+
+  // 3. Calculs Scientifiques pour chaque éprouvette (Surface, Contrainte, Densité)
+  if (this.specimens && this.specimens.length > 0) {
+    this.specimenCount = this.specimens.length;
+    
+    this.specimens.forEach(s => {
+      // A. Recalcul Surface (au cas où diamètre change)
+      // Si type contient 'cube' ou dimensions carrées, Surface = Coté * Coté
+      const isCube = s.specimenType && (s.specimenType.toLowerCase().includes('cube') || s.specimenType.toLowerCase().includes('prisme'));
+      if (isCube) {
+        s.surface = s.diameter * s.diameter; 
+      } else {
+        // Cylindre: PI * r²
+        s.surface = Math.PI * Math.pow(s.diameter / 2, 2);
+      }
+      
+      // B. Calcul Contrainte (MPa) = Force (N) / Surface (mm²)
+      // Force stockée en kN, donc * 1000
+      if (s.force !== null && s.force !== undefined && s.surface > 0) {
+        s.stress = (s.force * 1000) / s.surface;
+      } else {
+        s.stress = null;
+      }
+
+      // C. Calcul Masse Volumique (kg/m³) = Masse (kg) / Volume (m³)
+      // Masse en g, Dimensions en mm.
+      // Formule simplifiée : (Masse_g / (Surface_mm2 * Hauteur_mm)) * 1,000,000
+      if (s.weight !== null && s.weight !== undefined && s.height > 0 && s.surface > 0) {
+        const volumeMm3 = s.surface * s.height;
+        s.density = (s.weight / volumeMm3) * 1000000;
+      } else {
+        s.density = null;
+      }
+    });
   }
 
   next();
