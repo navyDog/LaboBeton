@@ -6,6 +6,16 @@ const projectSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Company',
+    default: null
+  },
+  companyName: {
+    type: String, // Stocké pour éviter des requêtes complexes, mis à jour si l'entreprise change
+    trim: true,
+    default: ''
+  },
   name: {
     type: String, // Nom de l'affaire
     required: true,
@@ -31,11 +41,6 @@ const projectSchema = new mongoose.Schema({
   moe: {
     type: String, // Maître d'oeuvre
     trim: true
-  },
-  status: {
-    type: String,
-    enum: ['En cours', 'Terminé', 'Archivé'],
-    default: 'En cours'
   }
 }, { timestamps: true });
 

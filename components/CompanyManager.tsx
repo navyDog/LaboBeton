@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Trash2, Building, Phone, Mail, User as UserIcon, Search } from 'lucide-react';
+import { User, Plus, Trash2, Building, Phone, Mail, User as UserIcon, Search, Pencil } from 'lucide-react';
 import { Company } from '../types';
 
 interface CompanyManagerProps {
@@ -11,6 +11,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
@@ -39,11 +42,31 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
     fetchCompanies();
   }, [token]);
 
+  const handleEdit = (company: Company) => {
+    setFormData({
+      name: company.name,
+      contactName: company.contactName || '',
+      email: company.email || '',
+      phone: company.phone || ''
+    });
+    setEditingId(company._id);
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', contactName: '', email: '', phone: '' });
+    setEditingId(null);
+    setShowForm(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/companies', {
-        method: 'POST',
+      const url = editingId ? `/api/companies/${editingId}` : '/api/companies';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
@@ -52,8 +75,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
       });
       
       if (res.ok) {
-        setFormData({ name: '', contactName: '', email: '', phone: '' });
-        setShowForm(false);
+        resetForm();
         fetchCompanies();
       }
     } catch (error) {
@@ -82,17 +104,22 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
           <p className="text-concrete-500">Gérez votre liste de clients et partenaires.</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if(showForm) resetForm();
+            else setShowForm(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-medium"
         >
-          <Plus className="w-4 h-4" />
-          {showForm ? 'Fermer' : 'Nouvelle Entreprise'}
+          {showForm ? <UserIcon className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showForm ? 'Annuler' : 'Nouvelle Entreprise'}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white p-6 rounded-xl border border-concrete-200 shadow-sm animate-in fade-in slide-in-from-top-4">
-          <h3 className="font-bold text-lg mb-4 text-concrete-800">Ajouter une entreprise</h3>
+          <h3 className="font-bold text-lg mb-4 text-concrete-800">
+            {editingId ? 'Modifier l\'entreprise' : 'Ajouter une entreprise'}
+          </h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'entreprise *</label>
@@ -132,9 +159,16 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
                 placeholder="01 23 45 67 89"
               />
             </div>
-            <div className="md:col-span-2 flex justify-end">
+            <div className="md:col-span-2 flex justify-end gap-2">
+              <button 
+                type="button" 
+                onClick={resetForm}
+                className="px-4 py-2 border border-concrete-300 text-concrete-600 rounded hover:bg-concrete-50 transition-colors"
+              >
+                Annuler
+              </button>
               <button type="submit" className="px-6 py-2 bg-concrete-800 text-white rounded hover:bg-concrete-700 transition-colors">
-                Enregistrer
+                {editingId ? 'Mettre à jour' : 'Enregistrer'}
               </button>
             </div>
           </form>
@@ -194,12 +228,22 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
                       {!company.email && !company.phone && <span className="text-concrete-300 text-xs italic">Aucune donnée</span>}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => handleDelete(company._id)}
-                        className="text-concrete-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-full"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleEdit(company)}
+                          className="text-concrete-400 hover:text-safety-orange transition-colors p-2 hover:bg-orange-50 rounded-full"
+                          title="Modifier"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(company._id)}
+                          className="text-concrete-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-full"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

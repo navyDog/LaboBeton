@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown } from 'lucide-react';
-import { Project } from '../types';
+import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil } from 'lucide-react';
+import { Project, Company } from '../types';
 
 interface ProjectManagerProps {
   token: string;
@@ -8,12 +8,17 @@ interface ProjectManagerProps {
 
 export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]); // Liste pour le dropdown
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
+    companyId: '',
     contactName: '',
     email: '',
     phone: '',
@@ -21,15 +26,20 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
     moe: ''
   });
 
-  const fetchProjects = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/projects', {
+      // Charger les projets
+      const projectsRes = await fetch('/api/projects', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (res.ok) {
-        const data = await res.json();
-        setProjects(data);
-      }
+      if (projectsRes.ok) setProjects(await projectsRes.json());
+
+      // Charger les entreprises pour le menu déroulant
+      const companiesRes = await fetch('/api/companies', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (companiesRes.ok) setCompanies(await companiesRes.json());
+
     } catch (error) {
       console.error(error);
     } finally {
@@ -38,25 +48,51 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   };
 
   useEffect(() => {
-    fetchProjects();
+    fetchData();
   }, [token]);
+
+  const handleEdit = (project: Project) => {
+    setFormData({
+      name: project.name,
+      companyId: project.companyId || '',
+      contactName: project.contactName || '',
+      email: project.email || '',
+      phone: project.phone || '',
+      moa: project.moa || '',
+      moe: project.moe || ''
+    });
+    setEditingId(project._id);
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', companyId: '', contactName: '', email: '', phone: '', moa: '', moe: '' });
+    setEditingId(null);
+    setShowForm(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
+      // Trouver le nom de l'entreprise si un ID est sélectionné
+      const selectedCompany = companies.find(c => c._id === formData.companyId);
+      const payload = { ...formData, companyName: selectedCompany ? selectedCompany.name : '' };
+
+      const url = editingId ? `/api/projects/${editingId}` : '/api/projects';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       
       if (res.ok) {
-        setFormData({ name: '', contactName: '', email: '', phone: '', moa: '', moe: '' });
-        setShowForm(false);
-        fetchProjects();
+        resetForm();
+        fetchData(); // Recharger pour avoir la liste à jour
       }
     } catch (error) {
       console.error(error);
@@ -70,7 +106,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      fetchProjects();
+      fetchData();
     } catch (error) {
       console.error(error);
     }
@@ -81,22 +117,27 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-concrete-900">Mes Affaires</h2>
-          <p className="text-concrete-500">Gérez vos chantiers et projets en cours.</p>
+          <p className="text-concrete-500">Gérez vos chantiers et projets.</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) resetForm();
+            else setShowForm(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-medium"
         >
-          <Plus className="w-4 h-4" />
-          {showForm ? 'Fermer' : 'Nouvelle Affaire'}
+          {showForm ? <Briefcase className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showForm ? 'Annuler' : 'Nouvelle Affaire'}
         </button>
       </div>
 
       {showForm && (
         <div className="bg-white p-6 rounded-xl border border-concrete-200 shadow-sm animate-in fade-in slide-in-from-top-4">
-          <h3 className="font-bold text-lg mb-4 text-concrete-800">Créer une nouvelle affaire</h3>
+          <h3 className="font-bold text-lg mb-4 text-concrete-800">
+            {editingId ? 'Modifier l\'affaire' : 'Créer une nouvelle affaire'}
+          </h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
+            <div className="md:col-span-1">
               <label className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'affaire (Projet) *</label>
               <input 
                 required 
@@ -105,6 +146,23 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
                 onChange={e => setFormData({...formData, name: e.target.value})}
                 placeholder="ex: Résidence Les Lilas - Bâtiment B"
               />
+            </div>
+
+            <div className="md:col-span-1">
+               <label className="block text-xs font-medium text-concrete-500 mb-1">Entreprise liée</label>
+               <div className="relative">
+                 <Building className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
+                 <select
+                    className="w-full pl-9 p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange bg-white"
+                    value={formData.companyId}
+                    onChange={e => setFormData({...formData, companyId: e.target.value})}
+                 >
+                    <option value="">-- Aucune entreprise liée --</option>
+                    {companies.map(c => (
+                      <option key={c._id} value={c._id}>{c.name}</option>
+                    ))}
+                 </select>
+               </div>
             </div>
 
             <div className="border-t border-concrete-100 md:col-span-2 my-2 pt-2">
@@ -160,9 +218,16 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
               />
             </div>
             
-            <div className="md:col-span-2 flex justify-end mt-4">
+            <div className="md:col-span-2 flex justify-end gap-2 mt-4">
+              <button 
+                type="button"
+                onClick={resetForm}
+                className="px-4 py-2 border border-concrete-300 text-concrete-600 rounded hover:bg-concrete-50 transition-colors"
+              >
+                Annuler
+              </button>
               <button type="submit" className="px-6 py-2 bg-concrete-800 text-white rounded hover:bg-concrete-700 transition-colors">
-                Enregistrer l'affaire
+                {editingId ? 'Mettre à jour' : 'Enregistrer'}
               </button>
             </div>
           </form>
@@ -188,15 +253,31 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
                    </div>
                    <div>
                      <h4 className="font-bold text-concrete-900 leading-tight">{project.name}</h4>
-                     <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-medium">En cours</span>
+                     {/* Affichage de l'entreprise liée si elle existe */}
+                     {project.companyName && (
+                       <div className="flex items-center gap-1 mt-1">
+                          <Building className="w-3 h-3 text-concrete-400" />
+                          <span className="text-xs text-concrete-500 font-medium">{project.companyName}</span>
+                       </div>
+                     )}
                    </div>
                 </div>
-                <button 
-                  onClick={() => handleDelete(project._id)}
-                  className="text-concrete-300 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => handleEdit(project)}
+                    className="text-concrete-300 hover:text-safety-orange transition-colors p-1"
+                    title="Modifier"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(project._id)}
+                    className="text-concrete-300 hover:text-red-500 transition-colors p-1"
+                    title="Supprimer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-3 mb-4 flex-grow">

@@ -26,13 +26,15 @@ export interface Company {
 
 export interface Project {
   _id: string;
+  companyId?: string;
+  companyName?: string;
   name: string;
   contactName: string;
   email: string;
   phone: string;
   moa: string;
   moe: string;
-  status: string;
+  // status supprimé
 }
 
 export interface MenuItem {

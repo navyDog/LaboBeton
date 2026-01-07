@@ -158,7 +158,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 
 // --- Routes API Entreprises (Companies) ---
 
-// Lister les entreprises de l'utilisateur connecté
+// Lister les entreprises
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
     const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 });
@@ -182,6 +182,21 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
   }
 });
 
+// Modifier une entreprise
+app.put('/api/companies/:id', authenticateToken, async (req, res) => {
+  try {
+    const updated = await Company.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      req.body,
+      { new: true } // Retourne l'objet modifié
+    );
+    if (!updated) return res.status(404).json({ message: "Entreprise non trouvée" });
+    res.json(updated);
+  } catch (error) {
+    res.status(400).json({ message: "Erreur modification" });
+  }
+});
+
 // Supprimer une entreprise
 app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
@@ -195,7 +210,7 @@ app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
 
 // --- Routes API Affaires (Projects) ---
 
-// Lister les affaires de l'utilisateur connecté
+// Lister les affaires
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
     const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -216,6 +231,21 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
     res.status(201).json(newProject);
   } catch (error) {
     res.status(400).json({ message: "Erreur création affaire", error: error.message });
+  }
+});
+
+// Modifier une affaire
+app.put('/api/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const updated = await Project.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      req.body,
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Affaire non trouvée" });
+    res.json(updated);
+  } catch (error) {
+    res.status(400).json({ message: "Erreur modification" });
   }
 });
 
