@@ -25,7 +25,8 @@ const specimenSchema = new mongoose.Schema({
 const concreteTestSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   
-  reference: { type: String, unique: true },
+  // Modification : On retire unique: true global pour le gérer via un index composé (userId + reference)
+  reference: { type: String }, 
   sequenceNumber: { type: Number },
   year: { type: Number },
 
@@ -69,6 +70,10 @@ const concreteTestSchema = new mongoose.Schema({
   specimens: [specimenSchema]
 
 }, { timestamps: true });
+
+// Index composé pour s'assurer que la référence est unique PAR UTILISATEUR, et non globalement
+// Cela permet à 'labo' d'avoir 2025-B-0001 et à 'nouveau_compte' d'avoir aussi 2025-B-0001
+concreteTestSchema.index({ userId: 1, reference: 1 }, { unique: true });
 
 concreteTestSchema.pre('save', async function(next) {
   // 1. Génération de référence si nouveau
