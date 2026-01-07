@@ -36,21 +36,38 @@ export interface Project {
   moe: string;
 }
 
+export interface Specimen {
+  _id?: string;
+  number: number;
+  reference?: string;
+  age: number;
+  castingDate: string;
+  crushingDate: string;
+  specimenType: string;
+  diameter: number;
+  height: number;
+  surface: number;
+  weight?: number; // null si pas encore pesé
+  force?: number;  // null si pas encore écrasé
+  stress?: number;
+  density?: number;
+}
+
 export interface ConcreteTest {
   _id: string;
   reference: string; // 2025-B-0001
   projectId: string;
   projectName?: string;
   companyName?: string;
-  structureName: string; // Ouvrage
-  elementName: string;   // Partie d'ouvrage
+  structureName: string;
+  elementName: string;
   
   receptionDate: string;
   samplingDate: string;
   volume: number;
 
   concreteClass: string;
-  consistencyClass: string; // S3, S4...
+  consistencyClass?: string; // S3, S4... (Calculé)
   mixType: string;
   formulaInfo: string;
   manufacturer: string;
@@ -59,18 +76,22 @@ export interface ConcreteTest {
 
   slump: number;
   samplingPlace: string;
-  specimenType: string;
-  specimenCount: number;
   
+  // Info Prélèvement
   tightening: string;
   vibrationTime: number;
   layers: number;
   curing: string;
 
+  // Info Essai
   testType: string;
   standard: string;
   preparation: string;
   pressMachine: string;
+
+  // Liste des éprouvettes
+  specimens: Specimen[];
+  specimenCount: number; // Total count cached
   
   createdAt?: string;
 }
