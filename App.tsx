@@ -8,14 +8,14 @@ import { CompanyManager } from './components/CompanyManager';
 import { ProjectManager } from './components/ProjectManager';
 import { SettingsManager } from './components/SettingsManager';
 import { ConcreteTestManager } from './components/ConcreteTestManager';
-import { Building2, FlaskConical, LogOut, ShieldCheck, ChevronLeft, Building, Briefcase, LayoutGrid, Settings } from 'lucide-react';
+import { CalendarView } from './components/CalendarView'; // NEW IMPORT
+import { Building2, FlaskConical, LogOut, ShieldCheck, ChevronLeft, Building, Briefcase, LayoutGrid, Settings, Calendar } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings' | 'fresh_tests'
-  // Changement demandé : Vue par défaut sur les fiches de prélèvement
+  // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings' | 'fresh_tests' | 'calendar'
   const [view, setView] = useState<string>('fresh_tests');
 
   // Vérification connexion DB
@@ -122,16 +122,22 @@ const App: React.FC = () => {
                   <FlaskConical className="w-4 h-4" /> Prélèvements
                 </button>
                 <button 
+                  onClick={() => setView('calendar')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                >
+                  <Calendar className="w-4 h-4" /> Planning
+                </button>
+                <button 
                   onClick={() => setView('projects')}
                   className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
                 >
-                  <Briefcase className="w-4 h-4" /> Mes Affaires
+                  <Briefcase className="w-4 h-4" /> Affaires
                 </button>
                 <button 
                   onClick={() => setView('companies')}
                   className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
                 >
-                  <Building className="w-4 h-4" /> Mes Entreprises
+                  <Building className="w-4 h-4" /> Clients
                 </button>
              </div>
 
@@ -174,6 +180,11 @@ const App: React.FC = () => {
             </div>
           )}
 
+          {/* View: CALENDRIER */}
+          {view === 'calendar' && (
+            <CalendarView token={currentUser.token || ''} />
+          )}
+
           {/* View: ENTREPRISES */}
           {view === 'companies' && (
             <CompanyManager token={currentUser.token || ''} />
@@ -207,6 +218,9 @@ const App: React.FC = () => {
                   <div className="md:hidden flex justify-center gap-4 mt-6 flex-wrap">
                     <button onClick={() => setView('fresh_tests')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
                       <FlaskConical className="w-4 h-4" /> Prélèvements
+                    </button>
+                    <button onClick={() => setView('calendar')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
+                      <Calendar className="w-4 h-4" /> Planning
                     </button>
                     <button onClick={() => setView('projects')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
                       <Briefcase className="w-4 h-4" /> Mes Affaires
