@@ -1,0 +1,514 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search } from 'lucide-react';
+import { ConcreteTest, Project, Settings } from '../types';
+
+interface ConcreteTestManagerProps {
+  token: string;
+  onBack: () => void;
+}
+
+export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token, onBack }) => {
+  const [tests, setTests] = useState<ConcreteTest[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Initial Form State
+  const initialFormState = {
+    projectId: '',
+    structureName: '',
+    elementName: '',
+    receptionDate: new Date().toISOString().split('T')[0],
+    samplingDate: new Date().toISOString().split('T')[0],
+    volume: 0,
+    concreteClass: '',
+    mixType: '',
+    formulaInfo: '',
+    manufacturer: '',
+    manufacturingPlace: '',
+    deliveryMethod: '',
+    slump: 0,
+    samplingPlace: '',
+    specimenType: '',
+    specimenCount: 3,
+    tightening: 'Piquage',
+    vibrationTime: 0,
+    layers: 2,
+    curing: 'Eau 20°C',
+    testType: 'Compression',
+    standard: '',
+    preparation: 'Surfaçage soufre',
+    pressMachine: 'Presse 3000kN'
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
+
+  // Data Fetching
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [testsRes, projectsRes, settingsRes] = await Promise.all([
+          fetch('/api/concrete-tests', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/api/settings', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        if (testsRes.ok) setTests(await testsRes.json());
+        if (projectsRes.ok) setProjects(await projectsRes.json());
+        if (settingsRes.ok) setSettings(await settingsRes.json());
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [token]);
+
+  // Handlers
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.projectId) return alert("Veuillez sélectionner une affaire.");
+
+    const selectedProject = projects.find(p => p._id === formData.projectId);
+    
+    // Enrichir le payload avec les infos du projet (pour cache)
+    const payload = {
+      ...formData,
+      projectName: selectedProject?.name || '',
+      companyName: selectedProject?.companyName || ''
+    };
+
+    try {
+      const res = await fetch('/api/concrete-tests', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        // Refresh list
+        const newTest = await res.json();
+        setTests([newTest, ...tests]);
+        setViewMode('list');
+        setFormData(initialFormState);
+      } else {
+        alert("Erreur lors de la création.");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cette fiche de prélèvement ?")) return;
+    try {
+      await fetch(`/api/concrete-tests/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setTests(tests.filter(t => t._id !== id));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Filter Logic
+  const filteredTests = tests.filter(t => 
+    t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    t.structureName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // --- RENDER CREATE MODE ---
+  if (viewMode === 'create') {
+    return (
+      <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+        <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+             <button onClick={() => setViewMode('list')} className="text-concrete-400 hover:text-white transition-colors">
+               <ArrowLeft className="w-5 h-5" />
+             </button>
+             <h2 className="text-xl font-bold text-white">Nouveau Prélèvement Béton</h2>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
+           
+           {/* SECTION 1: IDENTIFICATION */}
+           <div className="space-y-4">
+              <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
+                <FileText className="w-5 h-5 text-safety-orange" /> Identification Chantier
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="lg:col-span-1">
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Affaire (Client) *</label>
+                    <select 
+                      required
+                      className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
+                      value={formData.projectId}
+                      onChange={e => setFormData({...formData, projectId: e.target.value})}
+                    >
+                      <option value="">-- Sélectionner --</option>
+                      {projects.map(p => (
+                        <option key={p._id} value={p._id}>{p.name} ({p.companyName})</option>
+                      ))}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Nom Ouvrage</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Bâtiment A"
+                      value={formData.structureName}
+                      onChange={e => setFormData({...formData, structureName: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Partie d'Ouvrage</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Dalle R+1, Poteaux..."
+                      value={formData.elementName}
+                      onChange={e => setFormData({...formData, elementName: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Date Prélèvement</label>
+                    <input 
+                      type="date"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.samplingDate}
+                      onChange={e => setFormData({...formData, samplingDate: e.target.value})}
+                    />
+                 </div>
+              </div>
+           </div>
+
+           {/* SECTION 2: BETON */}
+           <div className="space-y-4">
+              <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
+                <Factory className="w-5 h-5 text-safety-orange" /> Caractéristiques Béton
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Classe Résistance</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.concreteClass}
+                      onChange={e => setFormData({...formData, concreteClass: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Type Mélange / Formule</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.mixType}
+                      onChange={e => setFormData({...formData, mixType: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Infos Complémentaires</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Hydrofuge, Accélérateur..."
+                      value={formData.formulaInfo}
+                      onChange={e => setFormData({...formData, formulaInfo: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Volume Coulé (m³)</label>
+                    <input 
+                      type="number" step="0.1"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.volume}
+                      onChange={e => setFormData({...formData, volume: parseFloat(e.target.value)})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Fabricant / Fournisseur</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Unibéton"
+                      value={formData.manufacturer}
+                      onChange={e => setFormData({...formData, manufacturer: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Fabrication</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.manufacturingPlace}
+                      onChange={e => setFormData({...formData, manufacturingPlace: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.manufacturingPlaces.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Mode Livraison</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.deliveryMethod}
+                      onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+              </div>
+           </div>
+
+           {/* SECTION 3: PRÉLÈVEMENT & MISE EN OEUVRE */}
+           <div className="space-y-4">
+              <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
+                <Beaker className="w-5 h-5 text-safety-orange" /> Prélèvement & Confection
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Affaissement / Slump (mm)</label>
+                    <input 
+                      type="number"
+                      className="w-full p-2 border border-concrete-300 rounded font-mono"
+                      value={formData.slump}
+                      onChange={e => setFormData({...formData, slump: parseInt(e.target.value)})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Type Éprouvette</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.specimenType}
+                      onChange={e => setFormData({...formData, specimenType: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.specimenTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Nombre d'éprouvettes</label>
+                    <input 
+                      type="number"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.specimenCount}
+                      onChange={e => setFormData({...formData, specimenCount: parseInt(e.target.value)})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Prélèvement</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Sortie goulotte"
+                      value={formData.samplingPlace}
+                      onChange={e => setFormData({...formData, samplingPlace: e.target.value})}
+                    />
+                 </div>
+
+                 {/* Paramètres techniques avancés */}
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Mode Serrage</label>
+                    <select 
+                       className="w-full p-2 border border-concrete-300 rounded"
+                       value={formData.tightening}
+                       onChange={e => setFormData({...formData, tightening: e.target.value})}
+                    >
+                      <option value="Piquage">Piquage</option>
+                      <option value="Vibration Aiguille">Vibration Aiguille</option>
+                      <option value="Table Vibrante">Table Vibrante</option>
+                    </select>
+                 </div>
+                 {formData.tightening.includes('Vibr') && (
+                   <div>
+                      <label className="block text-xs font-bold text-concrete-500 mb-1">Temps Vibration (s)</label>
+                      <input 
+                        type="number"
+                        className="w-full p-2 border border-concrete-300 rounded"
+                        value={formData.vibrationTime}
+                        onChange={e => setFormData({...formData, vibrationTime: parseInt(e.target.value)})}
+                      />
+                   </div>
+                 )}
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Nbre Couches</label>
+                    <input 
+                      type="number"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.layers}
+                      onChange={e => setFormData({...formData, layers: parseInt(e.target.value)})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Mode Conservation</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.curing}
+                      onChange={e => setFormData({...formData, curing: e.target.value})}
+                    />
+                 </div>
+              </div>
+           </div>
+
+           {/* SECTION 4: PARAMÈTRES ESSAI */}
+           <div className="space-y-4">
+              <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
+                <ClipboardCheck className="w-5 h-5 text-safety-orange" /> Contexte Normatif
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Norme Applicable</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.standard}
+                      onChange={e => setFormData({...formData, standard: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.nfStandards.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Type d'Essai Visé</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.testType}
+                      onChange={e => setFormData({...formData, testType: e.target.value})}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Préparation Surfaces</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.preparation}
+                      onChange={e => setFormData({...formData, preparation: e.target.value})}
+                    />
+                 </div>
+              </div>
+           </div>
+
+           <div className="flex justify-end pt-6">
+              <button 
+                type="button" 
+                onClick={() => setViewMode('list')}
+                className="mr-4 px-6 py-3 text-concrete-600 hover:bg-concrete-100 rounded-lg font-medium"
+              >
+                Annuler
+              </button>
+              <button 
+                type="submit" 
+                className="px-8 py-3 bg-safety-orange text-white rounded-lg hover:bg-orange-600 font-bold shadow-lg hover:shadow-xl transition-all"
+              >
+                Créer la fiche
+              </button>
+           </div>
+        </form>
+      </div>
+    );
+  }
+
+  // --- RENDER LIST MODE ---
+  return (
+    <div className="space-y-6">
+       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 bg-white border border-concrete-200 rounded-lg text-concrete-500 hover:text-concrete-900">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-2xl font-bold text-concrete-900">Fiches de Prélèvement</h2>
+            <p className="text-concrete-500">Registre des éprouvettes et du béton frais (12350)</p>
+          </div>
+        </div>
+        <button 
+          onClick={() => setViewMode('create')}
+          className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-bold"
+        >
+          <Plus className="w-4 h-4" />
+          Nouveau Prélèvement
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-concrete-100 bg-concrete-50 flex items-center gap-3">
+          <div className="relative flex-grow max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
+            <input 
+              type="text" 
+              placeholder="Rechercher (Référence, Chantier, Ouvrage)..." 
+              className="w-full pl-9 pr-4 py-2 border border-concrete-300 rounded-lg text-sm focus:border-concrete-500 focus:ring-1 focus:ring-concrete-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {loading ? (
+           <div className="p-12 text-center text-concrete-400">Chargement...</div>
+        ) : filteredTests.length === 0 ? (
+           <div className="p-12 text-center text-concrete-400 italic">Aucune fiche trouvée.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-concrete-50 text-concrete-500 font-semibold border-b border-concrete-200">
+                <tr>
+                  <th className="px-4 py-3">Référence</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Affaire / Client</th>
+                  <th className="px-4 py-3">Ouvrage</th>
+                  <th className="px-4 py-3">Béton</th>
+                  <th className="px-4 py-3 text-center">Éprouvettes</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-concrete-100">
+                {filteredTests.map(test => (
+                  <tr key={test._id} className="hover:bg-concrete-50 group transition-colors">
+                    <td className="px-4 py-3 font-mono font-bold text-concrete-900">{test.reference}</td>
+                    <td className="px-4 py-3 text-concrete-600">
+                      {new Date(test.samplingDate).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-concrete-800">{test.projectName}</div>
+                      <div className="text-xs text-concrete-400">{test.companyName}</div>
+                    </td>
+                    <td className="px-4 py-3 text-concrete-600">
+                      {test.structureName} <span className="text-concrete-400">- {test.elementName}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                        {test.concreteClass}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-bold text-concrete-700">{test.specimenCount}x</span> {test.specimenType}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                       <button 
+                         onClick={() => handleDelete(test._id)}
+                         className="text-concrete-300 hover:text-red-500 transition-colors p-1"
+                         title="Supprimer"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

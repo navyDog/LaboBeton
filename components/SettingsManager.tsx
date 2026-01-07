@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen, Waves } from 'lucide-react';
 import { Settings } from '../types';
 
 interface SettingsManagerProps {
@@ -65,10 +65,10 @@ const ListEditor: React.FC<{
 
         {/* Liste */}
         <div className="flex-grow overflow-y-auto max-h-48 space-y-2 pr-1 custom-scrollbar">
-          {items.length === 0 && (
+          {(!items || items.length === 0) && (
             <p className="text-xs text-concrete-400 italic text-center py-4">Aucune donnée configurée.</p>
           )}
-          {items.map((item, idx) => (
+          {items && items.map((item, idx) => (
             <div key={idx} className="flex justify-between items-center bg-concrete-50 px-3 py-2 rounded text-sm group border border-transparent hover:border-concrete-200">
               <span className="text-concrete-700 font-medium">{item}</span>
               <button 
@@ -177,6 +177,30 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         
         <ListEditor 
+          title="Classes de résistance"
+          icon={<Gauge className="w-5 h-5" />}
+          items={settings.concreteClasses}
+          placeholder="ex: C25/30"
+          onChange={(items) => setSettings({...settings, concreteClasses: items})}
+        />
+
+        <ListEditor 
+          title="Classes de consistance (Slump)"
+          icon={<Waves className="w-5 h-5" />}
+          items={settings.consistencyClasses || []}
+          placeholder="ex: S3"
+          onChange={(items) => setSettings({...settings, consistencyClasses: items})}
+        />
+
+        <ListEditor 
+          title="Types de mélange / Composition"
+          icon={<FlaskConical className="w-5 h-5" />}
+          items={settings.mixTypes}
+          placeholder="ex: CEM II/A 350kg"
+          onChange={(items) => setSettings({...settings, mixTypes: items})}
+        />
+
+        <ListEditor 
           title="Types d'éprouvette"
           icon={<Box className="w-5 h-5" />}
           items={settings.specimenTypes}
@@ -198,22 +222,6 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
           items={settings.manufacturingPlaces}
           placeholder="ex: Centrale BPE"
           onChange={(items) => setSettings({...settings, manufacturingPlaces: items})}
-        />
-
-        <ListEditor 
-          title="Types de mélange"
-          icon={<FlaskConical className="w-5 h-5" />}
-          items={settings.mixTypes}
-          placeholder="ex: C25/30 XF1"
-          onChange={(items) => setSettings({...settings, mixTypes: items})}
-        />
-
-        <ListEditor 
-          title="Classes de béton"
-          icon={<Gauge className="w-5 h-5" />}
-          items={settings.concreteClasses}
-          placeholder="ex: S3"
-          onChange={(items) => setSettings({...settings, concreteClasses: items})}
         />
 
         <ListEditor 

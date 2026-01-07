@@ -10,8 +10,14 @@ const settingsSchema = new mongoose.Schema({
   specimenTypes: [{ type: String, trim: true }],      // ex: Cylindrique 16x32
   deliveryMethods: [{ type: String, trim: true }],    // ex: Toupie, Benne
   manufacturingPlaces: [{ type: String, trim: true }], // ex: Centrale BPE, Sur site
-  mixTypes: [{ type: String, trim: true }],           // ex: C25/30 XF1
-  concreteClasses: [{ type: String, trim: true }],    // ex: S3, S4
+  
+  // Composition du béton (Recette)
+  mixTypes: [{ type: String, trim: true }],           // ex: Dosage 350kg CEM II, B25 Granulat 20mm
+  
+  // Caractéristiques normatives
+  concreteClasses: [{ type: String, trim: true }],    // Classes de résistance: C25/30, C30/37
+  consistencyClasses: [{ type: String, trim: true }], // Classes de consistance: S1, S2, S3...
+  
   nfStandards: [{ type: String, trim: true }]         // ex: NF EN 206/CN
 }, { timestamps: true });
 

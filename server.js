@@ -10,6 +10,7 @@ import User from './models/User.js';
 import Company from './models/Company.js';
 import Project from './models/Project.js';
 import Settings from './models/Settings.js';
+import ConcreteTest from './models/ConcreteTest.js';
 
 // Configuration des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -239,6 +240,41 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
   }
 });
 
+// --- Routes API Tests (Fiches Prélèvements) ---
+
+app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
+  try {
+    const tests = await ConcreteTest.find({ userId: req.user.id })
+      .sort({ sequenceNumber: -1 }) // Le plus récent en premier
+      .populate('projectId', 'name'); // Optionnel, si on veut peupler
+    res.json(tests);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération fiches" });
+  }
+});
+
+app.post('/api/concrete-tests', authenticateToken, async (req, res) => {
+  try {
+    // On laisse le pre-save hook gérer 'reference', 'sequenceNumber', 'year'
+    const newTest = new ConcreteTest({ ...req.body, userId: req.user.id });
+    await newTest.save();
+    res.status(201).json(newTest);
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ message: "Erreur création fiche", error: error.message });
+  }
+});
+
+app.delete('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await ConcreteTest.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!deleted) return res.status(404).json({ message: "Fiche non trouvée" });
+    res.json({ message: "Fiche supprimée" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur suppression" });
+  }
+});
+
 // --- Routes API Réglages (Settings) ---
 
 app.get('/api/settings', authenticateToken, async (req, res) => {
@@ -252,8 +288,9 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
         specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15', 'Cubique 10x10'],
         deliveryMethods: ['Toupie', 'Benne', 'Mixer', 'Sur site'],
         manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier', 'Préfabrication'],
-        mixTypes: ['C25/30 XF1', 'C30/37 XF1', 'C35/45'],
-        concreteClasses: ['S1', 'S2', 'S3', 'S4', 'S5'],
+        mixTypes: ['CEM II/A-LL 42.5N - 350kg', 'Béton B25 - Gravillon 20mm', 'Béton Hydrofuge - 400kg'],
+        concreteClasses: ['C20/25', 'C25/30', 'C30/37', 'C35/45', 'C40/50', 'C45/55', 'C50/60'],
+        consistencyClasses: ['S1', 'S2', 'S3', 'S4', 'S5'],
         nfStandards: ['NF EN 206/CN', 'NF EN 12350', 'NF EN 12390']
       });
       await settings.save();

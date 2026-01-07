@@ -7,13 +7,14 @@ import { AdminDashboard } from './components/AdminDashboard'; // Import du Dashb
 import { CompanyManager } from './components/CompanyManager';
 import { ProjectManager } from './components/ProjectManager';
 import { SettingsManager } from './components/SettingsManager';
+import { ConcreteTestManager } from './components/ConcreteTestManager';
 import { Building2, FlaskConical, LogOut, ShieldCheck, ChevronLeft, Building, Briefcase, LayoutGrid, Settings } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings'
+  // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings' | 'fresh_tests'
   const [view, setView] = useState<string>('dashboard');
 
   // Vérification connexion DB
@@ -48,7 +49,11 @@ const App: React.FC = () => {
   };
 
   const handleModuleClick = (module: string) => {
-    console.log(`Navigation vers le module : ${module}`);
+    if (module === 'fresh') {
+      setView('fresh_tests');
+    } else {
+      console.log(`Module ${module} non implémenté pour l'instant`);
+    }
   };
 
   // 1. Si pas connecté, afficher Login
@@ -183,6 +188,11 @@ const App: React.FC = () => {
             <SettingsManager token={currentUser.token || ''} />
           )}
 
+          {/* View: FRESH CONCRETE TESTS (PRÉLÈVEMENTS) */}
+          {view === 'fresh_tests' && (
+            <ConcreteTestManager token={currentUser.token || ''} onBack={() => setView('dashboard')} />
+          )}
+
           {/* View: DASHBOARD */}
           {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
              <>
@@ -208,9 +218,9 @@ const App: React.FC = () => {
 
                 <div className="grid md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-4xl mx-auto">
                   <MenuCard 
-                    title="Essais Béton Frais" 
+                    title="Prélèvements & Béton Frais" 
                     standard="NF EN 12350"
-                    description="Saisie des essais sur béton frais : affaissement (slump), teneur en air, masse volumique..."
+                    description="Créer une nouvelle fiche : Identification, Formulation, Slump et Fabrication des éprouvettes."
                     iconType="fresh"
                     onClick={() => handleModuleClick('fresh')}
                   />
@@ -218,7 +228,7 @@ const App: React.FC = () => {
                   <MenuCard 
                     title="Essais Béton Durci" 
                     standard="NF EN 12390"
-                    description="Suivi de la cure, surfaçage et essais de résistance à la compression."
+                    description="Saisie des résultats de rupture (Compression) pour les fiches existantes."
                     iconType="hardened"
                     onClick={() => handleModuleClick('hardened')}
                   />
