@@ -20,8 +20,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_temporaire_labo_beton_2024';
 
+// Augmentation de la limite de taille pour supporter l'upload de logo en Base64
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- Initialisation Base de Données ---
 const connectDB = async () => {
@@ -119,16 +121,13 @@ app.post('/api/auth/login', async (req, res) => {
 
     const token = jwt.sign({ id: user._id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '8h' });
 
+    // On renvoie l'utilisateur complet sans le password
+    const userObj = user.toObject();
+    delete userObj.password;
+
     res.json({
       token,
-      user: { 
-        id: user._id, 
-        username: user.username, 
-        role: user.role,
-        companyName: user.companyName,
-        address: user.address,
-        contact: user.contact
-      }
+      user: { id: user._id, ...userObj }
     });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur" });
@@ -149,7 +148,7 @@ app.get('/api/auth/profile', authenticateToken, async (req, res) => {
 // Mettre à jour le profil actuel
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { companyName, address, contact, password } = req.body;
+    const { companyName, address, contact, password, siret, apeCode, legalInfo, logo } = req.body;
     
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
@@ -158,6 +157,12 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     if (companyName !== undefined) user.companyName = companyName;
     if (address !== undefined) user.address = address;
     if (contact !== undefined) user.contact = contact;
+    
+    // Nouveaux champs
+    if (siret !== undefined) user.siret = siret;
+    if (apeCode !== undefined) user.apeCode = apeCode;
+    if (legalInfo !== undefined) user.legalInfo = legalInfo;
+    if (logo !== undefined) user.logo = logo;
 
     // Mise à jour du mot de passe si fourni
     if (password && password.trim() !== "") {
@@ -173,6 +178,7 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     
     res.json(userObj);
   } catch (error) {
+    console.error(error);
     res.status(400).json({ message: "Erreur mise à jour profil", error: error.message });
   }
 });

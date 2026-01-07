@@ -15,6 +15,11 @@ export interface User {
   companyName?: string;
   address?: string;
   contact?: string;
+  // Nouveaux champs
+  siret?: string;
+  apeCode?: string;
+  legalInfo?: string; // Pour RCS, Capital Social...
+  logo?: string;      // Base64 string
 }
 
 export interface Company {

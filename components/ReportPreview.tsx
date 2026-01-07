@@ -27,6 +27,14 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
   const headerName = user?.companyName || "Nom du Laboratoire";
   const headerAddress = user?.address || "Adresse non renseignée";
   const headerContact = user?.contact || "Contact non renseigné";
+  const headerLogo = user?.logo;
+
+  // Pied de page légal
+  const legalParts = [];
+  if (user?.siret) legalParts.push(`SIRET : ${user.siret}`);
+  if (user?.apeCode) legalParts.push(`APE : ${user.apeCode}`);
+  if (user?.legalInfo) legalParts.push(user.legalInfo);
+  const legalString = legalParts.join(' - ');
 
   const handlePrint = () => {
     const printContent = document.getElementById('report-content');
@@ -101,17 +109,25 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
            {/* REPORT PAPER (A4 RATIO) */}
            <div 
              id="report-content" 
-             className="bg-white w-[210mm] min-h-[297mm] p-[15mm] shadow-xl text-black text-sm relative"
+             className="bg-white w-[210mm] min-h-[297mm] p-[15mm] shadow-xl text-black text-sm relative flex flex-col"
              style={{ fontFamily: 'Arial, sans-serif' }}
            >
-              {/* HEADER LABO - DYNAMIQUE */}
+              {/* HEADER LABO - DYNAMIQUE AVEC LOGO */}
               <div className="flex justify-between items-start mb-8 border-b-2 border-black pb-4">
-                 <div>
-                    <h1 className="text-2xl font-black uppercase tracking-wider mb-1">{headerName}</h1>
-                    <p className="text-xs text-gray-600">Laboratoire de Contrôle des Matériaux</p>
-                    <p className="text-xs text-gray-600">{headerAddress}</p>
-                    <p className="text-xs text-gray-600">{headerContact}</p>
+                 <div className="flex gap-4">
+                    {/* LOGO */}
+                    {headerLogo && (
+                       <img src={headerLogo} alt="Logo" className="h-24 w-auto object-contain max-w-[150px]" />
+                    )}
+                    
+                    <div>
+                      <h1 className="text-2xl font-black uppercase tracking-wider mb-1">{headerName}</h1>
+                      <p className="text-xs text-gray-600">Laboratoire de Contrôle des Matériaux</p>
+                      <p className="text-xs text-gray-600 whitespace-pre-wrap">{headerAddress}</p>
+                      <p className="text-xs text-gray-600">{headerContact}</p>
+                    </div>
                  </div>
+                 
                  <div className="text-right">
                     <h2 className="text-xl font-bold uppercase text-safety-orange">{type === 'PV' ? 'PROCÈS VERBAL' : 'RAPPORT FINAL'}</h2>
                     <p className="font-mono font-bold text-lg mt-1">{test.reference}</p>
@@ -233,9 +249,12 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                  </div>
               </div>
 
-              {/* FOOTER PAGE - DYNAMIQUE */}
-              <div className="absolute bottom-4 left-0 right-0 text-center text-[10px] text-gray-400 px-8">
-                 {headerName} - Document généré informatiquement le {reportDate}.
+              {/* FOOTER PAGE - DYNAMIQUE AVEC INFOS LEGALES */}
+              <div className="absolute bottom-4 left-0 right-0 text-center px-8">
+                 <div className="border-t border-gray-300 pt-2 text-[10px] text-gray-500">
+                   <p>{headerName} - Document généré informatiquement le {reportDate}.</p>
+                   {legalString && <p className="mt-1 font-medium">{legalString}</p>}
+                 </div>
               </div>
            </div>
 
