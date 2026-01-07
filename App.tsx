@@ -3,20 +3,19 @@ import { ConnectionStatus, User } from './types';
 import { StatusBadge } from './components/StatusBadge';
 import { LoginScreen } from './components/LoginScreen';
 import { AdminDashboard } from './components/AdminDashboard'; 
-import { CompanyManager } from './components/CompanyManager';
-import { ProjectManager } from './components/ProjectManager';
 import { SettingsManager } from './components/SettingsManager';
 import { ConcreteTestManager } from './components/ConcreteTestManager';
 import { CalendarView } from './components/CalendarView'; 
-import { DashboardHome } from './components/DashboardHome'; // NEW IMPORT
-import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Briefcase, Settings, Calendar } from 'lucide-react';
+import { DashboardHome } from './components/DashboardHome';
+import { RelationsManager } from './components/RelationsManager'; // NEW IMPORT
+import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Users } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   // Vue principale
-  const [view, setView] = useState<string>('dashboard'); // Default view is now dashboard (which loads DashboardHome)
+  const [view, setView] = useState<string>('dashboard');
 
   // Vérification connexion DB
   useEffect(() => {
@@ -120,16 +119,10 @@ const App: React.FC = () => {
                   <Calendar className="w-4 h-4" /> Planning
                 </button>
                 <button 
-                  onClick={() => setView('projects')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  onClick={() => setView('relations')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'relations' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
                 >
-                  <Briefcase className="w-4 h-4" /> Affaires
-                </button>
-                <button 
-                  onClick={() => setView('companies')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                >
-                  <Building className="w-4 h-4" /> Clients
+                  <Users className="w-4 h-4" /> Clients & Affaires
                 </button>
              </div>
 
@@ -159,7 +152,7 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-6xl">
+        <div className="w-full max-w-7xl">
           
           {/* Connection Error State */}
           {dbStatus === ConnectionStatus.ERROR && (
@@ -177,14 +170,9 @@ const App: React.FC = () => {
             <CalendarView token={currentUser.token || ''} />
           )}
 
-          {/* View: ENTREPRISES */}
-          {view === 'companies' && (
-            <CompanyManager token={currentUser.token || ''} />
-          )}
-
-          {/* View: AFFAIRES */}
-          {view === 'projects' && (
-            <ProjectManager token={currentUser.token || ''} />
+          {/* View: CLIENTS & AFFAIRES (RELATIONS) */}
+          {view === 'relations' && (
+            <RelationsManager token={currentUser.token || ''} />
           )}
 
           {/* View: SETTINGS */}

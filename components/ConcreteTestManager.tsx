@@ -522,15 +522,8 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       onChange={e => setFormData({...formData, elementName: e.target.value})}
                     />
                  </div>
-                 <div>
-                    <label className="block text-xs font-bold text-concrete-500 mb-1">Date Réception Béton</label>
-                    <input 
-                      type="date"
-                      className="w-full p-2 border border-concrete-300 rounded"
-                      value={formData.receptionDate}
-                      onChange={e => setFormData({...formData, receptionDate: e.target.value})}
-                    />
-                 </div>
+                 
+                 {/* MODIFICATION : ORDRE INVERSÉ (Prélèvement AVANT Réception) */}
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Date Prélèvement</label>
                     <input 
@@ -546,6 +539,15 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                         }));
                         setFormData(prev => ({ ...prev, specimens: updatedSpecimens, samplingDate: e.target.value }));
                       }}
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Date Réception Béton</label>
+                    <input 
+                      type="date"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.receptionDate}
+                      onChange={e => setFormData({...formData, receptionDate: e.target.value})}
                     />
                  </div>
               </div>
