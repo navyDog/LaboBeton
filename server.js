@@ -265,6 +265,25 @@ app.post('/api/concrete-tests', authenticateToken, async (req, res) => {
   }
 });
 
+app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
+  try {
+    const test = await ConcreteTest.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!test) return res.status(404).json({ message: "Fiche non trouvée" });
+
+    // Mise à jour des champs
+    Object.assign(test, req.body);
+    
+    // Le pre-save hook recalcule la consistance et les séquences si nécessaire
+    // Note: Mongoose save() déclenche les hooks
+    await test.save();
+    
+    res.json(test);
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ message: "Erreur modification", error: error.message });
+  }
+});
+
 app.delete('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
   try {
     const deleted = await ConcreteTest.findOneAndDelete({ _id: req.params.id, userId: req.user.id });

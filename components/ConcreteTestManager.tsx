@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen } from '../types';
 
 interface ConcreteTestManagerProps {
@@ -33,6 +33,9 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Edit State
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Initial Form State
   const initialFormState = {
@@ -96,6 +99,13 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     fetchData();
   }, [token]);
 
+  // Reset form helper
+  const resetForm = () => {
+    setFormData(initialFormState);
+    setEditingId(null);
+    setViewMode('list');
+  };
+
   // Gestion des packs d'éprouvettes
   const handleAddPack = () => {
     if (packCount <= 0) return;
@@ -142,6 +152,42 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setFormData({ ...formData, specimens: renumbered });
   };
 
+  // Prepare Edit
+  const handleEdit = (test: ConcreteTest) => {
+    setFormData({
+      projectId: test.projectId,
+      structureName: test.structureName || '',
+      elementName: test.elementName || '',
+      receptionDate: test.receptionDate ? new Date(test.receptionDate).toISOString().split('T')[0] : initialFormState.receptionDate,
+      samplingDate: test.samplingDate ? new Date(test.samplingDate).toISOString().split('T')[0] : initialFormState.samplingDate,
+      volume: test.volume || 0,
+      
+      concreteClass: test.concreteClass || '',
+      mixType: test.mixType || '',
+      formulaInfo: test.formulaInfo || '',
+      manufacturer: test.manufacturer || '',
+      manufacturingPlace: test.manufacturingPlace || '',
+      deliveryMethod: test.deliveryMethod || '',
+      
+      slump: test.slump || 0,
+      samplingPlace: test.samplingPlace || '',
+      
+      tightening: test.tightening || 'Piquage',
+      vibrationTime: test.vibrationTime || 0,
+      layers: test.layers || 2,
+      curing: test.curing || '',
+      
+      testType: test.testType || '',
+      standard: test.standard || '',
+      preparation: test.preparation || '',
+      pressMachine: test.pressMachine || 'Presse 3000kN',
+      
+      specimens: test.specimens || []
+    });
+    setEditingId(test._id);
+    setViewMode('create');
+  };
+
   // Handlers
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,8 +203,11 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     };
 
     try {
-      const res = await fetch('/api/concrete-tests', {
-        method: 'POST',
+      const url = editingId ? `/api/concrete-tests/${editingId}` : '/api/concrete-tests';
+      const method = editingId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
@@ -167,12 +216,17 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       });
 
       if (res.ok) {
-        const newTest = await res.json();
-        setTests([newTest, ...tests]);
-        setViewMode('list');
-        setFormData(initialFormState);
+        const updatedTest = await res.json();
+        
+        if (editingId) {
+          setTests(tests.map(t => t._id === editingId ? updatedTest : t));
+        } else {
+          setTests([updatedTest, ...tests]);
+        }
+        
+        resetForm();
       } else {
-        alert("Erreur lors de la création.");
+        alert("Erreur lors de l'enregistrement.");
       }
     } catch (error) {
       console.error(error);
@@ -206,10 +260,12 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
         <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
           <div className="flex items-center gap-3">
-             <button onClick={() => setViewMode('list')} className="text-concrete-400 hover:text-white transition-colors">
+             <button onClick={resetForm} className="text-concrete-400 hover:text-white transition-colors">
                <ArrowLeft className="w-5 h-5" />
              </button>
-             <h2 className="text-xl font-bold text-white">Nouveau Prélèvement Béton</h2>
+             <h2 className="text-xl font-bold text-white">
+               {editingId ? 'Modifier Prélèvement Béton' : 'Nouveau Prélèvement Béton'}
+             </h2>
           </div>
         </div>
         
@@ -519,7 +575,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
            <div className="flex justify-end pt-6">
               <button 
                 type="button" 
-                onClick={() => setViewMode('list')}
+                onClick={resetForm}
                 className="mr-4 px-6 py-3 text-concrete-600 hover:bg-concrete-100 rounded-lg font-medium"
               >
                 Annuler
@@ -528,7 +584,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                 type="submit" 
                 className="px-8 py-3 bg-safety-orange text-white rounded-lg hover:bg-orange-600 font-bold shadow-lg hover:shadow-xl transition-all"
               >
-                Créer la fiche
+                {editingId ? 'Mettre à jour' : 'Créer la fiche'}
               </button>
            </div>
         </form>
@@ -550,7 +606,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
           </div>
         </div>
         <button 
-          onClick={() => setViewMode('create')}
+          onClick={() => { resetForm(); setViewMode('create'); }}
           className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-bold"
         >
           <Plus className="w-4 h-4" />
@@ -619,6 +675,13 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       <span className="font-bold text-concrete-700">{test.specimenCount}</span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                       <button 
+                         onClick={() => handleEdit(test)}
+                         className="text-concrete-300 hover:text-safety-orange transition-colors p-1"
+                         title="Modifier"
+                       >
+                         <Pencil className="w-4 h-4" />
+                       </button>
                        <button 
                          onClick={() => handleDelete(test._id)}
                          className="text-concrete-300 hover:text-red-500 transition-colors p-1"
