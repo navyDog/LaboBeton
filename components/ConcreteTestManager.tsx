@@ -471,7 +471,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
           />
         )}
 
-        <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+        <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center sticky top-16 z-20">
           <div className="flex items-center gap-3">
              <button type="button" onClick={resetForm} className="text-concrete-400 hover:text-white transition-colors">
                <ArrowLeft className="w-5 h-5" />
