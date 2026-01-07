@@ -7,6 +7,8 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import User from './models/User.js';
+import Company from './models/Company.js';
+import Project from './models/Project.js';
 
 // Configuration des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -79,9 +81,8 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// --- Routes API ---
+// --- Routes API Auth ---
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   try {
@@ -112,9 +113,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Création utilisateur (ADMIN SEULEMENT)
+// --- Routes API Admin (Users) ---
+
 app.post('/api/users', authenticateToken, async (req, res) => {
-  // Vérification rôle admin
   if (req.user.role !== 'admin') {
     return res.status(403).json({ message: "Accès réservé aux administrateurs." });
   }
@@ -122,11 +123,8 @@ app.post('/api/users', authenticateToken, async (req, res) => {
   const { username, password, role, companyName, address, contact } = req.body;
 
   try {
-    // Vérifier si user existe déjà
     const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      return res.status(400).json({ message: "Ce nom d'utilisateur existe déjà." });
-    }
+    if (existingUser) return res.status(400).json({ message: "Ce nom d'utilisateur existe déjà." });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -141,18 +139,99 @@ app.post('/api/users', authenticateToken, async (req, res) => {
     });
 
     await newUser.save();
-
-    res.status(201).json({ 
-      message: "Utilisateur créé avec succès",
-      user: { username: newUser.username, role: newUser.role, companyName: newUser.companyName }
-    });
-
+    res.status(201).json({ message: "Utilisateur créé", user: { username: newUser.username } });
   } catch (error) {
-    console.error("Erreur création user:", error);
-    res.status(500).json({ message: "Erreur lors de la création de l'utilisateur." });
+    res.status(500).json({ message: "Erreur création utilisateur." });
   }
 });
 
+app.get('/api/users', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ message: "Accès réservé aux administrateurs." });
+  
+  try {
+    const users = await User.find({}, '-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération utilisateurs" });
+  }
+});
+
+// --- Routes API Entreprises (Companies) ---
+
+// Lister les entreprises de l'utilisateur connecté
+app.get('/api/companies', authenticateToken, async (req, res) => {
+  try {
+    const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 });
+    res.json(companies);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération entreprises" });
+  }
+});
+
+// Ajouter une entreprise
+app.post('/api/companies', authenticateToken, async (req, res) => {
+  try {
+    const newCompany = new Company({
+      ...req.body,
+      userId: req.user.id
+    });
+    await newCompany.save();
+    res.status(201).json(newCompany);
+  } catch (error) {
+    res.status(400).json({ message: "Erreur création entreprise", error: error.message });
+  }
+});
+
+// Supprimer une entreprise
+app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!deleted) return res.status(404).json({ message: "Entreprise non trouvée" });
+    res.json({ message: "Entreprise supprimée" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur suppression" });
+  }
+});
+
+// --- Routes API Affaires (Projects) ---
+
+// Lister les affaires de l'utilisateur connecté
+app.get('/api/projects', authenticateToken, async (req, res) => {
+  try {
+    const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(projects);
+  } catch (error) {
+    res.status(500).json({ message: "Erreur récupération affaires" });
+  }
+});
+
+// Ajouter une affaire
+app.post('/api/projects', authenticateToken, async (req, res) => {
+  try {
+    const newProject = new Project({
+      ...req.body,
+      userId: req.user.id
+    });
+    await newProject.save();
+    res.status(201).json(newProject);
+  } catch (error) {
+    res.status(400).json({ message: "Erreur création affaire", error: error.message });
+  }
+});
+
+// Supprimer une affaire
+app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!deleted) return res.status(404).json({ message: "Affaire non trouvée" });
+    res.json({ message: "Affaire supprimée" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur suppression" });
+  }
+});
+
+
+// --- Health & Static ---
 app.get('/api/health', (req, res) => {
   const state = mongoose.connection.readyState;
   if (state === 1) {
@@ -162,32 +241,20 @@ app.get('/api/health', (req, res) => {
   }
 });
 
-// --- Gestion Frontend (Production & Fallback) ---
 app.use(express.static(path.join(__dirname, 'dist')));
 
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) {
-    return res.status(404).json({ message: "Route API non trouvée" });
-  }
-
+  if (req.path.startsWith('/api')) return res.status(404).json({ message: "Route API non trouvée" });
   if (req.accepts('html')) {
     const indexPath = path.join(__dirname, 'dist', 'index.html');
     res.sendFile(indexPath, (err) => {
-      if (err) {
-        res.status(200).send(`
-          <div style="font-family: sans-serif; padding: 2rem; text-align: center;">
-            <h1>API Backend LaboBéton En Ligne 🚀</h1>
-            <p>Le serveur backend tourne sur le port ${PORT}.</p>
-          </div>
-        `);
-      }
+      if (err) res.status(200).send('<h1>API Backend Running</h1>');
     });
   } else {
     res.status(404).send('Not Found');
   }
 });
 
-// Démarrage serveur
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Serveur Backend prêt sur http://localhost:${PORT}`);

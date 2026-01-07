@@ -11,10 +11,28 @@ export interface User {
   username: string;
   role: UserRole;
   token?: string;
-  // Nouveaux champs
   companyName?: string;
   address?: string;
   contact?: string;
+}
+
+export interface Company {
+  _id: string;
+  name: string;
+  contactName: string;
+  email: string;
+  phone: string;
+}
+
+export interface Project {
+  _id: string;
+  name: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  moa: string;
+  moe: string;
+  status: string;
 }
 
 export interface MenuItem {

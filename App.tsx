@@ -4,13 +4,17 @@ import { StatusBadge } from './components/StatusBadge';
 import { MenuCard } from './components/MenuCard';
 import { LoginScreen } from './components/LoginScreen';
 import { AdminUserForm } from './components/AdminUserForm';
-import { Building2, FlaskConical, LogOut, ShieldCheck, Users, ChevronLeft } from 'lucide-react';
+import { CompanyManager } from './components/CompanyManager';
+import { ProjectManager } from './components/ProjectManager';
+import { Building2, FlaskConical, LogOut, ShieldCheck, Users, ChevronLeft, Building, Briefcase, LayoutGrid } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
   const [lastChecked, setLastChecked] = useState<Date | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [view, setView] = useState<'dashboard' | 'admin'>('dashboard');
+  
+  // Vue principale : 'dashboard' | 'admin' | 'companies' | 'projects'
+  const [view, setView] = useState<string>('dashboard');
 
   // Vérification connexion DB
   useEffect(() => {
@@ -59,11 +63,11 @@ const App: React.FC = () => {
       <header className="bg-white border-b border-concrete-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-concrete-900 text-white p-2 rounded-lg">
+            <div className="bg-concrete-900 text-white p-2 rounded-lg cursor-pointer" onClick={() => setView('dashboard')}>
               <Building2 className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-concrete-900 leading-tight">LaboBéton</h1>
+              <h1 className="text-xl font-bold text-concrete-900 leading-tight cursor-pointer" onClick={() => setView('dashboard')}>LaboBéton</h1>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-concrete-500 font-medium">Connecté en tant que <strong>{currentUser.username}</strong></span>
                 {currentUser.role === 'admin' && (
@@ -75,33 +79,44 @@ const App: React.FC = () => {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-             {/* Bouton Admin Dashboard */}
-             {currentUser.role === 'admin' && view === 'dashboard' && (
+          <div className="flex items-center gap-2 md:gap-4">
+             {/* Navigation Menu */}
+             <div className="hidden md:flex items-center bg-concrete-100 rounded-lg p-1 gap-1">
+                <button 
+                  onClick={() => setView('dashboard')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'dashboard' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                >
+                  <LayoutGrid className="w-4 h-4" /> Accueil
+                </button>
+                <button 
+                  onClick={() => setView('projects')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                >
+                  <Briefcase className="w-4 h-4" /> Mes Affaires
+                </button>
+                <button 
+                  onClick={() => setView('companies')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                >
+                  <Building className="w-4 h-4" /> Mes Entreprises
+                </button>
+             </div>
+
+             {/* Bouton Admin */}
+             {currentUser.role === 'admin' && (
                <button 
-                onClick={() => setView('admin')}
-                className="flex items-center gap-2 px-3 py-1.5 bg-concrete-800 text-white text-xs font-semibold rounded hover:bg-concrete-700 transition-colors"
+                onClick={() => setView(view === 'admin' ? 'dashboard' : 'admin')}
+                className={`flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded transition-colors ${view === 'admin' ? 'bg-concrete-800 text-white' : 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'}`}
                >
                  <Users className="w-4 h-4" />
-                 Gestion Clients
+                 <span className="hidden sm:inline">Gestion Clients</span>
                </button>
              )}
 
-            {/* Bouton Retour Dashboard */}
-            {view === 'admin' && (
-               <button 
-                onClick={() => setView('dashboard')}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-concrete-300 text-concrete-700 text-xs font-semibold rounded hover:bg-concrete-50 transition-colors"
-               >
-                 <ChevronLeft className="w-4 h-4" />
-                 Retour Menu
-               </button>
-             )}
-
-             <div className="hidden md:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
-               {lastChecked && `Synchro: ${lastChecked.toLocaleTimeString()}`}
+             <div className="hidden lg:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
+               <StatusBadge status={dbStatus} />
              </div>
-             <StatusBadge status={dbStatus} />
+             
              <button 
                 onClick={handleLogout}
                 className="ml-2 p-2 text-concrete-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
@@ -115,7 +130,7 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-5xl">
+        <div className="w-full max-w-6xl">
           
           {/* Connection Error State */}
           {dbStatus === ConnectionStatus.ERROR && (
@@ -133,17 +148,37 @@ const App: React.FC = () => {
              <AdminUserForm currentUser={currentUser} onClose={() => setView('dashboard')} />
           )}
 
+          {/* View: ENTREPRISES */}
+          {view === 'companies' && (
+            <CompanyManager token={currentUser.token || ''} />
+          )}
+
+          {/* View: AFFAIRES */}
+          {view === 'projects' && (
+            <ProjectManager token={currentUser.token || ''} />
+          )}
+
           {/* View: DASHBOARD */}
           {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
              <>
                <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <h2 className="text-3xl font-bold text-concrete-900 mb-4">Tableau de Bord Laboratoire</h2>
                   <p className="text-concrete-500 max-w-2xl mx-auto text-lg">
-                    Bienvenue, {currentUser.companyName ? currentUser.companyName : currentUser.username}. Sélectionnez un module ci-dessous.
+                    Bienvenue, {currentUser.companyName ? currentUser.companyName : currentUser.username}. 
                   </p>
+                  
+                  {/* Mobile Navigation Links */}
+                  <div className="md:hidden flex justify-center gap-4 mt-6">
+                    <button onClick={() => setView('projects')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
+                      <Briefcase className="w-4 h-4" /> Mes Affaires
+                    </button>
+                    <button onClick={() => setView('companies')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
+                      <Building className="w-4 h-4" /> Mes Entreprises
+                    </button>
+                  </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="grid md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-4xl mx-auto">
                   <MenuCard 
                     title="Essais Béton Frais" 
                     standard="NF EN 12350"
