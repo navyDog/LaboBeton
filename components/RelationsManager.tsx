@@ -12,12 +12,12 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
   const [loading, setLoading] = useState(true);
 
   // --- ETATS CLIENTS (GAUCHE) ---
-  const [showCompanyForm, setShowCompanyForm] = useState(false);
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
   const [companyForm, setCompanyForm] = useState({ name: '', contactName: '', email: '', phone: '' });
 
   // --- ETATS AFFAIRES (DROITE) ---
-  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [projectForm, setProjectForm] = useState({ 
     name: '', companyId: '', contactName: '', email: '', phone: '', moa: '', moe: '' 
@@ -47,13 +47,13 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
   const handleEditCompany = (c: Company) => {
     setCompanyForm({ name: c.name, contactName: c.contactName || '', email: c.email || '', phone: c.phone || '' });
     setEditingCompanyId(c._id);
-    setShowCompanyForm(true);
+    setShowCompanyModal(true);
   };
 
-  const resetCompanyForm = () => {
+  const closeCompanyModal = () => {
     setCompanyForm({ name: '', contactName: '', email: '', phone: '' });
     setEditingCompanyId(null);
-    setShowCompanyForm(false);
+    setShowCompanyModal(false);
   };
 
   const submitCompany = async (e: React.FormEvent) => {
@@ -67,7 +67,7 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
         body: JSON.stringify(companyForm)
       });
       if (res.ok) {
-        resetCompanyForm();
+        closeCompanyModal();
         fetchData();
       }
     } catch (err) { console.error(err); }
@@ -89,13 +89,13 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
       email: p.email || '', phone: p.phone || '', moa: p.moa || '', moe: p.moe || ''
     });
     setEditingProjectId(p._id);
-    setShowProjectForm(true);
+    setShowProjectModal(true);
   };
 
-  const resetProjectForm = () => {
+  const closeProjectModal = () => {
     setProjectForm({ name: '', companyId: '', contactName: '', email: '', phone: '', moa: '', moe: '' });
     setEditingProjectId(null);
-    setShowProjectForm(false);
+    setShowProjectModal(false);
   };
 
   const submitProject = async (e: React.FormEvent) => {
@@ -112,7 +112,7 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
         body: JSON.stringify(payload)
       });
       if (res.ok) {
-        resetProjectForm();
+        closeProjectModal();
         fetchData();
       }
     } catch (err) { console.error(err); }
@@ -137,37 +137,12 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
         <div className="flex justify-between items-end px-1">
           <h2 className="text-xl font-bold text-concrete-900">Clients</h2>
           <button 
-            onClick={() => { resetCompanyForm(); setShowCompanyForm(!showCompanyForm); }}
-            className="text-xs font-bold text-safety-orange hover:text-orange-600 transition-colors uppercase tracking-wide"
+            onClick={() => { closeCompanyModal(); setShowCompanyModal(true); }}
+            className="text-xs font-bold text-safety-orange hover:text-orange-600 transition-colors uppercase tracking-wide flex items-center gap-1"
           >
-            {showCompanyForm ? 'Fermer' : '+ Ajouter'}
+            <Plus className="w-4 h-4" /> Ajouter
           </button>
         </div>
-
-        {/* FORMULAIRE CLIENT (ÉPURÉ) */}
-        {showCompanyForm && (
-          <div className="bg-white p-5 rounded-2xl shadow-lg border border-concrete-100 z-10 relative">
-            <form onSubmit={submitCompany} className="space-y-4">
-              <div>
-                <input required className="w-full text-lg font-bold border-none border-b border-concrete-200 p-0 py-2 focus:ring-0 focus:border-safety-orange placeholder:text-concrete-300 transition-colors" placeholder="Nom de l'entreprise" 
-                  value={companyForm.name} onChange={e => setCompanyForm({...companyForm, name: e.target.value})} autoFocus />
-              </div>
-              
-              <div className="grid grid-cols-1 gap-3">
-                 <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="Nom du contact" 
-                  value={companyForm.contactName} onChange={e => setCompanyForm({...companyForm, contactName: e.target.value})} />
-                 <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="Email" 
-                  value={companyForm.email} onChange={e => setCompanyForm({...companyForm, email: e.target.value})} />
-                 <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="Téléphone" 
-                  value={companyForm.phone} onChange={e => setCompanyForm({...companyForm, phone: e.target.value})} />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                 <button type="submit" className="px-4 py-2 text-sm bg-concrete-900 text-white rounded-lg font-medium hover:bg-black transition-colors">{editingCompanyId ? 'Modifier' : 'Créer'}</button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {/* LISTE CLIENTS */}
         <div className="bg-white rounded-2xl shadow-sm border border-concrete-100 overflow-hidden min-h-[500px]">
@@ -210,58 +185,12 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
         <div className="flex justify-between items-end px-1">
           <h2 className="text-xl font-bold text-concrete-900">Affaires</h2>
           <button 
-            onClick={() => { resetProjectForm(); setShowProjectForm(!showProjectForm); }}
+            onClick={() => { closeProjectModal(); setShowProjectModal(true); }}
             className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-full hover:bg-orange-600 transition-colors shadow-sm text-sm font-bold"
           >
-            {showProjectForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showProjectForm ? 'Annuler' : 'Nouvelle Affaire'}
+            <Plus className="w-4 h-4" /> Nouvelle Affaire
           </button>
         </div>
-
-        {/* FORMULAIRE AFFAIRE (ÉPURÉ) */}
-        {showProjectForm && (
-          <div className="bg-white p-6 rounded-2xl shadow-xl border border-concrete-100 mb-6 animate-in slide-in-from-top-4">
-             <form onSubmit={submitProject} className="flex flex-col gap-6">
-                
-                {/* Ligne Principale */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Nom du Projet</label>
-                        <input required className="w-full text-xl font-bold border-none border-b border-concrete-200 p-0 py-2 focus:ring-0 focus:border-safety-orange placeholder:text-concrete-300" placeholder="ex: Résidence Les Pins" 
-                        value={projectForm.name} onChange={e => setProjectForm({...projectForm, name: e.target.value})} autoFocus />
-                    </div>
-                    <div>
-                        <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Client</label>
-                        <select className="w-full bg-concrete-50 rounded-lg p-2.5 text-sm font-medium border-none focus:ring-1 focus:ring-safety-orange" value={projectForm.companyId} onChange={e => setProjectForm({...projectForm, companyId: e.target.value})}>
-                            <option value="">-- Sélectionner un client --</option>
-                            {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                        </select>
-                    </div>
-                </div>
-                
-                {/* Détails Secondaires (Grid propre) */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-concrete-50">
-                    <div className="col-span-2 md:col-span-1">
-                         <label className="text-[10px] font-bold text-concrete-400 uppercase mb-1 block">Contact Site</label>
-                         <input className="w-full text-sm bg-concrete-50 rounded px-2 py-1.5 border-none" placeholder="Nom..." value={projectForm.contactName} onChange={e => setProjectForm({...projectForm, contactName: e.target.value})} />
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                         <label className="text-[10px] font-bold text-concrete-400 uppercase mb-1 block">MOA</label>
-                         <input className="w-full text-sm bg-concrete-50 rounded px-2 py-1.5 border-none" placeholder="Maître d'Ouvrage" value={projectForm.moa} onChange={e => setProjectForm({...projectForm, moa: e.target.value})} />
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                         <label className="text-[10px] font-bold text-concrete-400 uppercase mb-1 block">MOE</label>
-                         <input className="w-full text-sm bg-concrete-50 rounded px-2 py-1.5 border-none" placeholder="Maître d'Oeuvre" value={projectForm.moe} onChange={e => setProjectForm({...projectForm, moe: e.target.value})} />
-                    </div>
-                     <div className="col-span-2 md:col-span-1 flex items-end">
-                        <button type="submit" className="w-full py-2 bg-concrete-900 text-white rounded-lg text-sm font-bold hover:bg-black transition-colors">
-                            {editingProjectId ? 'Sauvegarder' : 'Créer'}
-                        </button>
-                    </div>
-                </div>
-             </form>
-          </div>
-        )}
 
         {/* GRILLE AFFAIRES */}
         {projects.length === 0 ? (
@@ -313,6 +242,120 @@ export const RelationsManager: React.FC<RelationsManagerProps> = ({ token }) => 
           </div>
         )}
       </div>
+
+      {/* --- POP-UP (MODALE) : CLIENT --- */}
+      {showCompanyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200">
+            <button onClick={closeCompanyModal} className="absolute top-4 right-4 text-concrete-400 hover:text-concrete-900 transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+            
+            <h3 className="text-xl font-bold text-concrete-900 mb-6 flex items-center gap-2">
+              <Building className="w-6 h-6 text-safety-orange" />
+              {editingCompanyId ? 'Modifier Client' : 'Nouveau Client'}
+            </h3>
+
+            <form onSubmit={submitCompany} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Nom Entreprise</label>
+                <input required className="w-full text-lg font-bold border-none border-b border-concrete-200 p-0 py-2 focus:ring-0 focus:border-safety-orange placeholder:text-concrete-300 transition-colors" placeholder="ex: BTP Construction" 
+                  value={companyForm.name} onChange={e => setCompanyForm({...companyForm, name: e.target.value})} autoFocus />
+              </div>
+              
+              <div className="space-y-3 pt-2">
+                 <div>
+                   <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Contact</label>
+                   <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="Nom du contact" 
+                    value={companyForm.contactName} onChange={e => setCompanyForm({...companyForm, contactName: e.target.value})} />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Email</label>
+                   <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="contact@exemple.com" 
+                    value={companyForm.email} onChange={e => setCompanyForm({...companyForm, email: e.target.value})} />
+                 </div>
+                 <div>
+                   <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Téléphone</label>
+                   <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="01..." 
+                    value={companyForm.phone} onChange={e => setCompanyForm({...companyForm, phone: e.target.value})} />
+                 </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                 <button type="button" onClick={closeCompanyModal} className="px-4 py-2 text-sm text-concrete-600 font-medium hover:bg-concrete-50 rounded-lg">Annuler</button>
+                 <button type="submit" className="px-6 py-2 text-sm bg-concrete-900 text-white rounded-lg font-bold hover:bg-black transition-colors shadow-lg">
+                   {editingCompanyId ? 'Sauvegarder' : 'Créer Client'}
+                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- POP-UP (MODALE) : AFFAIRE --- */}
+      {showProjectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-2xl relative animate-in zoom-in-95 duration-200">
+             <button onClick={closeProjectModal} className="absolute top-4 right-4 text-concrete-400 hover:text-concrete-900 transition-colors">
+               <X className="w-5 h-5" />
+             </button>
+
+             <h3 className="text-xl font-bold text-concrete-900 mb-6 flex items-center gap-2">
+               <Briefcase className="w-6 h-6 text-safety-orange" />
+               {editingProjectId ? 'Modifier Affaire' : 'Nouvelle Affaire'}
+             </h3>
+
+             <form onSubmit={submitProject} className="flex flex-col gap-6">
+                
+                {/* Ligne Principale */}
+                <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Nom du Projet / Chantier</label>
+                        <input required className="w-full text-xl font-bold border-none border-b border-concrete-200 p-0 py-2 focus:ring-0 focus:border-safety-orange placeholder:text-concrete-300" placeholder="ex: Résidence Les Pins" 
+                        value={projectForm.name} onChange={e => setProjectForm({...projectForm, name: e.target.value})} autoFocus />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Client (Entreprise)</label>
+                        <select className="w-full bg-concrete-50 rounded-lg p-2.5 text-sm font-medium border-none focus:ring-1 focus:ring-safety-orange cursor-pointer" value={projectForm.companyId} onChange={e => setProjectForm({...projectForm, companyId: e.target.value})}>
+                            <option value="">-- Sélectionner --</option>
+                            {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                        </select>
+                    </div>
+                </div>
+                
+                {/* Détails Secondaires */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="col-span-2 md:col-span-1">
+                         <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Contact Site</label>
+                         <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="Nom du responsable..." value={projectForm.contactName} onChange={e => setProjectForm({...projectForm, contactName: e.target.value})} />
+                    </div>
+                    <div className="col-span-2 md:col-span-1">
+                         <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Email Contact</label>
+                         <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="email@projet.com" value={projectForm.email} onChange={e => setProjectForm({...projectForm, email: e.target.value})} />
+                    </div>
+                    
+                    <div className="col-span-2 border-t border-concrete-100 my-2"></div>
+
+                    <div className="col-span-1">
+                         <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Maître d'Ouvrage (MOA)</label>
+                         <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="ex: Mairie..." value={projectForm.moa} onChange={e => setProjectForm({...projectForm, moa: e.target.value})} />
+                    </div>
+                    <div className="col-span-1">
+                         <label className="text-xs font-bold text-concrete-400 uppercase mb-1 block">Maître d'Oeuvre (MOE)</label>
+                         <input className="w-full text-sm bg-concrete-50 rounded-lg px-3 py-2 border-none focus:ring-1 focus:ring-safety-orange" placeholder="ex: Architecte..." value={projectForm.moe} onChange={e => setProjectForm({...projectForm, moe: e.target.value})} />
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-concrete-50 mt-2">
+                     <button type="button" onClick={closeProjectModal} className="px-4 py-2 text-sm text-concrete-600 font-medium hover:bg-concrete-50 rounded-lg">Annuler</button>
+                     <button type="submit" className="px-6 py-2 text-sm bg-concrete-900 text-white rounded-lg font-bold hover:bg-black transition-colors shadow-lg">
+                        {editingProjectId ? 'Sauvegarder' : 'Créer Affaire'}
+                     </button>
+                </div>
+             </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

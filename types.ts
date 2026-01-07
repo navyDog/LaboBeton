@@ -1,3 +1,4 @@
+
 export enum ConnectionStatus {
   CHECKING = 'CHECKING',
   CONNECTED = 'CONNECTED',
@@ -59,6 +60,8 @@ export interface ConcreteTest {
   projectId: string;
   projectName?: string;
   companyName?: string;
+  moe?: string;
+  moa?: string;
   structureName: string;
   elementName: string;
   

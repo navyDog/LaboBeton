@@ -1,6 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen } from '../types';
+import { ReportPreview } from './ReportPreview';
 
 interface ConcreteTestManagerProps {
   token: string;
@@ -213,6 +215,9 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const [selectedSpecimenIdx, setSelectedSpecimenIdx] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Report Modal State
+  const [reportState, setReportState] = useState<{ test: ConcreteTest, type: 'PV'|'RP' } | null>(null);
+
   // Initial Form State
   const initialFormState = {
     projectId: '',
@@ -400,6 +405,8 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       ...formData,
       projectName: selectedProject?.name || '',
       companyName: selectedProject?.companyName || '',
+      moe: selectedProject?.moe || '',
+      moa: selectedProject?.moa || '',
       specimenCount: formData.specimens.length 
     };
 
@@ -827,7 +834,17 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
   // --- RENDER LIST MODE ---
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
+       
+       {/* Modale Rapport */}
+       {reportState && (
+         <ReportPreview 
+           test={reportState.test} 
+           type={reportState.type} 
+           onClose={() => setReportState(null)} 
+         />
+       )}
+
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 bg-white border border-concrete-200 rounded-lg text-concrete-500 hover:text-concrete-900">
@@ -875,13 +892,17 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                   <th className="px-4 py-3">Date Prélèv.</th>
                   <th className="px-4 py-3">Affaire / Client</th>
                   <th className="px-4 py-3">Ouvrage</th>
-                  <th className="px-4 py-3">Béton</th>
-                  <th className="px-4 py-3 text-center">Éprouvettes</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-4 py-3 text-center">Actions Rapports</th>
+                  <th className="px-4 py-3 text-right">Modifier</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-concrete-100">
-                {filteredTests.map(test => (
+                {filteredTests.map(test => {
+                  // Vérification de la disponibilité des rapports
+                  const has7d = test.specimens.some(s => s.age <= 7);
+                  const has28d = test.specimens.some(s => s.age === 28);
+
+                  return (
                   <tr key={test._id} className="hover:bg-concrete-50 group transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-concrete-900">{test.reference}</td>
                     <td className="px-4 py-3 text-concrete-600">
@@ -894,37 +915,56 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     <td className="px-4 py-3 text-concrete-600">
                       {test.structureName} <span className="text-concrete-400">- {test.elementName}</span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 w-fit">
-                          {test.concreteClass}
-                        </span>
-                        {test.consistencyClass && (
-                           <span className="text-xs text-concrete-400">Slump: {test.consistencyClass}</span>
-                        )}
-                      </div>
-                    </td>
+                    
+                    {/* COLONNE ACTIONS RAPPORTS */}
                     <td className="px-4 py-3 text-center">
-                      <span className="font-bold text-concrete-700">{test.specimenCount}</span>
+                       <div className="flex items-center justify-center gap-2">
+                          {has7d ? (
+                            <button 
+                              onClick={() => setReportState({ test, type: 'PV' })}
+                              className="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-xs font-bold border border-blue-200 transition-colors"
+                              title="Générer Procès Verbal (7j)"
+                            >
+                              PV (7j)
+                            </button>
+                          ) : (
+                            <span className="text-xs text-concrete-300 italic px-2">PV N/A</span>
+                          )}
+
+                          {has28d ? (
+                            <button 
+                              onClick={() => setReportState({ test, type: 'RP' })}
+                              className="px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 rounded text-xs font-bold border border-green-200 transition-colors"
+                              title="Générer Rapport Final (28j)"
+                            >
+                              RP (28j)
+                            </button>
+                          ) : (
+                            <span className="text-xs text-concrete-300 italic px-2">RP N/A</span>
+                          )}
+                       </div>
                     </td>
+
                     <td className="px-4 py-3 text-right">
-                       <button 
-                         onClick={() => handleEdit(test)}
-                         className="text-concrete-300 hover:text-safety-orange transition-colors p-1"
-                         title="Modifier"
-                       >
-                         <Pencil className="w-4 h-4" />
-                       </button>
-                       <button 
-                         onClick={() => handleDelete(test._id)}
-                         className="text-concrete-300 hover:text-red-500 transition-colors p-1"
-                         title="Supprimer"
-                       >
-                         <Trash2 className="w-4 h-4" />
-                       </button>
+                       <div className="flex items-center justify-end gap-1">
+                          <button 
+                            onClick={() => handleEdit(test)}
+                            className="text-concrete-400 hover:text-safety-orange transition-colors p-1.5 hover:bg-orange-50 rounded"
+                            title="Modifier la fiche"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(test._id)}
+                            className="text-concrete-400 hover:text-red-500 transition-colors p-1.5 hover:bg-red-50 rounded"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                       </div>
                     </td>
                   </tr>
-                ))}
+                )})} 
               </tbody>
             </table>
           </div>

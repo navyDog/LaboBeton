@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const specimenSchema = new mongoose.Schema({
@@ -33,6 +34,8 @@ const concreteTestSchema = new mongoose.Schema({
   projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
   projectName: { type: String },
   companyName: { type: String },
+  moe: { type: String },
+  moa: { type: String },
 
   structureName: { type: String, trim: true },
   elementName: { type: String, trim: true },
