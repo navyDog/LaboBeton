@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { ConnectionStatus, User } from './types';
 import { StatusBadge } from './components/StatusBadge';
-import { MenuCard } from './components/MenuCard';
 import { LoginScreen } from './components/LoginScreen';
-import { AdminDashboard } from './components/AdminDashboard'; // Import du Dashboard Admin
+import { AdminDashboard } from './components/AdminDashboard'; 
 import { CompanyManager } from './components/CompanyManager';
 import { ProjectManager } from './components/ProjectManager';
 import { SettingsManager } from './components/SettingsManager';
 import { ConcreteTestManager } from './components/ConcreteTestManager';
-import { CalendarView } from './components/CalendarView'; // NEW IMPORT
-import { Building2, FlaskConical, LogOut, ShieldCheck, ChevronLeft, Building, Briefcase, LayoutGrid, Settings, Calendar } from 'lucide-react';
+import { CalendarView } from './components/CalendarView'; 
+import { DashboardHome } from './components/DashboardHome'; // NEW IMPORT
+import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Briefcase, Settings, Calendar } from 'lucide-react';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings' | 'fresh_tests' | 'calendar'
-  const [view, setView] = useState<string>('fresh_tests');
+  // Vue principale
+  const [view, setView] = useState<string>('dashboard'); // Default view is now dashboard (which loads DashboardHome)
 
   // Vérification connexion DB
   useEffect(() => {
@@ -47,14 +47,6 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setView('dashboard');
-  };
-
-  const handleModuleClick = (module: string) => {
-    if (module === 'fresh') {
-      setView('fresh_tests');
-    } else {
-      console.log(`Module ${module} non implémenté pour l'instant`);
-    }
   };
 
   // 1. Si pas connecté, afficher Login
@@ -205,53 +197,13 @@ const App: React.FC = () => {
             <ConcreteTestManager token={currentUser.token || ''} onBack={() => setView('dashboard')} />
           )}
 
-          {/* View: DASHBOARD */}
+          {/* View: DASHBOARD HOME (NOUVELLE VUE) */}
           {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
-             <>
-               <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <h2 className="text-3xl font-bold text-concrete-900 mb-4">Tableau de Bord Laboratoire</h2>
-                  <p className="text-concrete-500 max-w-2xl mx-auto text-lg">
-                    Gestion des essais et rapports.
-                  </p>
-                  
-                  {/* Mobile Navigation Links */}
-                  <div className="md:hidden flex justify-center gap-4 mt-6 flex-wrap">
-                    <button onClick={() => setView('fresh_tests')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
-                      <FlaskConical className="w-4 h-4" /> Prélèvements
-                    </button>
-                    <button onClick={() => setView('calendar')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
-                      <Calendar className="w-4 h-4" /> Planning
-                    </button>
-                    <button onClick={() => setView('projects')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
-                      <Briefcase className="w-4 h-4" /> Mes Affaires
-                    </button>
-                    <button onClick={() => setView('companies')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
-                      <Building className="w-4 h-4" /> Mes Entreprises
-                    </button>
-                    <button onClick={() => setView('settings')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
-                      <Settings className="w-4 h-4" /> Réglages
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-4xl mx-auto">
-                  <MenuCard 
-                    title="Prélèvements & Béton Frais" 
-                    standard="NF EN 12350"
-                    description="Créer une nouvelle fiche : Identification, Formulation, Slump et Fabrication des éprouvettes."
-                    iconType="fresh"
-                    onClick={() => handleModuleClick('fresh')}
-                  />
-                  
-                  <MenuCard 
-                    title="Essais Béton Durci" 
-                    standard="NF EN 12390"
-                    description="Saisie des résultats de rupture (Compression) pour les fiches existantes."
-                    iconType="hardened"
-                    onClick={() => handleModuleClick('hardened')}
-                  />
-                </div>
-             </>
+             <DashboardHome 
+               token={currentUser.token || ''} 
+               userDisplayName={currentUser.companyName || currentUser.username}
+               onNavigate={setView}
+             />
           )}
         </div>
       </main>

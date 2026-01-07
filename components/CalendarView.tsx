@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, Truck } from 'lucide-react';
-import { ConcreteTest } from '../types';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, Truck, X, FileText, MapPin, Beaker } from 'lucide-react';
+import { ConcreteTest, Specimen } from '../types';
 
 interface CalendarViewProps {
   token: string;
@@ -10,16 +10,152 @@ type EventType = 'reception' | 'sampling' | 'crushing';
 
 interface CalendarEvent {
   id: string;
+  testId: string; // ID de la fiche parente
   dateStr: string; // YYYY-MM-DD
   type: EventType;
   title: string;
   details: string;
 }
 
+// --- MODALE DE VISUALISATION (Read Only) ---
+interface EventModalProps {
+  test: ConcreteTest;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-concrete-200 flex flex-col max-h-[90vh]">
+        
+        {/* Header */}
+        <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center shrink-0">
+          <div>
+             <h3 className="text-white font-bold text-lg flex items-center gap-2">
+               <FileText className="w-5 h-5 text-safety-orange" />
+               {test.reference}
+             </h3>
+             <p className="text-concrete-400 text-xs">{test.projectName} - {test.companyName}</p>
+          </div>
+          <button onClick={onClose} className="text-concrete-400 hover:text-white transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+             {/* Bloc 1: Localisation */}
+             <div className="bg-concrete-50 p-4 rounded-lg border border-concrete-100">
+                <h4 className="text-xs font-bold text-concrete-500 uppercase mb-3 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" /> Localisation
+                </h4>
+                <div className="space-y-2 text-sm">
+                   <div className="flex justify-between">
+                     <span className="text-concrete-500">Ouvrage:</span>
+                     <span className="font-semibold text-concrete-900">{test.structureName}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-concrete-500">Partie:</span>
+                     <span className="font-semibold text-concrete-900">{test.elementName}</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-concrete-500">Date Prélèvement:</span>
+                     <span className="font-semibold text-concrete-900">{new Date(test.samplingDate).toLocaleDateString()}</span>
+                   </div>
+                </div>
+             </div>
+
+             {/* Bloc 2: Béton */}
+             <div className="bg-concrete-50 p-4 rounded-lg border border-concrete-100">
+                <h4 className="text-xs font-bold text-concrete-500 uppercase mb-3 flex items-center gap-2">
+                  <Beaker className="w-4 h-4" /> Caractéristiques
+                </h4>
+                <div className="space-y-2 text-sm">
+                   <div className="flex justify-between">
+                     <span className="text-concrete-500">Classe:</span>
+                     <span className="inline-block px-2 py-0.5 bg-white border border-concrete-200 rounded text-xs font-bold">
+                       {test.concreteClass}
+                     </span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-concrete-500">Slump:</span>
+                     <span className="font-semibold text-concrete-900">{test.slump} mm ({test.consistencyClass})</span>
+                   </div>
+                   <div className="flex justify-between">
+                     <span className="text-concrete-500">Volume:</span>
+                     <span className="font-semibold text-concrete-900">{test.volume} m³</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Tableau Eprouvettes */}
+          <div>
+            <h4 className="text-xs font-bold text-concrete-500 uppercase mb-3 flex items-center gap-2">
+              <Hammer className="w-4 h-4" /> Éprouvettes associées
+            </h4>
+            <div className="overflow-x-auto border border-concrete-200 rounded-lg">
+              <table className="w-full text-left text-xs md:text-sm">
+                <thead className="bg-concrete-100 text-concrete-600 font-semibold">
+                  <tr>
+                    <th className="px-3 py-2">N°</th>
+                    <th className="px-3 py-2">Âge</th>
+                    <th className="px-3 py-2">Date Écrasement</th>
+                    <th className="px-3 py-2 text-right">Résultat (MPa)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-concrete-100">
+                  {test.specimens.map((s, idx) => (
+                    <tr key={idx} className="hover:bg-concrete-50">
+                      <td className="px-3 py-2 font-mono font-bold">#{s.number}</td>
+                      <td className="px-3 py-2">{s.age}j</td>
+                      <td className="px-3 py-2">
+                         {new Date(s.crushingDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono">
+                        {s.stress ? (
+                          <span className="font-bold text-safety-orange">{s.stress.toFixed(1)}</span>
+                        ) : (
+                          <span className="text-concrete-300">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 bg-concrete-50 border-t border-concrete-200 text-right shrink-0">
+          <button 
+            onClick={onClose}
+            className="px-4 py-2 bg-concrete-200 text-concrete-700 hover:bg-concrete-300 rounded font-medium transition-colors"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- MAIN COMPONENT ---
 export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
   const [tests, setTests] = useState<ConcreteTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  // State pour la modale
+  const [selectedTest, setSelectedTest] = useState<ConcreteTest | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Chargement des données
   useEffect(() => {
@@ -51,6 +187,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
       if (test.receptionDate) {
         list.push({
           id: `${test._id}-rec`,
+          testId: test._id,
           dateStr: new Date(test.receptionDate).toISOString().split('T')[0],
           type: 'reception',
           title: `Réception ${ref}`,
@@ -58,12 +195,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
         });
       }
 
-      // 2. Prélèvement (souvent identique à réception mais pas toujours)
+      // 2. Prélèvement
       if (test.samplingDate) {
-        // On évite le doublon visuel si c'est exactement la même date que réception, on peut prioriser Prélèvement
-        // Mais affichons les deux pour être rigoureux
         list.push({
           id: `${test._id}-samp`,
+          testId: test._id,
           dateStr: new Date(test.samplingDate).toISOString().split('T')[0],
           type: 'sampling',
           title: `Prélèvement ${ref}`,
@@ -71,9 +207,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
         });
       }
 
-      // 3. Ecrasements (Basé sur les éprouvettes)
+      // 3. Ecrasements
       if (test.specimens) {
-        // On regroupe par date pour ne pas avoir 3 lignes pour 3 éprouvettes du même jour
         const crushingGroups: Record<string, number> = {};
         
         test.specimens.forEach(s => {
@@ -86,6 +221,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
         Object.entries(crushingGroups).forEach(([dateStr, count]) => {
           list.push({
             id: `${test._id}-crush-${dateStr}`,
+            testId: test._id,
             dateStr: dateStr,
             type: 'crushing',
             title: `Écrasement ${ref}`,
@@ -98,10 +234,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
     return list;
   }, [tests]);
 
+  const handleEventClick = (testId: string) => {
+    const foundTest = tests.find(t => t._id === testId);
+    if (foundTest) {
+      setSelectedTest(foundTest);
+      setIsModalOpen(true);
+    }
+  };
+
   // --- Logique Calendrier ---
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => {
-    // 0 = Dimanche, 1 = Lundi. On veut Lundi en premier (France)
     const day = new Date(year, month, 1).getDay();
     return day === 0 ? 6 : day - 1; 
   };
@@ -110,22 +253,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
   const month = currentDate.getMonth();
   
   const daysInMonth = getDaysInMonth(year, month);
-  const firstDayIndex = getFirstDayOfMonth(year, month); // 0 à 6 (Lundi à Dimanche)
+  const firstDayIndex = getFirstDayOfMonth(year, month);
 
   const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const handleToday = () => setCurrentDate(new Date());
 
-  // Génération de la grille
   const renderCalendarDays = () => {
     const days = [];
     
-    // Cellules vides avant le 1er du mois
     for (let i = 0; i < firstDayIndex; i++) {
       days.push(<div key={`empty-${i}`} className="bg-concrete-50/50 border-r border-b border-concrete-100 min-h-[120px]"></div>);
     }
 
-    // Jours du mois
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const dayEvents = events.filter(e => e.dateStr === dateStr);
@@ -147,13 +287,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
           <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
             {dayEvents.map(ev => (
               <div 
-                key={ev.id} 
-                className={`text-[10px] px-2 py-1 rounded border shadow-sm flex flex-col ${
+                key={ev.id}
+                onClick={(e) => { e.stopPropagation(); handleEventClick(ev.testId); }} 
+                className={`text-[10px] px-2 py-1 rounded border shadow-sm flex flex-col cursor-pointer hover:brightness-95 hover:scale-[1.02] transition-all active:scale-95 ${
                   ev.type === 'crushing' ? 'bg-orange-50 text-orange-800 border-orange-100' :
                   ev.type === 'sampling' ? 'bg-blue-50 text-blue-800 border-blue-100' :
                   'bg-gray-50 text-gray-700 border-gray-200'
                 }`}
-                title={`${ev.title} - ${ev.details}`}
+                title={`Cliquez pour voir les détails de ${ev.title}`}
               >
                 <div className="flex items-center gap-1 font-bold truncate">
                   {ev.type === 'crushing' && <Hammer className="w-3 h-3 flex-shrink-0" />}
@@ -177,7 +318,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
   if (loading) return <div className="text-center py-12 text-concrete-400">Chargement du planning...</div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 relative">
+      
+      {/* Modale Details */}
+      {selectedTest && (
+        <EventModal 
+          test={selectedTest} 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+        />
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-concrete-200 shadow-sm gap-4">
         <div>
           <h2 className="text-2xl font-bold text-concrete-900 flex items-center gap-2">
