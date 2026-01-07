@@ -28,9 +28,13 @@ const connectDB = async () => {
       return;
     }
 
-    const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
+    const clientOptions = { 
+      dbName: 'labobeton', // Force le nom de la BDD ici
+      serverApi: { version: '1', strict: true, deprecationErrors: true } 
+    };
+    
     await mongoose.connect(uri, clientOptions);
-    console.log(`✅ MongoDB Connecté`);
+    console.log(`✅ MongoDB Connecté à la base: labobeton`);
 
     await seedUsers();
 
