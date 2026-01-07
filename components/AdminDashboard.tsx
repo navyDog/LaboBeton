@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, ShieldCheck, User as UserIcon, Building, Clock, Users } from 'lucide-react';
+import { UserPlus, Search, ShieldCheck, User as UserIcon, Building, Clock, Users, Trash2 } from 'lucide-react';
 import { User } from '../types';
 import { AdminUserForm } from './AdminUserForm';
 
@@ -36,6 +36,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   const handleUserCreated = () => {
     setShowCreateForm(false);
     fetchUsers();
+  };
+
+  const handleDeleteUser = async (userId: string, username: string) => {
+    if (!confirm(`Voulez-vous vraiment supprimer l'utilisateur "${username}" ?\nCette action est irréversible.`)) {
+      return;
+    }
+
+    try {
+      // Optimistic update pour éviter le scintillement du chargement complet
+      const previousUsers = [...users];
+      setUsers(users.filter(u => u._id !== userId));
+
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${currentUser.token}` }
+      });
+      
+      if (!res.ok) {
+        // Rollback en cas d'erreur
+        const data = await res.json();
+        alert(data.message || "Erreur lors de la suppression.");
+        setUsers(previousUsers);
+      } else {
+        // Optionnel : on peut re-fetch pour être sûr à 100% mais l'optimistic suffit souvent
+        // fetchUsers(); 
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erreur de connexion serveur.");
+      fetchUsers(); // Rollback via fetch
+    }
   };
 
   const filteredUsers = users.filter(user => 
@@ -97,16 +128,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                 <th className="px-6 py-4">Rôle</th>
                 <th className="px-6 py-4">Dernière Connexion</th>
                 <th className="px-6 py-4">Inscrit le</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-concrete-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-concrete-400">Chargement...</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-concrete-400">Chargement...</td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-concrete-400">Aucun utilisateur trouvé.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-concrete-400">Aucun utilisateur trouvé.</td>
                 </tr>
               ) : (
                 filteredUsers.map(user => (
@@ -148,6 +180,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                     </td>
                     <td className="px-6 py-4 text-sm text-concrete-500">
                       {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {user._id !== currentUser.id && (
+                        <button 
+                          onClick={() => handleDeleteUser(user._id, user.username)}
+                          className="text-concrete-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-full"
+                          title="Supprimer l'utilisateur"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

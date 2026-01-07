@@ -182,6 +182,26 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
+app.delete('/api/users/:id', authenticateToken, async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: "Accès réservé aux administrateurs." });
+  }
+  
+  try {
+    // Empêcher l'admin de se supprimer lui-même
+    if (req.params.id === req.user.id) {
+       return res.status(400).json({ message: "Vous ne pouvez pas supprimer votre propre compte." });
+    }
+
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    if (!deletedUser) return res.status(404).json({ message: "Utilisateur non trouvé." });
+    
+    res.json({ message: "Utilisateur supprimé avec succès." });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur suppression utilisateur." });
+  }
+});
+
 // --- Routes API Entreprises (Companies) ---
 
 app.get('/api/companies', authenticateToken, async (req, res) => {
