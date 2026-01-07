@@ -24,23 +24,29 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     receptionDate: new Date().toISOString().split('T')[0],
     samplingDate: new Date().toISOString().split('T')[0],
     volume: 0,
-    concreteClass: '',
-    mixType: '',
+    
+    concreteClass: '',      // C25/30
+    consistencyClass: '',   // S3
+    mixType: '',            // Recette
+    
     formulaInfo: '',
     manufacturer: '',
     manufacturingPlace: '',
     deliveryMethod: '',
-    slump: 0,
+    
+    slump: 0,               // Mesuré en mm
     samplingPlace: '',
     specimenType: '',
     specimenCount: 3,
+    
     tightening: 'Piquage',
     vibrationTime: 0,
     layers: 2,
-    curing: 'Eau 20°C',
-    testType: 'Compression',
+    curing: '',
+    
+    testType: '',
     standard: '',
-    preparation: 'Surfaçage soufre',
+    preparation: '',
     pressMachine: 'Presse 3000kN'
   };
 
@@ -180,6 +186,15 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     />
                  </div>
                  <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Date Réception Béton</label>
+                    <input 
+                      type="date"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.receptionDate}
+                      onChange={e => setFormData({...formData, receptionDate: e.target.value})}
+                    />
+                 </div>
+                 <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Date Prélèvement</label>
                     <input 
                       type="date"
@@ -204,18 +219,29 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       value={formData.concreteClass}
                       onChange={e => setFormData({...formData, concreteClass: e.target.value})}
                     >
-                       <option value="">-- Choisir --</option>
+                       <option value="">-- C25/30... --</option>
                        {settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                  </div>
                  <div>
-                    <label className="block text-xs font-bold text-concrete-500 mb-1">Type Mélange / Formule</label>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Classe Consistance (Visée)</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.consistencyClass}
+                      onChange={e => setFormData({...formData, consistencyClass: e.target.value})}
+                    >
+                       <option value="">-- S3, S4... --</option>
+                       {settings?.consistencyClasses?.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+                 <div className="lg:col-span-2">
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Type Mélange / Formulation</label>
                     <select 
                       className="w-full p-2 border border-concrete-300 rounded bg-white"
                       value={formData.mixType}
                       onChange={e => setFormData({...formData, mixType: e.target.value})}
                     >
-                       <option value="">-- Choisir --</option>
+                       <option value="">-- Recette / Dosage --</option>
                        {settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                  </div>
@@ -278,7 +304,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                  <div>
-                    <label className="block text-xs font-bold text-concrete-500 mb-1">Affaissement / Slump (mm)</label>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Slump Mesuré (mm)</label>
                     <input 
                       type="number"
                       className="w-full p-2 border border-concrete-300 rounded font-mono"
@@ -351,11 +377,14 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Mode Conservation</label>
-                    <input 
-                      className="w-full p-2 border border-concrete-300 rounded"
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
                       value={formData.curing}
                       onChange={e => setFormData({...formData, curing: e.target.value})}
-                    />
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.curingMethods?.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                  </div>
               </div>
            </div>
@@ -379,19 +408,25 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Type d'Essai Visé</label>
-                    <input 
-                      className="w-full p-2 border border-concrete-300 rounded"
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
                       value={formData.testType}
                       onChange={e => setFormData({...formData, testType: e.target.value})}
-                    />
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.testTypes?.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                  </div>
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Préparation Surfaces</label>
-                    <input 
-                      className="w-full p-2 border border-concrete-300 rounded"
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
                       value={formData.preparation}
                       onChange={e => setFormData({...formData, preparation: e.target.value})}
-                    />
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.preparations?.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                  </div>
               </div>
            </div>
@@ -463,7 +498,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               <thead className="bg-concrete-50 text-concrete-500 font-semibold border-b border-concrete-200">
                 <tr>
                   <th className="px-4 py-3">Référence</th>
-                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Date Prélèv.</th>
                   <th className="px-4 py-3">Affaire / Client</th>
                   <th className="px-4 py-3">Ouvrage</th>
                   <th className="px-4 py-3">Béton</th>
@@ -486,9 +521,14 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       {test.structureName} <span className="text-concrete-400">- {test.elementName}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                        {test.concreteClass}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 w-fit">
+                          {test.concreteClass}
+                        </span>
+                        {test.consistencyClass && (
+                           <span className="text-xs text-concrete-400">Slump: {test.consistencyClass}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="font-bold text-concrete-700">{test.specimenCount}x</span> {test.specimenType}

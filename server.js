@@ -288,9 +288,16 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
         specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15', 'Cubique 10x10'],
         deliveryMethods: ['Toupie', 'Benne', 'Mixer', 'Sur site'],
         manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier', 'Préfabrication'],
+        
         mixTypes: ['CEM II/A-LL 42.5N - 350kg', 'Béton B25 - Gravillon 20mm', 'Béton Hydrofuge - 400kg'],
+        
         concreteClasses: ['C20/25', 'C25/30', 'C30/37', 'C35/45', 'C40/50', 'C45/55', 'C50/60'],
         consistencyClasses: ['S1', 'S2', 'S3', 'S4', 'S5'],
+        
+        curingMethods: ['Eau 20°C +/- 2°C', 'Salle Humide', 'Air ambiant', 'Isolant'],
+        testTypes: ['Compression', 'Fendage', 'Flexion'],
+        preparations: ['Surfaçage Soufre', 'Rectification', 'Boîte à Sable', 'Aucune'],
+
         nfStandards: ['NF EN 206/CN', 'NF EN 12350', 'NF EN 12390']
       });
       await settings.save();

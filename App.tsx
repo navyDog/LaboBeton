@@ -15,7 +15,8 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   // Vue principale pour utilisateur standard : 'dashboard' | 'companies' | 'projects' | 'settings' | 'fresh_tests'
-  const [view, setView] = useState<string>('dashboard');
+  // Changement demandé : Vue par défaut sur les fiches de prélèvement
+  const [view, setView] = useState<string>('fresh_tests');
 
   // Vérification connexion DB
   useEffect(() => {
@@ -115,10 +116,10 @@ const App: React.FC = () => {
              {/* Navigation Menu */}
              <div className="hidden md:flex items-center bg-concrete-100 rounded-lg p-1 gap-1">
                 <button 
-                  onClick={() => setView('dashboard')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'dashboard' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  onClick={() => setView('fresh_tests')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'fresh_tests' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
                 >
-                  <LayoutGrid className="w-4 h-4" /> Accueil
+                  <FlaskConical className="w-4 h-4" /> Prélèvements
                 </button>
                 <button 
                   onClick={() => setView('projects')}
@@ -204,6 +205,9 @@ const App: React.FC = () => {
                   
                   {/* Mobile Navigation Links */}
                   <div className="md:hidden flex justify-center gap-4 mt-6 flex-wrap">
+                    <button onClick={() => setView('fresh_tests')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
+                      <FlaskConical className="w-4 h-4" /> Prélèvements
+                    </button>
                     <button onClick={() => setView('projects')} className="text-sm font-semibold text-concrete-600 hover:text-safety-orange flex items-center gap-1">
                       <Briefcase className="w-4 h-4" /> Mes Affaires
                     </button>

@@ -23,15 +23,16 @@ const concreteTestSchema = new mongoose.Schema({
   volume: { type: Number }, // vBeton (m3)
 
   // Caractéristiques Béton
-  concreteClass: { type: String },      // cBeton (C25/30)
-  mixType: { type: String },            // melangeBeton (Recette)
-  formulaInfo: { type: String },        // infoFormule (Complément)
+  concreteClass: { type: String },      // Classe de Résistance (C25/30)
+  consistencyClass: { type: String },   // Classe de Consistance (S3, S4...)
+  mixType: { type: String },            // Composition / Recette
+  formulaInfo: { type: String },        // Complément
   manufacturer: { type: String },       // fabricantBeton
   manufacturingPlace: { type: String }, // lieuFabrication (Centrale, Site)
   deliveryMethod: { type: String },     // modeLivraison (Toupie...)
 
   // Données Prélèvement (Frais)
-  slump: { type: Number },              // Affaissement (mm)
+  slump: { type: Number },              // Affaissement Mesuré (mm)
   samplingPlace: { type: String },      // lieuPrelevement
   specimenType: { type: String },       // tEprouvette (Cylindrique 16x32)
   specimenCount: { type: Number, default: 3 }, 

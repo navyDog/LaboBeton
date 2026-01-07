@@ -18,6 +18,11 @@ const settingsSchema = new mongoose.Schema({
   concreteClasses: [{ type: String, trim: true }],    // Classes de résistance: C25/30, C30/37
   consistencyClasses: [{ type: String, trim: true }], // Classes de consistance: S1, S2, S3...
   
+  // Nouveaux champs pour menus déroulants
+  curingMethods: [{ type: String, trim: true }],      // ex: Eau 20°C, Salle Humide
+  testTypes: [{ type: String, trim: true }],          // ex: Compression, Fendage
+  preparations: [{ type: String, trim: true }],       // ex: Surfaçage Soufre, Rectification
+
   nfStandards: [{ type: String, trim: true }]         // ex: NF EN 206/CN
 }, { timestamps: true });
 

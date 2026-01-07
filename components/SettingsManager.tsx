@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen, Waves } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen, Waves, Thermometer, Hammer, Layers } from 'lucide-react';
 import { Settings } from '../types';
 
 interface SettingsManagerProps {
@@ -177,7 +177,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         
         <ListEditor 
-          title="Classes de résistance"
+          title="Classes de Résistance"
           icon={<Gauge className="w-5 h-5" />}
           items={settings.concreteClasses}
           placeholder="ex: C25/30"
@@ -185,7 +185,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
         />
 
         <ListEditor 
-          title="Classes de consistance (Slump)"
+          title="Classes de Consistance (Slump)"
           icon={<Waves className="w-5 h-5" />}
           items={settings.consistencyClasses || []}
           placeholder="ex: S3"
@@ -193,7 +193,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
         />
 
         <ListEditor 
-          title="Types de mélange / Composition"
+          title="Types de Mélange / Composition"
           icon={<FlaskConical className="w-5 h-5" />}
           items={settings.mixTypes}
           placeholder="ex: CEM II/A 350kg"
@@ -201,7 +201,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
         />
 
         <ListEditor 
-          title="Types d'éprouvette"
+          title="Types d'Éprouvette"
           icon={<Box className="w-5 h-5" />}
           items={settings.specimenTypes}
           placeholder="ex: Cylindrique 16x32"
@@ -209,7 +209,31 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
         />
 
         <ListEditor 
-          title="Modes de livraison"
+          title="Modes de Conservation"
+          icon={<Thermometer className="w-5 h-5" />}
+          items={settings.curingMethods || []}
+          placeholder="ex: Eau 20°C"
+          onChange={(items) => setSettings({...settings, curingMethods: items})}
+        />
+
+        <ListEditor 
+          title="Types d'Essai"
+          icon={<Hammer className="w-5 h-5" />}
+          items={settings.testTypes || []}
+          placeholder="ex: Compression"
+          onChange={(items) => setSettings({...settings, testTypes: items})}
+        />
+
+        <ListEditor 
+          title="Préparation / Surfaçage"
+          icon={<Layers className="w-5 h-5" />}
+          items={settings.preparations || []}
+          placeholder="ex: Surfaçage Soufre"
+          onChange={(items) => setSettings({...settings, preparations: items})}
+        />
+
+        <ListEditor 
+          title="Modes de Livraison"
           icon={<Truck className="w-5 h-5" />}
           items={settings.deliveryMethods}
           placeholder="ex: Toupie"
@@ -217,7 +241,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
         />
 
         <ListEditor 
-          title="Lieux de fabrication"
+          title="Lieux de Fabrication"
           icon={<Factory className="w-5 h-5" />}
           items={settings.manufacturingPlaces}
           placeholder="ex: Centrale BPE"
@@ -225,7 +249,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
         />
 
         <ListEditor 
-          title="Normes NF applicables"
+          title="Normes NF Applicables"
           icon={<BookOpen className="w-5 h-5" />}
           items={settings.nfStandards}
           placeholder="ex: NF EN 206/CN"

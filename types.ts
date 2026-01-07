@@ -50,6 +50,7 @@ export interface ConcreteTest {
   volume: number;
 
   concreteClass: string;
+  consistencyClass: string; // S3, S4...
   mixType: string;
   formulaInfo: string;
   manufacturer: string;
@@ -82,6 +83,9 @@ export interface Settings {
   mixTypes: string[];
   concreteClasses: string[];
   consistencyClasses: string[];
+  curingMethods: string[];
+  testTypes: string[];
+  preparations: string[];
   nfStandards: string[];
 }
 
