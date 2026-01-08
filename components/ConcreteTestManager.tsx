@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase } from 'lucide-react';
-import { ConcreteTest, Project, Settings, Specimen, User } from '../types';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase, User as UserIcon } from 'lucide-react';
+import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../utils/api';
 
@@ -97,6 +97,7 @@ const addDays = (dateStr: string, days: number): string => {
 export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token, user, initialTestId, onBack }) => {
   const [tests, setTests] = useState<ConcreteTest[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   
   const [loading, setLoading] = useState(true);
@@ -108,12 +109,22 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reportState, setReportState] = useState<{ test: ConcreteTest, type: 'PV'|'RP' } | null>(null);
   
-  // Quick Create Project State
+  // Quick Create State
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [quickCreateType, setQuickCreateType] = useState<'project' | 'company'>('project');
+  
   const [newProjectData, setNewProjectData] = useState({
     name: '',
+    companyId: '',
     moa: '',
     moe: '',
+    contactName: '',
+    email: '',
+    phone: ''
+  });
+
+  const [newCompanyData, setNewCompanyData] = useState({
+    name: '',
     contactName: '',
     email: '',
     phone: ''
@@ -133,21 +144,22 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [testsRes, projectsRes, settingsRes] = await Promise.all([
+        const [testsRes, projectsRes, companiesRes, settingsRes] = await Promise.all([
           authenticatedFetch('/api/concrete-tests', { headers: { 'Authorization': `Bearer ${token}` } }),
           authenticatedFetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
+          authenticatedFetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } }),
           authenticatedFetch('/api/settings', { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
         if (testsRes.ok) {
             const loadedTests = await testsRes.json();
             setTests(loadedTests);
-            // Handle Initial Navigation from Calendar or other deep links
             if (initialTestId) {
                 const found = loadedTests.find((t: ConcreteTest) => t._id === initialTestId);
                 if (found) handleEdit(found);
             }
         }
         if (projectsRes.ok) setProjects(await projectsRes.json());
+        if (companiesRes.ok) setCompanies(await companiesRes.json());
         if (settingsRes.ok) setSettings(await settingsRes.json());
       } catch (error) { console.error(error); } finally { setLoading(false); }
     };
@@ -234,22 +246,44 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     } catch (error) { alert("Erreur serveur."); }
   };
 
-  const handleQuickCreateProject = async () => {
-    if(!newProjectData.name.trim()) return;
-    try {
-        const res = await authenticatedFetch('/api/projects', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-            body: JSON.stringify(newProjectData)
-        });
-        if(res.ok) {
-            const newP = await res.json();
-            setProjects([newP, ...projects]);
-            setFormData({...formData, projectId: newP._id});
-            setQuickCreateOpen(false); 
-            setNewProjectData({ name: '', moa: '', moe: '', contactName: '', email: '', phone: '' });
-        }
-    } catch(e) { alert("Erreur"); }
+  const handleQuickCreate = async () => {
+    if (quickCreateType === 'company') {
+       if(!newCompanyData.name.trim()) return;
+       try {
+         const res = await authenticatedFetch('/api/companies', {
+           method: 'POST',
+           headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+           body: JSON.stringify(newCompanyData)
+         });
+         if(res.ok) {
+           const newCompany = await res.json();
+           setCompanies([...companies, newCompany]);
+           setNewProjectData({...newProjectData, companyId: newCompany._id});
+           setQuickCreateType('project'); // Basculer vers la création de projet avec l'entreprise pré-remplie
+           setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
+         }
+       } catch(e) { alert("Erreur Création Entreprise"); }
+    } else {
+       if(!newProjectData.name.trim()) return;
+       try {
+         // Récupérer le nom de l'entreprise si un ID est sélectionné
+         const selectedCompany = companies.find(c => c._id === newProjectData.companyId);
+         const payload = { ...newProjectData, companyName: selectedCompany ? selectedCompany.name : '' };
+
+         const res = await authenticatedFetch('/api/projects', {
+             method: 'POST',
+             headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+             body: JSON.stringify(payload)
+         });
+         if(res.ok) {
+             const newP = await res.json();
+             setProjects([newP, ...projects]);
+             setFormData({...formData, projectId: newP._id});
+             setQuickCreateOpen(false); 
+             setNewProjectData({ name: '', companyId: '', moa: '', moe: '', contactName: '', email: '', phone: '' });
+         }
+       } catch(e) { alert("Erreur Création Affaire"); }
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -267,47 +301,75 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
         {isModalOpen && selectedSpecimenIdx !== null && <SpecimenModal specimen={formData.specimens[selectedSpecimenIdx]} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSpecimen} />}
         
-        {/* Quick Project Modal - EXPANDED */}
+        {/* Quick Create Modal - DUAL MODE */}
         {quickCreateOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
                 <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
                     <div className="flex justify-between items-center mb-4">
-                       <h4 className="font-bold text-lg flex items-center gap-2"><Briefcase className="w-5 h-5 text-safety-orange"/> Nouvelle Affaire Rapide</h4>
+                       <h4 className="font-bold text-lg flex items-center gap-2">
+                         {quickCreateType === 'project' ? <Briefcase className="w-5 h-5 text-safety-orange"/> : <UserIcon className="w-5 h-5 text-blue-600"/>}
+                         {quickCreateType === 'project' ? 'Nouvelle Affaire' : 'Nouveau Client'}
+                       </h4>
                        <button onClick={()=>setQuickCreateOpen(false)}><X className="w-5 h-5 text-gray-400"/></button>
                     </div>
-                    <div className="space-y-3">
-                       <div>
-                          <label className="text-xs font-bold text-gray-500">Nom de l'affaire *</label>
-                          <input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} />
-                       </div>
-                       <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-xs font-bold text-gray-500">MOA (Client)</label>
-                            <input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} />
-                          </div>
-                          <div>
-                            <label className="text-xs font-bold text-gray-500">MOE (Archi)</label>
-                            <input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} />
-                          </div>
-                       </div>
-                       <div>
-                          <label className="text-xs font-bold text-gray-500">Contact Chantier</label>
-                          <input className="w-full border p-2 rounded text-sm mt-1" placeholder="Nom du conducteur..." value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} />
-                       </div>
-                       <div className="grid grid-cols-2 gap-2">
-                          <div>
-                             <label className="text-xs font-bold text-gray-500">Email</label>
-                             <input className="w-full border p-2 rounded text-sm mt-1" type="email" value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} />
-                          </div>
-                          <div>
-                             <label className="text-xs font-bold text-gray-500">Téléphone</label>
-                             <input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} />
-                          </div>
-                       </div>
+
+                    {/* Tabs */}
+                    <div className="flex mb-4 bg-concrete-100 p-1 rounded-lg">
+                       <button 
+                         onClick={() => setQuickCreateType('project')}
+                         className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'project' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}
+                       >
+                         Affaire
+                       </button>
+                       <button 
+                         onClick={() => setQuickCreateType('company')}
+                         className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'company' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}
+                       >
+                         Entreprise
+                       </button>
                     </div>
+
+                    {quickCreateType === 'project' ? (
+                      <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
+                         <div>
+                            <label className="text-xs font-bold text-gray-500">Nom de l'affaire *</label>
+                            <input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} />
+                         </div>
+                         <div>
+                            <label className="text-xs font-bold text-gray-500">Entreprise / Client</label>
+                            <select className="w-full border p-2 rounded text-sm mt-1 bg-white" value={newProjectData.companyId} onChange={e => setNewProjectData({...newProjectData, companyId: e.target.value})}>
+                               <option value="">-- Sélectionner ou créer --</option>
+                               {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                            </select>
+                            <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2">
+                            <div><label className="text-xs font-bold text-gray-500">MOA</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} /></div>
+                            <div><label className="text-xs font-bold text-gray-500">MOE</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} /></div>
+                         </div>
+                         <div><label className="text-xs font-bold text-gray-500">Contact</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} /></div>
+                         <div className="grid grid-cols-2 gap-2">
+                            <div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} /></div>
+                            <div><label className="text-xs font-bold text-gray-500">Tél</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} /></div>
+                         </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 animate-in fade-in slide-in-from-right-2">
+                         <div>
+                            <label className="text-xs font-bold text-gray-500">Nom de l'entreprise *</label>
+                            <input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS" value={newCompanyData.name} onChange={e=>setNewCompanyData({...newCompanyData, name: e.target.value})} />
+                         </div>
+                         <div><label className="text-xs font-bold text-gray-500">Contact Principal</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.contactName} onChange={e=>setNewCompanyData({...newCompanyData, contactName: e.target.value})} /></div>
+                         <div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.email} onChange={e=>setNewCompanyData({...newCompanyData, email: e.target.value})} /></div>
+                         <div><label className="text-xs font-bold text-gray-500">Téléphone</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.phone} onChange={e=>setNewCompanyData({...newCompanyData, phone: e.target.value})} /></div>
+                      </div>
+                    )}
+
                     <div className="flex justify-end gap-2 mt-6">
                         <button onClick={()=>setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button>
-                        <button onClick={handleQuickCreateProject} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">Créer & Sélectionner</button>
+                        <button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">
+                          {quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -327,7 +389,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                  <div className="lg:col-span-1">
                     <label className="block text-xs font-bold text-concrete-500 mb-1 flex justify-between">
                         Affaire (Client) * 
-                        <button type="button" onClick={()=>setQuickCreateOpen(true)} className="text-safety-orange hover:underline text-[10px] flex items-center gap-1"><Plus className="w-3 h-3"/> Créer</button>
+                        <button type="button" onClick={() => { setQuickCreateType('project'); setQuickCreateOpen(true); }} className="text-safety-orange hover:underline text-[10px] flex items-center gap-1"><Plus className="w-3 h-3"/> Créer</button>
                     </label>
                     <select required className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange" value={formData.projectId} onChange={e => setFormData({...formData, projectId: e.target.value})}>
                       <option value="">-- Sélectionner --</option>
