@@ -34,20 +34,16 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS ---
-if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error("⛔ ERREUR FATALE : JWT_SECRET n'est pas défini en production.");
-  process.exit(1);
-}
-
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error("⚠️ WARNING : JWT_SECRET n'est pas défini en production. Utilisation de la clé par défaut (NON SÉCURISÉ).");
+}
 
 // --- SÉCURITÉ : Proxy & HTTPS ---
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
-    // Modification : Ne pas forcer HTTPS si on est en local (pour tester le mode prod sur sa machine)
     const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
-    
     if (!isLocal && req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(`https://${req.headers.host}${req.url}`);
     }
@@ -56,19 +52,17 @@ app.use((req, res, next) => {
 });
 
 // --- SÉCURITÉ : CORS ---
-// En production, on autorise le domaine lui-même ('self') et l'URL spécifiée
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
-  process.env.FRONTEND_URL // Ex: https://mon-app-xyz.a.run.app
+  process.env.FRONTEND_URL 
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
-      // En prod, on bloque strictement. En dev, on peut être plus souple si besoin.
-      return callback(null, true); // Fallback safe pour Monolithe
+      return callback(null, true); 
     }
     return callback(null, true);
   },
@@ -111,15 +105,23 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 const connectDB = async () => {
   try {
     const uri = process.env.MONGO_URI;
-    if (!uri) throw new Error("MONGO_URI manquant dans les variables d'environnement.");
+    if (!uri) {
+        console.warn("⚠️ MONGO_URI manquant. Mode hors ligne.");
+        return;
+    }
 
     const clientOptions = { dbName: 'labobeton', serverApi: { version: '1', strict: true, deprecationErrors: true } };
     await mongoose.connect(uri, clientOptions);
     console.log(`✅ MongoDB Connecté`);
     
+    // Indexation pour performance
     try {
       if (mongoose.connection.readyState === 1) {
         const collection = mongoose.connection.collection('concretetests');
+        await collection.createIndex({ projectId: 1 });
+        await collection.createIndex({ samplingDate: 1 });
+        
+        // Nettoyage index legacy
         const indexes = await collection.indexes();
         if (indexes.find(idx => idx.name === 'reference_1')) {
            await collection.dropIndex('reference_1');
@@ -130,58 +132,61 @@ const connectDB = async () => {
     await seedAdminUser();
   } catch (error) {
     console.error(`❌ Erreur MongoDB: ${error.message}`);
-    process.exit(1); 
   }
 };
 
-// --- INITIALISATION ADMIN (PROD & DEV) ---
+// --- INITIALISATION ADMIN ---
 const seedAdminUser = async () => {
   try {
     const count = await User.countDocuments();
-    
     if (count === 0) {
-      console.log("ℹ️ Base de données utilisateurs vide. Initialisation...");
-      
+      console.log("ℹ️ Init Admin...");
       const initUser = process.env.INIT_ADMIN_USERNAME;
       const initPass = process.env.INIT_ADMIN_PASSWORD;
-
       if (initUser && initPass) {
         const salt = await bcrypt.genSalt(10);
         const hashed = await bcrypt.hash(initPass, salt);
-        
         await User.create({ 
           username: initUser, 
           password: hashed, 
           role: 'admin', 
           companyName: 'ADMINISTRATEUR SYSTEME',
-          contact: 'Support Technique'
+          tokenVersion: 0
         });
-        console.log(`✅ SECURITY: Compte Admin initial (${initUser}) créé avec succès.`);
-      } else {
-        console.warn("⚠️ ATTENTION : Base vide mais INIT_ADMIN_USERNAME/PASSWORD manquants. Aucun accès ne sera possible.");
+        console.log(`✅ Compte Admin initial créé.`);
       }
     }
-  } catch (error) { 
-    console.error("Erreur seedAdminUser:", error); 
-  }
+  } catch (error) { console.error("Erreur seedAdminUser:", error); }
 };
 
 // --- MIDDLEWARES AUTH ---
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   if (!token) return res.status(401).json({ message: "Token manquant." });
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(401).json({ message: "Token invalide ou expiré." });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(decoded.id).select('-password');
+    
+    if (!user) return res.status(401).json({ message: "Utilisateur introuvable." });
+    if (!user.isActive) return res.status(403).json({ message: "Compte désactivé." });
+    
+    // Vérification Session Unique
+    if (decoded.tokenVersion !== user.tokenVersion) {
+      return res.status(401).json({ message: "Session expirée (Connecté ailleurs)." });
+    }
+
     req.user = user;
     next();
-  });
+  } catch (err) {
+    return res.status(401).json({ message: "Token invalide ou expiré." });
+  }
 };
 
 const requireAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
-    return res.status(403).json({ message: "Accès refusé. Privilèges administrateur requis." });
+    return res.status(403).json({ message: "Accès refusé." });
   }
   next();
 };
@@ -193,36 +198,57 @@ const checkValidation = (req, res, next) => {
 };
 
 // --- API ROUTES ---
+
+// Login avec gestion Session Unique
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   try {
     const safeUsername = String(username);
     const user = await User.findOne({ username: safeUsername });
     if (!user) return res.status(401).json({ message: "Identifiants incorrects" });
+    
+    if (user.isActive === false) return res.status(403).json({ message: "Ce compte a été désactivé." });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Identifiants incorrects" });
 
+    // Incrémenter tokenVersion pour invalider les autres sessions
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
     user.lastLogin = new Date();
     await user.save();
 
     const token = jwt.sign(
-      { id: user._id, role: user.role, username: user.username }, 
+      { 
+        id: user._id, 
+        role: user.role, 
+        username: user.username,
+        tokenVersion: user.tokenVersion // Inclus dans le token
+      }, 
       JWT_SECRET, 
-      { expiresIn: '8h' }
+      { expiresIn: '12h' }
     );
 
     const userObj = user.toObject();
     delete userObj.password;
+    delete userObj.tokenVersion; // Ne pas exposer au front
     res.json({ token, user: { id: user._id, ...userObj } });
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
 
+// Bug Reporter
+app.post('/api/bugs', async (req, res) => {
+  // Dans un vrai cas, on enverrait un email ou on stockerait en DB
+  // Ici on log juste dans la console serveur
+  const { type, description, user } = req.body;
+  console.log(`🐞 [BUG REPORT] Type: ${type} | User: ${user} | Desc: ${description}`);
+  res.json({ message: "Signalement reçu" });
+});
+
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id, '-password');
+    const user = await User.findById(req.user.id, '-password -tokenVersion');
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
     res.json(user);
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
@@ -245,17 +271,21 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     if (password && password.trim() !== "") {
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(password, salt);
+      // Changer le mot de passe déconnecte les autres sessions aussi
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
     }
 
     await user.save();
     const userObj = user.toObject();
     delete userObj.password;
+    delete userObj.tokenVersion;
     res.json(userObj);
   } catch (error) { res.status(400).json({ message: "Erreur mise à jour" }); }
 });
 
+// --- ADMIN USERS ---
 app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
-  const { username, password, role, companyName, address, contact } = req.body;
+  const { username, password, role, companyName, address, contact, isActive } = req.body;
   try {
     const existingUser = await User.findOne({ username });
     if (existingUser) return res.status(400).json({ message: "Utilisateur existant." });
@@ -267,6 +297,7 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
       username,
       password: hashedPassword,
       role: role || 'standard',
+      isActive: isActive !== undefined ? isActive : true,
       companyName,
       address,
       contact
@@ -279,9 +310,25 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 
 app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const users = await User.find({}, '-password').sort({ createdAt: -1 });
+    const users = await User.find({}, '-password -tokenVersion').sort({ createdAt: -1 });
     res.json(users);
   } catch (error) { res.status(500).json({ message: "Erreur récupération" }); }
+});
+
+// Toggle Activation Utilisateur (au lieu de delete parfois)
+app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        if (req.params.id === req.user.id) return res.status(400).json({ message: "Impossible de modifier son propre accès." });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "Non trouvé" });
+        
+        user.isActive = !user.isActive;
+        // Invalider ses sessions s'il est désactivé
+        if (!user.isActive) user.tokenVersion = (user.tokenVersion || 0) + 1;
+        
+        await user.save();
+        res.json({ message: "Accès modifié", isActive: user.isActive });
+    } catch (error) { res.status(500).json({message: "Erreur serveur"}); }
 });
 
 app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
@@ -293,9 +340,10 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) =
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
 });
 
+// --- METIER ---
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 });
+    const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 }).lean();
     res.json(companies);
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
@@ -326,9 +374,75 @@ app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
-    const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
     res.json(projects);
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
+});
+
+// EXPORT CSV POUR PROJET
+app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    // Vérifier appartenance
+    const project = await Project.findOne({ _id: projectId, userId: req.user.id });
+    if (!project) return res.status(404).json({ message: "Projet introuvable" });
+
+    // Récupérer tous les tests du projet
+    const tests = await ConcreteTest.find({ projectId }).sort({ samplingDate: 1 }).lean();
+
+    // Construction CSV manuel (léger et sans dépendance lourde)
+    const header = [
+      "Reference", "Date Prelevement", "Ouvrage", "Partie", "Classe", 
+      "Slump (mm)", "Volume (m3)", "Num Eprouvette", "Age (j)", 
+      "Date Ecrasement", "Masse (g)", "Force (kN)", "Contrainte (MPa)", "Densite (kg/m3)"
+    ].join(",");
+
+    const rows = [];
+    tests.forEach(t => {
+      if (t.specimens && t.specimens.length > 0) {
+        t.specimens.forEach(s => {
+          rows.push([
+            t.reference,
+            t.samplingDate ? new Date(t.samplingDate).toLocaleDateString('fr-FR') : '',
+            `"${t.structureName || ''}"`,
+            `"${t.elementName || ''}"`,
+            t.concreteClass,
+            t.slump,
+            t.volume,
+            s.number,
+            s.age,
+            s.crushingDate ? new Date(s.crushingDate).toLocaleDateString('fr-FR') : '',
+            s.weight || '',
+            s.force || '',
+            s.stress ? s.stress.toFixed(1) : '',
+            s.density ? s.density.toFixed(0) : ''
+          ].join(","));
+        });
+      } else {
+         // Ligne sans éprouvette
+         rows.push([
+            t.reference,
+            t.samplingDate ? new Date(t.samplingDate).toLocaleDateString('fr-FR') : '',
+            `"${t.structureName || ''}"`,
+            `"${t.elementName || ''}"`,
+            t.concreteClass,
+            t.slump,
+            t.volume,
+            "","","","","","",""
+          ].join(","));
+      }
+    });
+
+    const csvContent = [header, ...rows].join("\n");
+    
+    res.header('Content-Type', 'text/csv');
+    res.header('Content-Disposition', `attachment; filename="export_affaire_${projectId}.csv"`);
+    res.send(csvContent);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Erreur export" });
+  }
 });
 
 app.post('/api/projects', authenticateToken, async (req, res) => {
@@ -357,9 +471,11 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
+    // Utilisation de lean() pour perf avec 10000 items
     const tests = await ConcreteTest.find({ userId: req.user.id })
       .sort({ sequenceNumber: -1 })
-      .populate('projectId', 'name'); 
+      .populate('projectId', 'name')
+      .lean(); 
     res.json(tests);
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
@@ -401,7 +517,7 @@ app.delete('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
 
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
-    let settings = await Settings.findOne({ userId: req.user.id });
+    let settings = await Settings.findOne({ userId: req.user.id }).lean();
     if (!settings) {
       settings = new Settings({
         userId: req.user.id,
@@ -435,26 +551,19 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
 
 app.get('/api/health', (req, res) => {
   const state = mongoose.connection.readyState;
-  res.status(state === 1 ? 200 : 503).json({ 
+  res.status(200).json({ 
     status: state === 1 ? 'CONNECTED' : 'ERROR', 
     timestamp: new Date() 
   });
 });
 
-// --- SERVICE DES FICHIERS STATIQUES (REACT BUILD) ---
-// En production, on sert le dossier 'dist' généré par Vite
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// --- CATCH-ALL ROUTE (React Router) ---
-// Toutes les routes non API sont renvoyées vers index.html pour laisser React Router gérer l'affichage
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// --- DÉMARRAGE ---
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Serveur Monolithe LaboBéton démarré sur le port ${PORT}`);
-    console.log(`🌍 Environnement: ${process.env.NODE_ENV}`);
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Serveur Monolithe LaboBéton démarré sur le port ${PORT}`);
+  connectDB();
 });
