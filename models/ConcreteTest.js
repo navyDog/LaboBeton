@@ -56,6 +56,10 @@ const concreteTestSchema = new mongoose.Schema({
   slump: { type: Number },
   samplingPlace: { type: String },
   
+  // NOUVEAUX CHAMPS TEMPERATURES
+  externalTemp: { type: Number },
+  concreteTemp: { type: Number },
+  
   // Info globale pour la méthode de confection
   specimenCount: { type: Number, default: 0 }, 
   

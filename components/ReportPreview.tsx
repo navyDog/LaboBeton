@@ -9,6 +9,29 @@ interface ReportPreviewProps {
   onClose: () => void;
 }
 
+// Helper pour grouper les éprouvettes par âge
+const groupSpecimensByAge = (specimens: Specimen[]) => {
+  const groups: Record<number, Specimen[]> = {};
+  specimens.forEach(s => {
+    if (!groups[s.age]) groups[s.age] = [];
+    groups[s.age].push(s);
+  });
+  return groups;
+};
+
+// Helper pour extraire la résistance cible (cylindre ou cube) depuis la classe (ex: C25/30)
+const getTargetStrength = (concreteClass: string, isCube: boolean): number | null => {
+  if (!concreteClass) return null;
+  // Regex pour capturer C(XX)/(YY)
+  const match = concreteClass.match(/C(\d+)\/(\d+)/i);
+  if (match) {
+    const cylinder = parseInt(match[1]);
+    const cube = parseInt(match[2]);
+    return isCube ? cube : cylinder;
+  }
+  return null;
+};
+
 export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, onClose }) => {
   
   // Filtrage des éprouvettes selon le type de rapport
@@ -16,6 +39,10 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
     if (type === 'PV') return s.age <= 7; // PV : On montre jusqu'à 7 jours
     return true; // RP : On montre tout l'historique
   }).sort((a, b) => a.number - b.number);
+
+  // Groupement pour calcul des moyennes
+  const groupedSpecimens = groupSpecimensByAge(filteredSpecimens);
+  const ages = Object.keys(groupedSpecimens).map(Number).sort((a, b) => a - b);
 
   const title = type === 'PV' 
     ? "PROCÈS VERBAL D'ESSAIS (PROVISOIRE)" 
@@ -35,6 +62,10 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
   if (user?.apeCode) legalParts.push(`APE : ${user.apeCode}`);
   if (user?.legalInfo) legalParts.push(user.legalInfo);
   const legalString = legalParts.join(' - ');
+
+  // Récupération des températures (avec fallback)
+  const extTemp = (test as any).externalTemp;
+  const concTemp = (test as any).concreteTemp;
 
   const handlePrint = () => {
     const printContent = document.getElementById('report-content');
@@ -164,6 +195,14 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                           <td className="border border-black p-2 w-1/4">{test.mixType}</td>
                        </tr>
                        <tr>
+                          <td className="border border-black p-2 font-bold bg-gray-50">Fabricant</td>
+                          <td className="border border-black p-2">{test.manufacturer}</td>
+                          <td className="border border-black p-2 font-bold bg-gray-50">Températures</td>
+                          <td className="border border-black p-2">
+                             Ext: {extTemp ? extTemp + '°C' : '-'} / Béton: {concTemp ? concTemp + '°C' : '-'}
+                          </td>
+                       </tr>
+                       <tr>
                           <td className="border border-black p-2 font-bold bg-gray-50">Lieu Fabrication</td>
                           <td className="border border-black p-2">{test.manufacturingPlace}</td>
                           <td className="border border-black p-2 font-bold bg-gray-50">Volume</td>
@@ -196,25 +235,46 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                           <th className="border border-black p-2 text-center">Âge</th>
                           <th className="border border-black p-2 text-center">Date Écrasement</th>
                           <th className="border border-black p-2 text-center">Dimensions (mm)</th>
-                          <th className="border border-black p-2 text-right">Masse (g)</th>
+                          <th className="border border-black p-2 text-right">Masse Vol. (kg/m³)</th>
                           <th className="border border-black p-2 text-right">Force (kN)</th>
                           <th className="border border-black p-2 text-right bg-gray-300">Résistance (MPa)</th>
                        </tr>
                     </thead>
                     <tbody>
-                       {filteredSpecimens.map((s, idx) => (
-                          <tr key={idx}>
-                             <td className="border border-black p-2 text-center font-bold">#{s.number}</td>
-                             <td className="border border-black p-2 text-center">{s.age} jours</td>
-                             <td className="border border-black p-2 text-center">{new Date(s.crushingDate).toLocaleDateString()}</td>
-                             <td className="border border-black p-2 text-center">{s.diameter} x {s.height}</td>
-                             <td className="border border-black p-2 text-right">{s.weight || '-'}</td>
-                             <td className="border border-black p-2 text-right">{s.force || '-'}</td>
-                             <td className="border border-black p-2 text-right font-bold text-base">
-                                {s.stress ? s.stress.toFixed(1) : '-'}
-                             </td>
-                          </tr>
-                       ))}
+                       {/* Pour chaque groupe d'âge, on affiche les lignes puis la moyenne */}
+                       {ages.map(age => {
+                          const specs = groupedSpecimens[age];
+                          const avgStress = specs.reduce((acc, s) => acc + (s.stress || 0), 0) / specs.length;
+                          const avgDensity = specs.reduce((acc, s) => acc + (s.density || 0), 0) / specs.length;
+                          
+                          return (
+                            <React.Fragment key={age}>
+                               {specs.map((s, idx) => (
+                                  <tr key={`${age}-${idx}`}>
+                                     <td className="border border-black p-2 text-center font-bold">#{s.number}</td>
+                                     <td className="border border-black p-2 text-center">{s.age} jours</td>
+                                     <td className="border border-black p-2 text-center">{new Date(s.crushingDate).toLocaleDateString()}</td>
+                                     <td className="border border-black p-2 text-center">{s.diameter} x {s.height}</td>
+                                     <td className="border border-black p-2 text-right text-gray-700">{s.density ? s.density.toFixed(0) : '-'}</td>
+                                     <td className="border border-black p-2 text-right">{s.force || '-'}</td>
+                                     <td className="border border-black p-2 text-right font-bold text-base">
+                                        {s.stress ? s.stress.toFixed(1) : '-'}
+                                     </td>
+                                  </tr>
+                               ))}
+                               {/* Ligne Moyenne */}
+                               <tr className="bg-gray-100 font-bold">
+                                  <td colSpan={4} className="border border-black p-2 text-right uppercase text-xs">Moyenne à {age} Jours :</td>
+                                  <td className="border border-black p-2 text-right text-xs">{avgDensity > 0 ? avgDensity.toFixed(0) : '-'}</td>
+                                  <td className="border border-black p-2 text-right bg-gray-200">-</td>
+                                  <td className="border border-black p-2 text-right text-lg border-l-2 border-l-black bg-gray-300 text-black">
+                                    {avgStress > 0 ? avgStress.toFixed(1) : '-'}
+                                  </td>
+                               </tr>
+                            </React.Fragment>
+                          );
+                       })}
+
                        {filteredSpecimens.length === 0 && (
                           <tr>
                              <td colSpan={7} className="border border-black p-4 text-center italic text-gray-500">
@@ -229,10 +289,50 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
               {/* OBSERVATIONS & CONCLUSION */}
               <div className="border border-black p-4 mb-8 min-h-[100px]">
                  <h4 className="font-bold underline mb-2 text-xs">OBSERVATIONS & CONCLUSIONS :</h4>
-                 <p className="text-sm">
-                    {test.concreteClass ? `La résistance caractéristique attendue est de classe ${test.concreteClass}.` : ''} 
-                    {filteredSpecimens.some(s => s.stress) ? ' Les résultats obtenus sont conformes aux exigences normatives pour l\'âge considéré.' : ''}
-                 </p>
+                 <div className="text-sm space-y-2">
+                    {/* Logique 1 : Rappel de la classe */}
+                    {test.concreteClass && (
+                      <p>Classe de résistance spécifiée : <strong>{test.concreteClass}</strong>.</p>
+                    )}
+
+                    {/* Logique 2 : Conformité probable à 7 jours */}
+                    {type === 'PV' && filteredSpecimens.some(s => s.age === 7 && s.stress) && (
+                       (() => {
+                          const specimens7d = groupedSpecimens[7];
+                          if(specimens7d && specimens7d.length > 0) {
+                             const avg7d = specimens7d.reduce((acc, s) => acc + (s.stress || 0), 0) / specimens7d.length;
+                             
+                             // Détection type cylindre ou cube pour le target
+                             const isCube = specimens7d[0].specimenType.toLowerCase().includes('cube');
+                             const targetStrength = getTargetStrength(test.concreteClass, isCube);
+
+                             if(targetStrength) {
+                                const required7d = targetStrength * 0.7; // 70% de fc28
+                                const percent = (avg7d / targetStrength) * 100;
+                                const isConform = avg7d >= required7d;
+
+                                return (
+                                  <p className={isConform ? "text-green-800" : "text-red-700"}>
+                                    <strong>Conformité Probable (7j) :</strong> La résistance moyenne à 7 jours est de <strong>{avg7d.toFixed(1)} MPa</strong>, 
+                                    soit <strong>{percent.toFixed(0)}%</strong> de la résistance caractéristique attendue ({targetStrength} MPa).
+                                    <br/>
+                                    Seuil de conformité probable (70% fc28) : {required7d.toFixed(1)} MPa.
+                                    <span className="block mt-1 font-bold uppercase">
+                                      {isConform ? "=> RÉSULTAT CONFORME AUX ATTENTES." : "=> ATTENTION : RÉSULTAT INFÉRIEUR AUX ATTENTES."}
+                                    </span>
+                                  </p>
+                                )
+                             }
+                          }
+                          return null;
+                       })()
+                    )}
+                    
+                    {/* Logique Standard (RP Final) */}
+                    {type === 'RP' && (
+                       <p>Les résultats obtenus sont conformes aux exigences normatives pour l'âge considéré.</p>
+                    )}
+                 </div>
               </div>
 
               {/* SIGNATURES */}
