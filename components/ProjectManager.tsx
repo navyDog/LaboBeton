@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil, Download, FileSpreadsheet } from 'lucide-react';
-import { Project, Company } from '../types';
+import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Project, Company, ConcreteTest } from '../types';
 import { authenticatedFetch } from '../utils/api';
+import { GlobalProjectReport } from './GlobalProjectReport';
 
 interface ProjectManagerProps {
   token: string;
@@ -13,6 +14,10 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // State for Global Report
+  const [reportData, setReportData] = useState<{project: Project, tests: ConcreteTest[]} | null>(null);
+  const [userProfile, setUserProfile] = useState<any>(null); // To pass logo etc to report
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,12 +31,14 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
 
   const fetchData = async () => {
     try {
-      const [projectsRes, companiesRes] = await Promise.all([
+      const [projectsRes, companiesRes, profileRes] = await Promise.all([
         authenticatedFetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
-        authenticatedFetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } })
+        authenticatedFetch('/api/companies', { headers: { 'Authorization': `Bearer ${token}` } }),
+        authenticatedFetch('/api/auth/profile', { headers: { 'Authorization': `Bearer ${token}` } })
       ]);
       if (projectsRes.ok) setProjects(await projectsRes.json());
       if (companiesRes.ok) setCompanies(await companiesRes.json());
+      if (profileRes.ok) setUserProfile(await profileRes.json());
     } catch (error) { console.error(error); } finally { setLoading(false); }
   };
 
@@ -119,8 +126,29 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
      } catch (e) { alert("Erreur lors de l'export"); }
   };
 
+  const handleGlobalReport = async (projectId: string) => {
+    try {
+      const res = await authenticatedFetch(`/api/projects/${projectId}/full-report`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if(res.ok) {
+        const data = await res.json();
+        setReportData(data);
+      }
+    } catch(e) { alert("Erreur chargement rapport global"); }
+  };
+
   return (
     <div className="space-y-6">
+      {reportData && (
+        <GlobalProjectReport 
+          project={reportData.project} 
+          tests={reportData.tests} 
+          user={userProfile}
+          onClose={() => setReportData(null)} 
+        />
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-concrete-900">Mes Affaires</h2>
@@ -224,6 +252,9 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
                    </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button onClick={() => handleGlobalReport(project._id)} className="text-concrete-300 hover:text-blue-600 p-1" title="PV Global Affaire">
+                    <FileText className="w-4 h-4" />
+                  </button>
                   <button onClick={() => handleExportCsv(project._id)} className="text-concrete-300 hover:text-green-600 p-1" title="Exporter CSV">
                     <FileSpreadsheet className="w-4 h-4" />
                   </button>

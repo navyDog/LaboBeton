@@ -1,0 +1,158 @@
+import React from 'react';
+import { X, Printer, FileText } from 'lucide-react';
+import { ConcreteTest, Project, User } from '../types';
+
+interface GlobalProjectReportProps {
+  project: Project;
+  tests: ConcreteTest[];
+  user?: User;
+  onClose: () => void;
+}
+
+export const GlobalProjectReport: React.FC<GlobalProjectReportProps> = ({ project, tests, user, onClose }) => {
+  
+  const reportDate = new Date().toLocaleDateString('fr-FR');
+  const headerName = user?.companyName || "Nom du Laboratoire";
+  const headerLogo = user?.logo;
+
+  // Helper pour obtenir la moyenne à X jours pour un test
+  const getAverageStress = (test: ConcreteTest, age: number): string => {
+    const specimens = test.specimens.filter(s => s.age === age && s.stress != null);
+    if (specimens.length === 0) return '-';
+    const avg = specimens.reduce((acc, s) => acc + (s.stress || 0), 0) / specimens.length;
+    return avg.toFixed(1);
+  };
+
+  const handlePrint = () => {
+    const printContent = document.getElementById('global-report-content');
+    if (!printContent) return;
+    
+    const windowUrl = 'about:blank';
+    const uniqueName = new Date().getTime();
+    const windowName = 'Print' + uniqueName;
+    const printWindow = window.open(windowUrl, windowName, 'left=50000,top=50000,width=0,height=0');
+
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>PV Global - ${project.name}</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <style>
+              @media print {
+                @page { size: A4 landscape; margin: 10mm; }
+                body { -webkit-print-color-adjust: exact; font-family: 'Arial', sans-serif; font-size: 10px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #000; padding: 4px; text-align: center; }
+                th { background-color: #f3f4f6; }
+                h1 { font-size: 18px; font-weight: bold; }
+              }
+            </style>
+          </head>
+          <body>
+            ${printContent.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 500);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+      <div className="bg-concrete-100 w-full max-w-6xl h-[90vh] flex flex-col rounded-xl overflow-hidden shadow-2xl">
+        
+        <div className="bg-concrete-900 p-4 flex justify-between items-center text-white shrink-0">
+          <div className="flex items-center gap-3">
+             <div className="p-2 bg-safety-orange rounded text-white">
+                <FileText className="w-5 h-5" />
+             </div>
+             <div>
+               <h3 className="font-bold text-lg">PV Global d'Affaire</h3>
+               <p className="text-concrete-400 text-xs">{project.name}</p>
+             </div>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-concrete-900 rounded-lg hover:bg-concrete-200 transition-colors font-bold text-sm"
+            >
+              <Printer className="w-4 h-4" /> Imprimer
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-grow overflow-y-auto p-8 bg-concrete-200 flex justify-center">
+           <div 
+             id="global-report-content" 
+             className="bg-white w-[297mm] min-h-[210mm] p-[10mm] shadow-xl text-black text-[11px] leading-tight relative flex flex-col"
+             style={{ fontFamily: 'Arial, sans-serif' }}
+           >
+              {/* Header */}
+              <div className="flex justify-between items-center border-b-2 border-black pb-4 mb-6">
+                 <div className="flex items-center gap-4">
+                    {headerLogo && <img src={headerLogo} className="h-12 object-contain" alt="logo" />}
+                    <div>
+                       <h1 className="text-lg font-black uppercase">{headerName}</h1>
+                       <p className="text-xs">Récapitulatif des Essais de Béton</p>
+                    </div>
+                 </div>
+                 <div className="text-right">
+                    <h2 className="text-xl font-bold uppercase text-safety-orange">PV RÉCAPITULATIF</h2>
+                    <p className="font-bold text-sm mt-1">{project.name}</p>
+                    <p className="text-xs">Client : {project.companyName}</p>
+                    <p className="text-[10px] mt-1">Date : {reportDate}</p>
+                 </div>
+              </div>
+
+              {/* Table */}
+              <table className="w-full border-collapse border border-black text-xs">
+                 <thead>
+                    <tr className="bg-gray-200 uppercase">
+                       <th className="w-20">Date Prél.</th>
+                       <th className="w-24">Référence</th>
+                       <th>Ouvrage / Partie</th>
+                       <th className="w-20">Classe</th>
+                       <th className="w-16">Slump</th>
+                       <th className="w-16">7 Jours (MPa)</th>
+                       <th className="w-16">28 Jours (MPa)</th>
+                       <th>Observations</th>
+                    </tr>
+                 </thead>
+                 <tbody>
+                    {tests.length === 0 ? (
+                       <tr><td colSpan={8} className="py-8 italic text-gray-500">Aucun prélèvement enregistré pour cette affaire.</td></tr>
+                    ) : (
+                       tests.map(test => (
+                          <tr key={test._id}>
+                             <td>{new Date(test.samplingDate).toLocaleDateString()}</td>
+                             <td className="font-bold">{test.reference}</td>
+                             <td className="text-left px-2">{test.structureName} - {test.elementName}</td>
+                             <td>{test.concreteClass}</td>
+                             <td>{test.slump} mm</td>
+                             <td className="font-mono">{getAverageStress(test, 7)}</td>
+                             <td className="font-mono font-bold bg-gray-50">{getAverageStress(test, 28)}</td>
+                             <td className="text-left px-2 italic text-[10px] text-gray-500 truncate max-w-[150px]">{test.formulaInfo}</td>
+                          </tr>
+                       ))
+                    )}
+                 </tbody>
+              </table>
+
+              <div className="mt-auto pt-4 border-t border-black text-[10px] text-center text-gray-500">
+                 Document généré automatiquement - {headerName}
+              </div>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};

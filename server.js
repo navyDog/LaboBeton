@@ -16,6 +16,7 @@ import Company from './models/Company.js';
 import Project from './models/Project.js';
 import Settings from './models/Settings.js';
 import ConcreteTest from './models/ConcreteTest.js';
+import BugReport from './models/BugReport.js';
 
 // --- Hack pour masquer l'avertissement de dépréciation util._extend ---
 const originalEmitWarning = process.emitWarning;
@@ -170,7 +171,7 @@ const authenticateToken = async (req, res, next) => {
     const user = await User.findById(decoded.id).select('-password');
     
     if (!user) return res.status(401).json({ message: "Utilisateur introuvable." });
-    if (!user.isActive) return res.status(403).json({ message: "Compte désactivé." });
+    if (user.isActive === false) return res.status(403).json({ message: "Compte désactivé." });
     
     // Vérification Session Unique
     if (decoded.tokenVersion !== user.tokenVersion) {
@@ -207,7 +208,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const user = await User.findOne({ username: safeUsername });
     if (!user) return res.status(401).json({ message: "Identifiants incorrects" });
     
-    if (user.isActive === false) return res.status(403).json({ message: "Ce compte a été désactivé." });
+    if (user.isActive === false) return res.status(403).json({ message: "Ce compte a été désactivé. Contactez l'administrateur." });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Identifiants incorrects" });
@@ -237,13 +238,31 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   }
 });
 
-// Bug Reporter
-app.post('/api/bugs', async (req, res) => {
-  // Dans un vrai cas, on enverrait un email ou on stockerait en DB
-  // Ici on log juste dans la console serveur
+// Bug Reporter (Public Authenticated)
+app.post('/api/bugs', authenticateToken, async (req, res) => {
   const { type, description, user } = req.body;
-  console.log(`🐞 [BUG REPORT] Type: ${type} | User: ${user} | Desc: ${description}`);
-  res.json({ message: "Signalement reçu" });
+  try {
+    await BugReport.create({ type, description, user });
+    res.json({ message: "Signalement reçu" });
+  } catch (e) {
+    res.status(500).json({ message: "Erreur enregistrement bug" });
+  }
+});
+
+// Admin Bug Routes
+app.get('/api/admin/bugs', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const bugs = await BugReport.find().sort({ createdAt: -1 });
+    res.json(bugs);
+  } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
+});
+
+app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const bug = await BugReport.findByIdAndUpdate(req.params.id, { status, resolvedAt: status === 'resolved' ? new Date() : null }, { new: true });
+    res.json(bug);
+  } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
 
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
@@ -443,6 +462,18 @@ app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Erreur export" });
   }
+});
+
+// FULL REPORT DATA FOR PV GLOBAL
+app.get('/api/projects/:id/full-report', authenticateToken, async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const project = await Project.findOne({ _id: projectId, userId: req.user.id });
+    if (!project) return res.status(404).json({ message: "Projet introuvable" });
+
+    const tests = await ConcreteTest.find({ projectId }).sort({ samplingDate: 1 }).lean();
+    res.json({ project, tests });
+  } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
 
 app.post('/api/projects', authenticateToken, async (req, res) => {
