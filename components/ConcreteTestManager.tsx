@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../utils/api';
@@ -107,8 +107,17 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const [selectedSpecimenIdx, setSelectedSpecimenIdx] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reportState, setReportState] = useState<{ test: ConcreteTest, type: 'PV'|'RP' } | null>(null);
-  const [quickCreateOpen, setQuickCreateOpen] = useState(false); // Mini modal pour créer un projet
-  const [newProjectName, setNewProjectName] = useState('');
+  
+  // Quick Create Project State
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [newProjectData, setNewProjectData] = useState({
+    name: '',
+    moa: '',
+    moe: '',
+    contactName: '',
+    email: '',
+    phone: ''
+  });
 
   const initialFormState = {
     projectId: '', structureName: '', elementName: '', receptionDate: new Date().toISOString().split('T')[0], samplingDate: new Date().toISOString().split('T')[0], volume: 0,
@@ -132,7 +141,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
         if (testsRes.ok) {
             const loadedTests = await testsRes.json();
             setTests(loadedTests);
-            // Handle Initial Navigation from Calendar
+            // Handle Initial Navigation from Calendar or other deep links
             if (initialTestId) {
                 const found = loadedTests.find((t: ConcreteTest) => t._id === initialTestId);
                 if (found) handleEdit(found);
@@ -226,18 +235,19 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   };
 
   const handleQuickCreateProject = async () => {
-    if(!newProjectName.trim()) return;
+    if(!newProjectData.name.trim()) return;
     try {
         const res = await authenticatedFetch('/api/projects', {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-            body: JSON.stringify({ name: newProjectName })
+            body: JSON.stringify(newProjectData)
         });
         if(res.ok) {
             const newP = await res.json();
             setProjects([newP, ...projects]);
             setFormData({...formData, projectId: newP._id});
-            setQuickCreateOpen(false); setNewProjectName('');
+            setQuickCreateOpen(false); 
+            setNewProjectData({ name: '', moa: '', moe: '', contactName: '', email: '', phone: '' });
         }
     } catch(e) { alert("Erreur"); }
   };
@@ -257,15 +267,47 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
         {isModalOpen && selectedSpecimenIdx !== null && <SpecimenModal specimen={formData.specimens[selectedSpecimenIdx]} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSpecimen} />}
         
-        {/* Quick Project Modal */}
+        {/* Quick Project Modal - EXPANDED */}
         {quickCreateOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-                <div className="bg-white p-4 rounded-lg shadow-xl w-80">
-                    <h4 className="font-bold mb-2">Nouvelle Affaire Rapide</h4>
-                    <input autoFocus className="w-full border p-2 rounded mb-2" placeholder="Nom de l'affaire" value={newProjectName} onChange={e=>setNewProjectName(e.target.value)} />
-                    <div className="flex justify-end gap-2">
-                        <button onClick={()=>setQuickCreateOpen(false)} className="px-3 py-1 bg-gray-100 rounded">Annuler</button>
-                        <button onClick={handleQuickCreateProject} className="px-3 py-1 bg-safety-orange text-white rounded">Créer</button>
+                <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+                    <div className="flex justify-between items-center mb-4">
+                       <h4 className="font-bold text-lg flex items-center gap-2"><Briefcase className="w-5 h-5 text-safety-orange"/> Nouvelle Affaire Rapide</h4>
+                       <button onClick={()=>setQuickCreateOpen(false)}><X className="w-5 h-5 text-gray-400"/></button>
+                    </div>
+                    <div className="space-y-3">
+                       <div>
+                          <label className="text-xs font-bold text-gray-500">Nom de l'affaire *</label>
+                          <input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} />
+                       </div>
+                       <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs font-bold text-gray-500">MOA (Client)</label>
+                            <input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} />
+                          </div>
+                          <div>
+                            <label className="text-xs font-bold text-gray-500">MOE (Archi)</label>
+                            <input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} />
+                          </div>
+                       </div>
+                       <div>
+                          <label className="text-xs font-bold text-gray-500">Contact Chantier</label>
+                          <input className="w-full border p-2 rounded text-sm mt-1" placeholder="Nom du conducteur..." value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} />
+                       </div>
+                       <div className="grid grid-cols-2 gap-2">
+                          <div>
+                             <label className="text-xs font-bold text-gray-500">Email</label>
+                             <input className="w-full border p-2 rounded text-sm mt-1" type="email" value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} />
+                          </div>
+                          <div>
+                             <label className="text-xs font-bold text-gray-500">Téléphone</label>
+                             <input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} />
+                          </div>
+                       </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-6">
+                        <button onClick={()=>setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button>
+                        <button onClick={handleQuickCreateProject} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">Créer & Sélectionner</button>
                     </div>
                 </div>
             </div>
@@ -285,7 +327,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                  <div className="lg:col-span-1">
                     <label className="block text-xs font-bold text-concrete-500 mb-1 flex justify-between">
                         Affaire (Client) * 
-                        <button type="button" onClick={()=>setQuickCreateOpen(true)} className="text-safety-orange hover:underline text-[10px] flex items-center gap-1"><Plus className="w-3 h-3"/> Rapide</button>
+                        <button type="button" onClick={()=>setQuickCreateOpen(true)} className="text-safety-orange hover:underline text-[10px] flex items-center gap-1"><Plus className="w-3 h-3"/> Créer</button>
                     </label>
                     <select required className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange" value={formData.projectId} onChange={e => setFormData({...formData, projectId: e.target.value})}>
                       <option value="">-- Sélectionner --</option>
@@ -318,13 +360,16 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2"><Boxes className="w-5 h-5 text-safety-orange" /> Planification & Résultats</h3>
-              <div className="bg-concrete-50 p-4 rounded-lg border border-concrete-200">
-                <label className="block text-xs font-bold text-concrete-500 mb-2 uppercase">Ajouter un pack</label>
-                <div className="flex flex-wrap items-end gap-3">
-                   <div><span className="text-xs text-concrete-400 mb-1 block">Échéance</span><div className="flex bg-white rounded border border-concrete-300 overflow-hidden">{[7, 28].map(d => <button key={d} type="button" onClick={() => setPackAge(d)} className={`px-3 py-1 text-sm font-medium border-r border-concrete-100 ${packAge === d ? 'bg-concrete-800 text-white' : 'hover:bg-concrete-100'}`}>{d}j</button>)}<input type="number" className="w-16 px-2 py-1 text-sm text-center" value={packAge} onChange={e => setPackAge(parseInt(e.target.value))} /></div></div>
-                   <div><span className="text-xs text-concrete-400 mb-1 block">Qté</span><input type="number" min="1" className="w-16 py-1 px-2 border border-concrete-300 rounded text-center text-sm h-[30px]" value={packCount} onChange={e => setPackCount(parseInt(e.target.value))} /></div>
-                   <div><span className="text-xs text-concrete-400 mb-1 block">Dim.</span><select className="py-1 px-2 border border-concrete-300 rounded bg-white text-sm h-[30px]" value={packDim} onChange={e => setPackDim(e.target.value)}><option value="160x320">Cyl. 160x320</option><option value="110x220">Cyl. 110x220</option><option value="150x150">Cube 150x150</option></select></div>
-                   <button type="button" onClick={handleAddPack} className="px-4 py-1.5 bg-concrete-800 text-white text-sm font-medium rounded hover:bg-concrete-700 h-[30px]"><Plus className="w-3 h-3" /> Ajouter</button>
+              
+              {/* Add Pack Bar - REPOSITIONED */}
+              <div className="bg-concrete-100 p-3 rounded-lg border border-concrete-200 flex flex-wrap items-center justify-between gap-4">
+                <span className="text-sm font-bold text-concrete-700">Ajouter des éprouvettes :</span>
+                <div className="flex items-center gap-2">
+                   <div className="flex bg-white rounded border border-concrete-300 overflow-hidden shadow-sm">{[7, 28].map(d => <button key={d} type="button" onClick={() => setPackAge(d)} className={`px-3 py-1.5 text-xs font-medium border-r border-concrete-100 last:border-0 transition-colors ${packAge === d ? 'bg-concrete-800 text-white' : 'hover:bg-concrete-100'}`}>{d}j</button>)}<input type="number" className="w-12 px-1 py-1 text-xs text-center font-bold" value={packAge} onChange={e => setPackAge(parseInt(e.target.value))} title="Âge personnalisé" /></div>
+                   <span className="text-xs text-concrete-400">x</span>
+                   <input type="number" min="1" className="w-12 py-1.5 px-2 border border-concrete-300 rounded text-center text-xs font-bold shadow-sm" value={packCount} onChange={e => setPackCount(parseInt(e.target.value))} />
+                   <select className="py-1.5 px-2 border border-concrete-300 rounded bg-white text-xs font-medium shadow-sm" value={packDim} onChange={e => setPackDim(e.target.value)}><option value="160x320">Cyl. 160x320</option><option value="110x220">Cyl. 110x220</option><option value="150x150">Cube 150x150</option></select>
+                   <button type="button" onClick={handleAddPack} className="ml-2 px-3 py-1.5 bg-concrete-800 text-white text-xs font-bold rounded hover:bg-concrete-700 flex items-center gap-1 shadow-sm"><Plus className="w-3 h-3" /> Ajouter</button>
                 </div>
               </div>
 

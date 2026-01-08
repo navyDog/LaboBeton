@@ -86,7 +86,12 @@ const App: React.FC = () => {
   };
 
   const handleDeepNavigate = (targetView: string, testId?: string) => {
-    if (testId) setSelectedTestId(testId);
+    // Si on navigue vers fresh_tests sans ID spécifié, on reset l'ID pour avoir la liste
+    if (targetView === 'fresh_tests' && !testId) {
+        setSelectedTestId(null);
+    } else if (testId) {
+        setSelectedTestId(testId);
+    }
     setView(targetView);
     setMobileMenuOpen(false);
   };
@@ -138,7 +143,6 @@ const App: React.FC = () => {
           
           {/* Logo Zone (Left) */}
           <div className="flex items-center gap-3">
-            {/* Si logo client existe, on l'affiche, sinon icône par défaut */}
             <div 
                className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-3" 
                onClick={() => setView('dashboard')}
@@ -169,33 +173,44 @@ const App: React.FC = () => {
           <div className="hidden md:flex items-center gap-2 md:gap-4">
              {view !== 'dashboard' && (
                <div className="flex items-center bg-concrete-100 rounded-lg p-1 gap-1 animate-in fade-in slide-in-from-top-2">
-                  <button onClick={() => setView('fresh_tests')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'fresh_tests' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
+                  <button onClick={() => handleDeepNavigate('fresh_tests')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'fresh_tests' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
                     <FlaskConical className="w-4 h-4" /> Prélèvements
                   </button>
-                  <button onClick={() => setView('calendar')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
+                  <button onClick={() => handleDeepNavigate('calendar')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
                     <Calendar className="w-4 h-4" /> Planning
                   </button>
-                  <button onClick={() => setView('projects')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
+                  <button onClick={() => handleDeepNavigate('companies')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
+                    <Building className="w-4 h-4" /> Entreprises
+                  </button>
+                  <button onClick={() => handleDeepNavigate('projects')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
                     <Briefcase className="w-4 h-4" /> Affaires
                   </button>
-                  <button onClick={() => setView('settings')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
+                  <button onClick={() => handleDeepNavigate('settings')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
                     <Settings className="w-4 h-4" /> Paramètres
                   </button>
                </div>
              )}
 
-             <div className="flex items-center gap-2 border-l border-concrete-200 pl-4">
-               <button onClick={() => setView('profile')} className="p-2 text-concrete-500 hover:bg-concrete-100 rounded-full" title="Mon Profil">
-                  <UserIcon className="w-5 h-5" />
-               </button>
-               <button onClick={handleLogout} className="p-2 text-concrete-500 hover:text-red-600 hover:bg-red-50 rounded-full" title="Déconnexion">
-                 <LogOut className="w-5 h-5" />
-               </button>
+             <div className="flex items-center gap-4 border-l border-concrete-200 pl-4">
+               {/* Status Badge moved inside nav */}
+               <StatusBadge status={dbStatus} />
+               
+               <div className="flex items-center gap-1">
+                 <button onClick={() => handleDeepNavigate('profile')} className="p-2 text-concrete-500 hover:bg-concrete-100 rounded-full" title="Mon Profil">
+                    <UserIcon className="w-5 h-5" />
+                 </button>
+                 <button onClick={handleLogout} className="p-2 text-concrete-500 hover:text-red-600 hover:bg-red-50 rounded-full" title="Déconnexion">
+                   <LogOut className="w-5 h-5" />
+                 </button>
+               </div>
              </div>
           </div>
 
           {/* Mobile Burger (Right) */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            <div className="scale-75">
+              <StatusBadge status={dbStatus} />
+            </div>
             <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-concrete-600">
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -240,10 +255,6 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-grow flex items-center justify-center p-4 sm:p-8 relative">
         <div className="w-full max-w-7xl">
-          {/* Status Bar */}
-          <div className="absolute top-0 right-0 p-4 hidden lg:block">
-             <StatusBadge status={dbStatus} />
-          </div>
           
           {dbStatus === ConnectionStatus.ERROR && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center max-w-2xl mx-auto mb-8">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, Truck, X, FileText, MapPin, Beaker, Download, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, Truck, X, FileText, MapPin, Beaker, Download, ArrowRight, Clock } from 'lucide-react';
 import { ConcreteTest } from '../types';
 import { authenticatedFetch } from '../utils/api';
 
@@ -29,74 +29,49 @@ const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose, onNaviga
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden border border-concrete-200 flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-concrete-200 flex flex-col">
+        {/* Header Simple */}
         <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center shrink-0">
-          <div>
-             <h3 className="text-white font-bold text-lg flex items-center gap-2">
-               <FileText className="w-5 h-5 text-safety-orange" />
-               {test.reference}
-             </h3>
-             <p className="text-concrete-400 text-xs">{test.projectName} - {test.companyName}</p>
-          </div>
+          <h3 className="text-white font-bold text-lg">Détails de l'événement</h3>
           <button onClick={onClose} className="text-concrete-400 hover:text-white transition-colors">
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-             <div className="bg-concrete-50 p-4 rounded-lg border border-concrete-100">
-                <h4 className="text-xs font-bold text-concrete-500 uppercase mb-3 flex items-center gap-2">
-                  <MapPin className="w-4 h-4" /> Localisation
-                </h4>
-                <div className="space-y-2 text-sm">
-                   <div className="flex justify-between"><span className="text-concrete-500">Ouvrage:</span><span className="font-semibold text-concrete-900">{test.structureName}</span></div>
-                   <div className="flex justify-between"><span className="text-concrete-500">Partie:</span><span className="font-semibold text-concrete-900">{test.elementName}</span></div>
-                   <div className="flex justify-between"><span className="text-concrete-500">Prélèvement:</span><span className="font-semibold text-concrete-900">{new Date(test.samplingDate).toLocaleDateString()}</span></div>
-                </div>
-             </div>
-             <div className="bg-concrete-50 p-4 rounded-lg border border-concrete-100">
-                <h4 className="text-xs font-bold text-concrete-500 uppercase mb-3 flex items-center gap-2">
-                  <Beaker className="w-4 h-4" /> Caractéristiques
-                </h4>
-                <div className="space-y-2 text-sm">
-                   <div className="flex justify-between"><span className="text-concrete-500">Classe:</span><span className="inline-block px-2 py-0.5 bg-white border border-concrete-200 rounded text-xs font-bold">{test.concreteClass}</span></div>
-                   <div className="flex justify-between"><span className="text-concrete-500">Slump:</span><span className="font-semibold text-concrete-900">{test.slump} mm</span></div>
-                   <div className="flex justify-between"><span className="text-concrete-500">Volume:</span><span className="font-semibold text-concrete-900">{test.volume} m³</span></div>
-                </div>
-             </div>
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-concrete-500 uppercase mb-3 flex items-center gap-2"><Hammer className="w-4 h-4" /> Éprouvettes</h4>
-            <div className="overflow-x-auto border border-concrete-200 rounded-lg">
-              <table className="w-full text-left text-xs md:text-sm">
-                <thead className="bg-concrete-100 text-concrete-600 font-semibold">
-                  <tr><th className="px-3 py-2">N°</th><th className="px-3 py-2">Âge</th><th className="px-3 py-2">Date Écrasement</th><th className="px-3 py-2 text-right">Résultat (MPa)</th></tr>
-                </thead>
-                <tbody className="divide-y divide-concrete-100">
-                  {test.specimens.map((s, idx) => (
-                    <tr key={idx} className="hover:bg-concrete-50">
-                      <td className="px-3 py-2 font-mono font-bold">#{s.number}</td>
-                      <td className="px-3 py-2">{s.age}j</td>
-                      <td className="px-3 py-2">{new Date(s.crushingDate).toLocaleDateString()}</td>
-                      <td className="px-3 py-2 text-right font-mono">{s.stress ? <span className="font-bold text-safety-orange">{s.stress.toFixed(1)}</span> : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div className="p-4 bg-concrete-50 border-t border-concrete-200 flex justify-end gap-3 shrink-0">
-          <button onClick={onClose} className="px-4 py-2 bg-concrete-200 text-concrete-700 hover:bg-concrete-300 rounded font-medium transition-colors">Fermer</button>
-          {onNavigate && (
+        <div className="p-6 text-center space-y-4">
+           <div className="inline-flex p-3 bg-concrete-100 rounded-full mb-2">
+              <FileText className="w-8 h-8 text-safety-orange" />
+           </div>
+           
+           <div>
+             <h2 className="text-xl font-bold text-concrete-900">{test.reference}</h2>
+             <p className="text-sm text-concrete-500 font-medium mt-1">{test.projectName}</p>
+             <p className="text-xs text-concrete-400">{test.companyName}</p>
+           </div>
+
+           <div className="bg-concrete-50 rounded-lg p-3 text-sm text-left border border-concrete-100 space-y-2">
+              <div className="flex justify-between">
+                <span className="text-concrete-500">Date Prélèvement:</span>
+                <span className="font-bold">{new Date(test.samplingDate).toLocaleDateString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-concrete-500">Ouvrage:</span>
+                <span className="font-bold">{test.structureName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-concrete-500">Éprouvettes:</span>
+                <span className="font-bold">{test.specimens.length}</span>
+              </div>
+           </div>
+
+           {onNavigate && (
             <button 
               onClick={() => onNavigate(test._id)} 
-              className="px-4 py-2 bg-concrete-800 text-white hover:bg-black rounded font-medium flex items-center gap-2"
+              className="w-full py-3 bg-safety-orange text-white hover:bg-orange-600 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-md mt-4"
             >
-              Accéder à la fiche <ArrowRight className="w-4 h-4" />
+              Accéder à la fiche complète <ArrowRight className="w-4 h-4" />
             </button>
-          )}
+           )}
         </div>
       </div>
     </div>
