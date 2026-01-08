@@ -7,8 +7,8 @@ WORKDIR /app
 # Copier les fichiers de dépendances
 COPY package*.json ./
 
-# Installer toutes les dépendances (y compris devDependencies pour Vite)
-RUN npm ci
+# Installer toutes les dépendances (npm install au lieu de ci pour générer le lockfile si absent)
+RUN npm install
 
 # Copier tout le code source
 COPY . .
@@ -25,8 +25,8 @@ WORKDIR /app
 # Copier les fichiers de dépendances
 COPY package*.json ./
 
-# Installer uniquement les dépendances de production (Express, Mongoose...)
-RUN npm ci --only=production
+# Installer uniquement les dépendances de production
+RUN npm install --omit=dev
 
 # Copier les artefacts construits depuis l'étape précédente
 COPY --from=builder /app/dist ./dist
