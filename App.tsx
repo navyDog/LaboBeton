@@ -159,7 +159,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-bold text-concrete-900 leading-tight">LaboBéton</h1>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-safety-orange border border-orange-200 uppercase tracking-widest">
-                    Alpha v0.1.0
+                    Alpha v0.1.0-alpha2
                   </span>
                 </div>
                 {currentUser.companyName && (

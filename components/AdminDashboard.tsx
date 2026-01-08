@@ -82,6 +82,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
     } catch (e) { alert("Erreur"); }
   };
 
+  const handleDeleteBug = async (bugId: string) => {
+    if(!confirm("Supprimer définitivement ce signalement ?")) return;
+    try {
+        await authenticatedFetch(`/api/admin/bugs/${bugId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${currentUser.token}` }
+        });
+        setBugs(bugs.filter(b => b._id !== bugId));
+    } catch(e) { alert("Erreur lors de la suppression"); }
+  };
+
   const filteredUsers = users.filter(user => 
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -196,12 +207,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                      </div>
                      <p className="text-sm text-concrete-800 whitespace-pre-wrap">{bug.description}</p>
                   </div>
-                  <div>
+                  <div className="flex flex-col items-end gap-2">
                     {bug.status === 'open' ? (
                       <button onClick={() => handleResolveBug(bug._id)} className="px-3 py-1 bg-concrete-100 hover:bg-green-100 text-concrete-600 hover:text-green-700 rounded text-xs font-bold transition-colors">Marquer Résolu</button>
                     ) : (
                       <span className="flex items-center gap-1 text-green-600 text-xs font-bold"><CheckCircle className="w-3 h-3" /> Résolu</span>
                     )}
+                    
+                    <button 
+                      onClick={() => handleDeleteBug(bug._id)} 
+                      className="text-concrete-300 hover:text-red-500 p-1 hover:bg-red-50 rounded transition-colors"
+                      title="Supprimer ce rapport"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                </div>
              ))

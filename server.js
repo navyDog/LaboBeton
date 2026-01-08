@@ -265,6 +265,13 @@ app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res)
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
 
+app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await BugReport.findByIdAndDelete(req.params.id);
+    res.json({ message: "Signalement supprimé" });
+  } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
+});
+
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id, '-password -tokenVersion');
