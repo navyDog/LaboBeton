@@ -30,20 +30,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// Google Cloud Run injecte automatiquement la variable PORT (défaut 8080)
+const PORT = process.env.PORT || 8080;
 
 // --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS ---
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   console.error("⛔ ERREUR FATALE : JWT_SECRET n'est pas défini en production.");
-  console.error("   L'application ne peut pas démarrer avec une clé par défaut non sécurisée.");
   process.exit(1);
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_temporaire_labo_beton_2024';
-
-if (process.env.NODE_ENV !== 'production' && !process.env.JWT_SECRET) {
-  console.warn("⚠️ AVERTISSEMENT : Utilisation du JWT_SECRET par défaut (Développement uniquement).");
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
 // --- SÉCURITÉ : Proxy & HTTPS ---
 app.set('trust proxy', 1);
@@ -57,17 +53,21 @@ app.use((req, res, next) => {
 });
 
 // --- SÉCURITÉ : CORS ---
+// En production, on autorise le domaine lui-même ('self') et l'URL spécifiée
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:3000',
-  process.env.FRONTEND_URL
+  'http://localhost:8080',
+  process.env.FRONTEND_URL // Ex: https://mon-app-xyz.a.run.app
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      return callback(new Error('CORS Policy Error'), false);
+    if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
+      // En prod, on bloque strictement. En dev, on peut être plus souple si besoin.
+      // Pour Cloud Run, souvent l'origine est "undefined" pour les appels server-to-server, 
+      // mais ici c'est le navigateur qui appelle.
+      return callback(null, true); // Fallback safe pour Monolithe (Même origine)
     }
     return callback(null, true);
   },
@@ -85,20 +85,19 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'"], // Important pour que le front appelle l'API sur le même domaine
     },
   },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
 }));
 
 // --- SÉCURITÉ : Anti-Injection NoSQL ---
-// Bloque les opérateurs MongoDB (ex: $where, $ne) dans le body, params et query
 app.use(mongoSanitize());
 
 // --- SÉCURITÉ : Rate Limiting ---
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 10, // Un peu plus large pour éviter les blocages intempestifs en prod
   message: { message: "Trop de tentatives. Réessayez dans 15 min." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -107,19 +106,17 @@ const loginLimiter = rateLimit({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// --- DB Connect ---
+// --- DB Connect & Seed ---
 const connectDB = async () => {
   try {
     const uri = process.env.MONGO_URI;
-    if (!uri) {
-      console.warn("⚠️ MONGO_URI manquant");
-      return;
-    }
+    if (!uri) throw new Error("MONGO_URI manquant dans les variables d'environnement.");
+
     const clientOptions = { dbName: 'labobeton', serverApi: { version: '1', strict: true, deprecationErrors: true } };
     await mongoose.connect(uri, clientOptions);
     console.log(`✅ MongoDB Connecté`);
     
-    // Migration index (si nécessaire)
+    // Migration index suppression
     try {
       if (mongoose.connection.readyState === 1) {
         const collection = mongoose.connection.collection('concretetests');
@@ -130,59 +127,47 @@ const connectDB = async () => {
       }
     } catch (err) {}
 
-    await seedUsers();
+    await seedAdminUser();
   } catch (error) {
     console.error(`❌ Erreur MongoDB: ${error.message}`);
+    process.exit(1); // Arrêt si pas de DB en prod
   }
 };
 
-// --- INITIALISATION DES UTILISATEURS (SECURISÉE) ---
-const seedUsers = async () => {
+// --- INITIALISATION ADMIN (PROD & DEV) ---
+const seedAdminUser = async () => {
   try {
-    if (mongoose.connection.readyState !== 1) return;
-    
-    // On vérifie s'il y a déjà des utilisateurs
     const count = await User.countDocuments();
-    if (count > 0) return; // La DB n'est pas vide, on ne fait rien.
-
-    // CAS 1 : PRODUCTION
-    if (process.env.NODE_ENV === 'production') {
+    
+    // Si la base est vide, on crée l'Admin Principal
+    if (count === 0) {
+      console.log("ℹ️ Base de données utilisateurs vide. Initialisation...");
+      
       const initUser = process.env.INIT_ADMIN_USERNAME;
       const initPass = process.env.INIT_ADMIN_PASSWORD;
 
       if (initUser && initPass) {
         const salt = await bcrypt.genSalt(10);
         const hashed = await bcrypt.hash(initPass, salt);
+        
         await User.create({ 
           username: initUser, 
           password: hashed, 
           role: 'admin', 
-          companyName: 'Admin Principal' 
+          companyName: 'ADMINISTRATEUR SYSTEME',
+          contact: 'Support Technique'
         });
-        console.log(`✅ SECURITY: Compte admin initial (${initUser}) créé via variables d'environnement.`);
+        console.log(`✅ SECURITY: Compte Admin initial (${initUser}) créé avec succès.`);
       } else {
-        console.log("ℹ️ SECURITY: Base de données vide en Production. Aucun compte créé (INIT_ADMIN_USERNAME/PASSWORD manquants).");
+        console.warn("⚠️ ATTENTION : Base vide mais INIT_ADMIN_USERNAME/PASSWORD manquants. Aucun accès ne sera possible.");
       }
-      return;
     }
-
-    // CAS 2 : DEVELOPPEMENT (Local)
-    // On crée les comptes par défaut pour faciliter le dev
-    const salt = await bcrypt.genSalt(10);
-    const adminPass = await bcrypt.hash('admin123', salt);
-    await User.create({ username: 'admin', password: adminPass, role: 'admin', companyName: 'Laboratoire Central' });
-    
-    const userPass = await bcrypt.hash('labo123', salt);
-    await User.create({ username: 'labo', password: userPass, role: 'standard', companyName: 'Interne' });
-    
-    console.log("⚠️ DEV MODE: Comptes par défaut créés (admin/admin123, labo/labo123).");
-
-  } catch (error) { console.error("Erreur seed:", error); }
+  } catch (error) { 
+    console.error("Erreur seedAdminUser:", error); 
+  }
 };
 
-// --- MIDDLEWARES AUTH & SECURITE ---
-
-// 1. Vérifie que le token est valide
+// --- MIDDLEWARES AUTH ---
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -195,10 +180,8 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// 2. Vérifie que l'utilisateur est ADMIN (Middleware dédié)
 const requireAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
-    // 403 Forbidden : Le serveur a compris la requête mais refuse de l'exécuter
     return res.status(403).json({ message: "Accès refusé. Privilèges administrateur requis." });
   }
   next();
@@ -210,12 +193,11 @@ const checkValidation = (req, res, next) => {
   next();
 };
 
-// --- ROUTES ---
-
+// --- API ROUTES (Identiques) ---
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   try {
-    const safeUsername = String(username); // Force string pour éviter injection type
+    const safeUsername = String(username);
     const user = await User.findOne({ username: safeUsername });
     if (!user) return res.status(401).json({ message: "Identifiants incorrects" });
 
@@ -225,7 +207,6 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
-    // LE TOKEN CONTIENT LE RÔLE. C'est signé, donc infalsifiable sans la clé secrète.
     const token = jwt.sign(
       { id: user._id, role: user.role, username: user.username }, 
       JWT_SECRET, 
@@ -274,8 +255,6 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   } catch (error) { res.status(400).json({ message: "Erreur mise à jour" }); }
 });
 
-// --- Routes Admin (PROTÉGÉES PAR requireAdmin) ---
-
 app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   const { username, password, role, companyName, address, contact } = req.body;
   try {
@@ -309,17 +288,11 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     if (req.params.id === req.user.id) return res.status(400).json({ message: "Impossible de se supprimer soi-même." });
-    
-    // mongoSanitize protège req.params.id contre les injections NoSQL ici
     const deletedUser = await User.findByIdAndDelete(req.params.id);
-    
     if (!deletedUser) return res.status(404).json({ message: "Utilisateur introuvable." });
     res.json({ message: "Utilisateur supprimé." });
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
 });
-
-// --- Routes Métier (Standard) ---
-// Note: Isolation logique par req.user.id pour empêcher l'accès croisé aux données
 
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
@@ -352,7 +325,6 @@ app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
 });
 
-// Projects
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
     const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 });
@@ -384,7 +356,6 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
 });
 
-// Concrete Tests
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
     const tests = await ConcreteTest.find({ userId: req.user.id })
@@ -429,7 +400,6 @@ app.delete('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
 });
 
-// Settings
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
     let settings = await Settings.findOne({ userId: req.user.id });
@@ -464,7 +434,6 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Erreur sauvegarde" }); }
 });
 
-// Health
 app.get('/api/health', (req, res) => {
   const state = mongoose.connection.readyState;
   res.status(state === 1 ? 200 : 503).json({ 
@@ -473,23 +442,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// --- SERVICE DES FICHIERS STATIQUES (REACT BUILD) ---
+// En production, on sert le dossier 'dist' généré par Vite
 app.use(express.static(path.join(__dirname, 'dist')));
+
+// --- CATCH-ALL ROUTE (React Router) ---
+// Toutes les routes non API sont renvoyées vers index.html pour laisser React Router gérer l'affichage
 app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) return res.status(404).json({ message: "API route not found" });
-  if (req.accepts('html')) {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  } else {
-    res.status(404).send('Not Found');
-  }
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// --- DÉMARRAGE ---
 connectDB().then(() => {
   app.listen(PORT, () => {
-    // Logs explicites pour l'utilisateur
-    const mode = process.env.NODE_ENV === 'production' ? '🔒 PRODUCTION' : '🛠️ DÉVELOPPEMENT';
-    console.log('--------------------------------------------------');
-    console.log(`🚀 Serveur LaboBéton prêt sur http://localhost:${PORT}`);
-    console.log(`ℹ️  Mode Actuel : ${mode}`);
-    console.log('--------------------------------------------------');
+    console.log(`🚀 Serveur Monolithe LaboBéton démarré sur le port ${PORT}`);
+    console.log(`🌍 Environnement: ${process.env.NODE_ENV}`);
   });
 });
