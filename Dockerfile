@@ -1,47 +1,46 @@
-Fonctionnalités:
+# Étape 1 : Construction du Frontend (Builder)
+FROM node:20-alpine AS builder
 
-Ajouter export .csv
-possibilité d’exporter toutes les infos d’un chantier/ou d’une affaire
+# Définir le répertoire de travail
+WORKDIR /app
 
-Générer un PV global d’affaires. 
-Ajout bug reporter
+# Copier les fichiers de dépendances
+COPY package*.json ./
 
+# Installer toutes les dépendances
+RUN npm install
 
-Ajout icône d’onglet
+# Copier tout le code source
+COPY . .
 
-Système de notification “exportable” : 
-calendrier teams / mail / événement google etc.
-Ajout de l’icône de l’entreprise client en haut à gauche.
+# Construire l'application React (génère le dossier /dist)
+RUN npm run build
 
-Ajout de VBM solutions dans le footer de la page.
-Vérifier Validator sur tous les champs (telephone cvcvb
-Moyen de limiter l’accès d’un utilisateur à l'application.
-Ajouter titre “mes affaires” : 
+# Étape 2 : Image de Production (Runner)
+FROM node:20-alpine
 
+# Définir le répertoire de travail
+WORKDIR /app
 
-petite modale pour création affaire / client depuis la page prélevemenets : 
+# Copier les fichiers de dépendances
+COPY package*.json ./
 
+# Installer uniquement les dépendances de production
+RUN npm install --omit=dev
 
+# Copier les artefacts construits depuis l'étape précédente
+COPY --from=builder /app/dist ./dist
 
-correction navbar : 
+# Copier le serveur et les modèles (Backend)
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/models ./models
 
-Pouvoir retourner a la page des prélevements associés depuis cette modale : 
+# Définir les variables d'environnement par défaut
+ENV NODE_ENV=production
+ENV PORT=8080
 
-10000 prélèvements, quel comportement?
-probleme d’affichage si durée >28jours : 
+# Exposer le port
+EXPOSE 8080
 
-
-
-légende du planning : avoir un meilleur contraste :
-
-ajouter petit carton “a venir cette semaine” sur page accueil : 
-
-
-Correction des bugs:
-
-Mise en place d’un BURGER MENU en responsive lorsque la taille de la page diminue (taille mobile)
-
-Correction graphique du logo de connexion (alpha 0.1.0).
-
-Impossibilité de se connecter sur le même compte depuis plusieurs postes.
-verificator 
+# Démarrer le serveur directement avec node
+CMD ["node", "server.js"]
