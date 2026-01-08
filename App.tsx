@@ -105,7 +105,15 @@ const App: React.FC = () => {
               <div className="bg-white/10 text-white p-2 rounded-lg">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h1 className="text-xl font-bold text-white">LaboBéton <span className="text-concrete-400 font-normal">| Administration</span></h1>
+              <div>
+                 <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                   LaboBéton 
+                   <span className="px-2 py-0.5 rounded-full bg-safety-orange text-white text-[10px] font-bold border border-orange-500/50 uppercase tracking-wide">
+                     Alpha v0.1.0
+                   </span>
+                 </h1>
+                 <span className="text-xs text-concrete-400">Administration</span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs text-concrete-400">Connecté en tant que <strong>{currentUser.username}</strong></span>
@@ -134,11 +142,16 @@ const App: React.FC = () => {
       <header className="bg-white border-b border-concrete-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-concrete-900 text-white p-2 rounded-lg cursor-pointer" onClick={() => setView('dashboard')}>
+            <div className="bg-concrete-900 text-white p-2 rounded-lg cursor-pointer hover:bg-black transition-colors" onClick={() => setView('dashboard')}>
               <Building2 className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-concrete-900 leading-tight cursor-pointer" onClick={() => setView('dashboard')}>LaboBéton</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-concrete-900 leading-tight cursor-pointer" onClick={() => setView('dashboard')}>LaboBéton</h1>
+                <span className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-bold border border-orange-200 uppercase tracking-wide shadow-sm">
+                  Alpha v0.1.0
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-concrete-500 font-medium"><strong>{currentUser.companyName || currentUser.username}</strong></span>
               </div>

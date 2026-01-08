@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
-import { ConcreteTest, Specimen } from '../types';
+import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight, Zap } from 'lucide-react';
+import { ConcreteTest } from '../types';
 import { MenuCard } from './MenuCard';
+import { QuickEntryModal } from './QuickEntryModal';
 import { authenticatedFetch } from '../utils/api';
 
 interface DashboardHomeProps {
@@ -13,9 +14,10 @@ interface DashboardHomeProps {
 interface NotificationTask {
   id: string;
   type: 'overdue' | 'today' | 'upcoming';
+  testId: string; // Ajout de l'ID réel pour l'édition
   testRef: string;
   projectName: string;
-  count: number; // Nombre d'éprouvettes concernées
+  count: number; 
   age: number;
   date: string;
 }
@@ -23,24 +25,44 @@ interface NotificationTask {
 export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplayName, onNavigate }) => {
   const [tests, setTests] = useState<ConcreteTest[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Quick Entry State
+  const [quickEntryTask, setQuickEntryTask] = useState<NotificationTask | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const res = await authenticatedFetch('/api/concrete-tests', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setTests(await res.json());
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await authenticatedFetch('/api/concrete-tests', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          setTests(await res.json());
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, [token]);
+
+  const handleTaskClick = (task: NotificationTask) => {
+    // Si c'est aujourd'hui ou en retard, on ouvre la saisie rapide
+    if (task.type === 'today' || task.type === 'overdue') {
+      setQuickEntryTask(task);
+    } else {
+      // Sinon on navigue vers la liste
+      onNavigate('fresh_tests');
+    }
+  };
+
+  const handleQuickEntrySuccess = () => {
+    setQuickEntryTask(null);
+    fetchData(); // Recharger les données pour mettre à jour les compteurs
+  };
 
   // --- LOGIQUE DE NOTIFICATION ---
   const tasks = useMemo(() => {
@@ -50,7 +72,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
 
     tests.forEach(test => {
       // Regrouper les éprouvettes par date d'écrasement pour ce test
-      const groups: Record<string, { count: number, age: number, dateStr: string }> = {};
+      const groups: Record<string, { count: number, age: number }> = {};
 
       test.specimens.forEach(s => {
         // Si pas de résultat (stress) et date définie
@@ -71,18 +93,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
           else if (diffDays === 1) type = 'upcoming';
 
           if (type) {
-             if (!groups[dateStr]) {
-               groups[dateStr] = { count: 0, age: s.age, dateStr: s.crushingDate };
-             }
-             groups[dateStr].count++;
              list.push({
                id: `${test._id}-${s.number}`,
                type,
+               testId: test._id,
                testRef: test.reference,
                projectName: test.projectName || 'Projet Inconnu',
                count: 1, 
                age: s.age,
-               date: s.crushingDate
+               date: s.crushingDate // Full date string
              });
           }
         }
@@ -92,7 +111,13 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
     // Consolider par Test + Date + Type
     const consolidated: NotificationTask[] = [];
     list.forEach(item => {
-      const existing = consolidated.find(c => c.testRef === item.testRef && c.type === item.type && c.age === item.age);
+      // On groupe par TestID + Date exacte (pour éditer le bon groupe d'éprouvettes)
+      const dateKey = new Date(item.date).toISOString().split('T')[0];
+      const existing = consolidated.find(c => 
+        c.testId === item.testId && 
+        new Date(c.date).toISOString().split('T')[0] === dateKey
+      );
+
       if (existing) {
         existing.count += item.count;
       } else {
@@ -114,6 +139,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
   return (
     <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
       
+      {/* MODALE SAISIE RAPIDE */}
+      {quickEntryTask && (
+        <QuickEntryModal 
+          testId={quickEntryTask.testId}
+          testReference={quickEntryTask.testRef}
+          projectName={quickEntryTask.projectName}
+          targetDate={quickEntryTask.date}
+          token={token}
+          onClose={() => setQuickEntryTask(null)}
+          onSuccess={handleQuickEntrySuccess}
+        />
+      )}
+
       {/* HEADER BIENVENUE */}
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-concrete-900">
@@ -168,12 +206,13 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                   {tasks.map((task, idx) => (
                     <div 
                       key={idx} 
-                      onClick={() => onNavigate('fresh_tests')} 
+                      onClick={() => handleTaskClick(task)}
                       className={`p-4 flex items-center gap-4 hover:bg-concrete-50 transition-colors cursor-pointer group border-l-4 ${
                         task.type === 'overdue' ? 'border-l-red-500 bg-red-50/10' : 
                         task.type === 'today' ? 'border-l-safety-orange bg-orange-50/10' : 
                         'border-l-blue-400'
                       }`}
+                      title={task.type === 'upcoming' ? "Voir la fiche" : "Saisie Rapide des Résultats"}
                     >
                       {/* Icône Statut */}
                       <div className="shrink-0">
@@ -185,10 +224,16 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                       {/* Contenu */}
                       <div className="flex-grow">
                         <div className="flex justify-between items-start">
-                           <h4 className="font-bold text-concrete-800 text-sm">
-                             {task.type === 'overdue' ? 'Écrasement en Retard' : 
-                              task.type === 'today' ? 'Écrasement à faire Aujourd\'hui' : 
-                              'Prévu pour demain'}
+                           <h4 className="font-bold text-concrete-800 text-sm flex items-center gap-2">
+                             {task.type === 'overdue' ? 'En Retard' : 
+                              task.type === 'today' ? 'À faire Aujourd\'hui' : 
+                              'Demain'}
+                              {/* Badge Saisie Rapide */}
+                              {(task.type === 'today' || task.type === 'overdue') && (
+                                <span className="bg-white border border-concrete-200 text-[10px] px-1.5 py-0.5 rounded text-concrete-500 uppercase tracking-wide flex items-center gap-1">
+                                  <Zap className="w-3 h-3 text-yellow-500" /> Saisie Rapide
+                                </span>
+                              )}
                            </h4>
                            <span className="text-xs font-mono text-concrete-400">{task.testRef}</span>
                         </div>
