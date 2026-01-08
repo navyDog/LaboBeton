@@ -328,9 +328,35 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                        })()
                     )}
                     
-                    {/* Logique Standard (RP Final) */}
-                    {type === 'RP' && (
-                       <p>Les résultats obtenus sont conformes aux exigences normatives pour l'âge considéré.</p>
+                    {/* Logique 3 : Conformité à 28 jours (Final) */}
+                    {type === 'RP' && filteredSpecimens.some(s => s.age === 28 && s.stress) && (
+                       (() => {
+                          const specimens28d = groupedSpecimens[28];
+                          if(specimens28d && specimens28d.length > 0) {
+                             const avg28d = specimens28d.reduce((acc, s) => acc + (s.stress || 0), 0) / specimens28d.length;
+                             
+                             // Détection type cylindre ou cube pour le target
+                             const isCube = specimens28d[0].specimenType.toLowerCase().includes('cube');
+                             const targetStrength = getTargetStrength(test.concreteClass, isCube);
+
+                             if(targetStrength) {
+                                const isConform = avg28d >= targetStrength;
+
+                                return (
+                                  <p className={isConform ? "text-green-800" : "text-red-700"}>
+                                    <strong>Conformité à 28 jours :</strong> La résistance moyenne obtenue est de <strong>{avg28d.toFixed(1)} MPa</strong>.
+                                    <br/>
+                                    Résistance caractéristique requise ({test.concreteClass}) : {targetStrength} MPa.
+                                    <span className="block mt-1 font-bold uppercase">
+                                      {isConform ? "=> BÉTON CONFORME (Résistance caractéristique atteinte)." : "=> BÉTON NON CONFORME (Résistance insuffisante)."}
+                                    </span>
+                                  </p>
+                                )
+                             }
+                          }
+                          // Si pas de classe définie ou pas de calcul possible
+                          return <p>Les résultats sont communiqués pour validation par le maître d'oeuvre.</p>;
+                       })()
                     )}
                  </div>
               </div>

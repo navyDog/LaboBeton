@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../utils/api';
@@ -560,7 +560,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     />
                  </div>
                  
-                 {/* MODIFICATION : ORDRE INVERSÉ (Prélèvement AVANT Réception) */}
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Date Prélèvement</label>
                     <input 
@@ -590,12 +589,15 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               </div>
            </div>
 
-           {/* SECTION 2: BETON & SLUMP */}
+           {/* SECTION 2: BETON & SLUMP & CONTEXTE (Réorganisé pour inclure tout) */}
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
-                <Factory className="w-5 h-5 text-safety-orange" /> Béton & Consistance
+                <Factory className="w-5 h-5 text-safety-orange" /> Béton & Contexte
               </h3>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                 
+                 {/* Ligne 1 : Essentiels Béton */}
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Classe Résistance</label>
                     <select 
@@ -603,7 +605,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       value={formData.concreteClass}
                       onChange={e => setFormData({...formData, concreteClass: e.target.value})}
                     >
-                       <option value="">-- C25/30... --</option>
+                       <option value="">-- Choisir --</option>
                        {settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                  </div>
@@ -624,6 +626,29 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     </div>
                  </div>
 
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Type Mélange / Dosage</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.mixType}
+                      onChange={e => setFormData({...formData, mixType: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Volume Coulé (m³)</label>
+                    <input 
+                      type="number" step="0.1"
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      value={formData.volume}
+                      onChange={e => setFormData({...formData, volume: parseFloat(e.target.value)})}
+                    />
+                 </div>
+
+                 {/* Ligne 2 : Origine & Logistique */}
                  <div className="lg:col-span-2">
                     <label className="block text-xs font-bold text-concrete-500 mb-1">Fabricant / Centrale</label>
                     <input
@@ -633,8 +658,53 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       placeholder="ex: Centrale Unibéton Nord"
                     />
                  </div>
+                 
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Fabrication</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.manufacturingPlace}
+                      onChange={e => setFormData({...formData, manufacturingPlace: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.manufacturingPlaces.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
 
-                 {/* NOUVEAUX CHAMPS TEMPERATURES */}
+                 <div>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Mode Livraison</label>
+                    <select 
+                      className="w-full p-2 border border-concrete-300 rounded bg-white"
+                      value={formData.deliveryMethod}
+                      onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}
+                    >
+                       <option value="">-- Choisir --</option>
+                       {settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                 </div>
+
+                 {/* Ligne 3 : Détails Techniques */}
+                 <div className="lg:col-span-2">
+                    <label className="block text-xs font-bold text-concrete-500 mb-1">Info Complémentaire Formule</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Ajout retardateur, Fibres..."
+                      value={formData.formulaInfo}
+                      onChange={e => setFormData({...formData, formulaInfo: e.target.value})}
+                    />
+                 </div>
+
+                 <div className="lg:col-span-2">
+                    <label className="block text-xs font-bold text-concrete-500 mb-1 flex items-center gap-1"><MapPin className="w-3 h-3"/> Lieu Prélèvement Exact</label>
+                    <input 
+                      className="w-full p-2 border border-concrete-300 rounded"
+                      placeholder="ex: Sortie goulotte camion n°4"
+                      value={formData.samplingPlace}
+                      onChange={e => setFormData({...formData, samplingPlace: e.target.value})}
+                    />
+                 </div>
+
+                 {/* Ligne 4 : Températures */}
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1 flex items-center gap-1"><Thermometer className="w-3 h-3"/> T° Extérieure (°C)</label>
                     <input 
@@ -652,27 +722,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       value={formData.concreteTemp}
                       onChange={e => setFormData({...formData, concreteTemp: parseFloat(e.target.value)})}
                     />
-                 </div>
-
-                 <div>
-                    <label className="block text-xs font-bold text-concrete-500 mb-1">Volume Coulé (m³)</label>
-                    <input 
-                      type="number" step="0.1"
-                      className="w-full p-2 border border-concrete-300 rounded"
-                      value={formData.volume}
-                      onChange={e => setFormData({...formData, volume: parseFloat(e.target.value)})}
-                    />
-                 </div>
-                 <div>
-                    <label className="block text-xs font-bold text-concrete-500 mb-1">Mode Livraison</label>
-                    <select 
-                      className="w-full p-2 border border-concrete-300 rounded bg-white"
-                      value={formData.deliveryMethod}
-                      onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}
-                    >
-                       <option value="">-- Choisir --</option>
-                       {settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
                  </div>
               </div>
            </div>
