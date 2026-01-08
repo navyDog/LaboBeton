@@ -9,7 +9,7 @@
     "server": "nodemon server.js",
     "client": "vite",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "start": "node server.js"
   },
   "dependencies": {
