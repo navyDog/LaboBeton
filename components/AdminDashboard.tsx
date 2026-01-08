@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserPlus, Search, ShieldCheck, User as UserIcon, Building, Clock, Users, Trash2 } from 'lucide-react';
 import { User } from '../types';
 import { AdminUserForm } from './AdminUserForm';
+import { authenticatedFetch } from '../utils/api';
 
 interface AdminDashboardProps {
   currentUser: User;
@@ -16,7 +17,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/users', {
+      const res = await authenticatedFetch('/api/users', {
         headers: { 'Authorization': `Bearer ${currentUser.token}` }
       });
       if (res.ok) {
@@ -48,7 +49,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
       const previousUsers = [...users];
       setUsers(users.filter(u => u._id !== userId));
 
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await authenticatedFetch(`/api/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentUser.token}` }
       });

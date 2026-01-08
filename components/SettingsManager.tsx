@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen, Waves, Thermometer, Hammer, Layers } from 'lucide-react';
 import { Settings } from '../types';
+import { authenticatedFetch } from '../utils/api';
 
 interface SettingsManagerProps {
   token: string;
@@ -97,7 +98,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch('/api/settings', {
+      const res = await authenticatedFetch('/api/settings', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -115,7 +116,7 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/settings', {
+      const res = await authenticatedFetch('/api/settings', {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

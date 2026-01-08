@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Building, MapPin, Phone, Save, Loader2, Lock, FileText, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { User as UserType } from '../types';
+import { authenticatedFetch } from '../utils/api';
 
 interface UserProfileProps {
   token: string;
@@ -65,7 +66,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
     setMessage(null);
 
     try {
-      const res = await fetch('/api/auth/profile', {
+      const res = await authenticatedFetch('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

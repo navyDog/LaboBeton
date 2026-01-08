@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
+import { authenticatedFetch } from '../utils/api';
 
 interface ConcreteTestManagerProps {
   token: string;
@@ -263,9 +264,9 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     const fetchData = async () => {
       try {
         const [testsRes, projectsRes, settingsRes] = await Promise.all([
-          fetch('/api/concrete-tests', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
-          fetch('/api/settings', { headers: { 'Authorization': `Bearer ${token}` } })
+          authenticatedFetch('/api/concrete-tests', { headers: { 'Authorization': `Bearer ${token}` } }),
+          authenticatedFetch('/api/projects', { headers: { 'Authorization': `Bearer ${token}` } }),
+          authenticatedFetch('/api/settings', { headers: { 'Authorization': `Bearer ${token}` } })
         ]);
 
         if (testsRes.ok) setTests(await testsRes.json());
@@ -436,7 +437,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       const url = editingId ? `/api/concrete-tests/${editingId}` : '/api/concrete-tests';
       const method = editingId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authenticatedFetch(url, {
         method: method,
         headers: { 
           'Content-Type': 'application/json',
@@ -468,7 +469,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const handleDelete = async (id: string) => {
     if (!confirm("Supprimer cette fiche de prélèvement ?")) return;
     try {
-      await fetch(`/api/concrete-tests/${id}`, {
+      await authenticatedFetch(`/api/concrete-tests/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Save, X, Building, MapPin, Phone, User, Lock, Loader2 } from 'lucide-react';
 import { User as UserType } from '../types';
+import { authenticatedFetch } from '../utils/api';
 
 interface AdminUserFormProps {
   currentUser: UserType;
@@ -26,7 +27,7 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
     setMessage(null);
 
     try {
-      const response = await fetch('/api/users', {
+      const response = await authenticatedFetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

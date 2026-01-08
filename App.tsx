@@ -19,6 +19,34 @@ const App: React.FC = () => {
   // Vue principale
   const [view, setView] = useState<string>('dashboard');
 
+  // --- PERSISTANCE SESSION STORAGE ---
+  useEffect(() => {
+    // Récupération de l'utilisateur au chargement
+    const storedUser = sessionStorage.getItem('labobeton_user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setCurrentUser(parsedUser);
+      } catch (e) {
+        sessionStorage.removeItem('labobeton_user');
+      }
+    }
+  }, []);
+
+  // --- GESTION DECONNEXION AUTOMATIQUE (401) ---
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      handleLogout();
+    };
+
+    // On écoute l'événement dispatché par authenticatedFetch
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
   // Vérification connexion DB
   useEffect(() => {
     const checkConnection = async () => {
@@ -40,18 +68,25 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Gestion Connexion / Déconnexion
+  // Gestion Connexion
   const handleLogin = (user: User, token: string) => {
-    setCurrentUser({ ...user, token }); 
+    const userWithToken = { ...user, token };
+    // Stockage en sessionStorage (perdu à la fermeture du navigateur)
+    sessionStorage.setItem('labobeton_user', JSON.stringify(userWithToken));
+    setCurrentUser(userWithToken); 
   };
 
+  // Gestion Déconnexion
   const handleLogout = () => {
+    sessionStorage.removeItem('labobeton_user');
     setCurrentUser(null);
     setView('dashboard');
   };
 
   // Callback pour mettre à jour les données de l'utilisateur courant sans relogin
   const handleUserUpdate = (updatedUser: User) => {
+    // Mise à jour de l'état et du sessionStorage
+    sessionStorage.setItem('labobeton_user', JSON.stringify(updatedUser));
     setCurrentUser(updatedUser);
   };
 

@@ -13,7 +13,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ title, standard, description
   return (
     <button 
       onClick={onClick}
-      className="group relative flex flex-col items-start p-8 bg-white border border-concrete-200 rounded-xl shadow-sm hover:shadow-md hover:border-safety-orange transition-all duration-300 w-full text-left"
+      className="group relative flex flex-col items-start p-8 bg-white border border-concrete-200 rounded-xl shadow-sm hover:shadow-md hover:border-safety-orange transition-all duration-300 w-full h-full text-left"
     >
       <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
         {iconType === 'fresh' ? (

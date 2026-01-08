@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight } from 'lucide-react';
 import { ConcreteTest, Specimen } from '../types';
 import { MenuCard } from './MenuCard';
+import { authenticatedFetch } from '../utils/api';
 
 interface DashboardHomeProps {
   token: string;
@@ -26,7 +27,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/concrete-tests', {
+        const res = await authenticatedFetch('/api/concrete-tests', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

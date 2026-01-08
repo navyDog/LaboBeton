@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil } from 'lucide-react';
 import { Project, Company } from '../types';
+import { authenticatedFetch } from '../utils/api';
 
 interface ProjectManagerProps {
   token: string;
@@ -29,13 +30,13 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   const fetchData = async () => {
     try {
       // Charger les projets
-      const projectsRes = await fetch('/api/projects', {
+      const projectsRes = await authenticatedFetch('/api/projects', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (projectsRes.ok) setProjects(await projectsRes.json());
 
       // Charger les entreprises pour le menu déroulant
-      const companiesRes = await fetch('/api/companies', {
+      const companiesRes = await authenticatedFetch('/api/companies', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (companiesRes.ok) setCompanies(await companiesRes.json());
@@ -98,7 +99,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
       const url = editingId ? `/api/projects/${editingId}` : '/api/projects';
       const method = editingId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authenticatedFetch(url, {
         method: method,
         headers: { 
           'Content-Type': 'application/json',
@@ -119,7 +120,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   const handleDelete = async (id: string) => {
     if (!confirm('Voulez-vous vraiment supprimer cette affaire ?')) return;
     try {
-      await fetch(`/api/projects/${id}`, {
+      await authenticatedFetch(`/api/projects/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

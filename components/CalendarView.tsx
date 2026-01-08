@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, Truck, X, FileText, MapPin, Beaker } from 'lucide-react';
 import { ConcreteTest, Specimen } from '../types';
+import { authenticatedFetch } from '../utils/api';
 
 interface CalendarViewProps {
   token: string;
@@ -161,7 +162,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token }) => {
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const res = await fetch('/api/concrete-tests', {
+        const res = await authenticatedFetch('/api/concrete-tests', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {

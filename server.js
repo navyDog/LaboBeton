@@ -6,11 +6,25 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import { body, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
+
 import User from './models/User.js';
 import Company from './models/Company.js';
 import Project from './models/Project.js';
 import Settings from './models/Settings.js';
 import ConcreteTest from './models/ConcreteTest.js';
+
+// --- Hack pour masquer l'avertissement de dépréciation util._extend (venant de dépendances tiers) ---
+const originalEmitWarning = process.emitWarning;
+process.emitWarning = (warning, ...args) => {
+  if (typeof warning === 'string' && warning.includes('util._extend')) return;
+  if (warning && typeof warning === 'object' && warning.message && warning.message.includes('util._extend')) return;
+  return originalEmitWarning.call(process, warning, ...args);
+};
+// ----------------------------------------------------------------------------------------------------
 
 // Configuration des chemins pour ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +34,77 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_temporaire_labo_beton_2024';
 
+// --- SÉCURITÉ : Configuration Proxy & Force HTTPS ---
+// Indispensable pour les déploiements Cloud (Heroku, AWS, Render...) derrière un Load Balancer
+app.set('trust proxy', 1);
+
+app.use((req, res, next) => {
+  // On applique la redirection uniquement en production pour ne pas bloquer le développement local (localhost)
+  if (process.env.NODE_ENV === 'production') {
+    // Vérifie le protocole via le header standard x-forwarded-proto
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(`https://${req.headers.host}${req.url}`);
+    }
+  }
+  next();
+});
+
+// --- SÉCURITÉ : CORS Strict ---
+const allowedOrigins = [
+  'http://localhost:5173', // Vite default dev port
+  'http://localhost:3000', // Express default dev port
+  process.env.FRONTEND_URL // Production URL définie dans les variables d'environnement
+].filter(Boolean); // Retire les valeurs undefined si la variable n'est pas définie
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Autoriser les requêtes sans origine (comme les applications mobiles ou curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'La politique CORS de ce site interdit l\'accès depuis cette origine.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true, // Autoriser les cookies/headers sécurisés si nécessaire
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// --- SÉCURITÉ : En-têtes HTTP (Helmet) ---
+// Configuration CSP pour autoriser Tailwind CDN et Google Fonts + HSTS Strict
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"], // Autoriser les images en Base64
+      connectSrc: ["'self'"],
+    },
+  },
+  // HSTS force le navigateur à utiliser HTTPS pour les prochaines visites (1 an)
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
+
+// --- SÉCURITÉ : Protection NoSQL Injection ---
+app.use(mongoSanitize());
+
+// --- SÉCURITÉ : Limiteur de débit (Rate Limiting) pour le login ---
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limite chaque IP à 5 requêtes par fenêtre
+  message: { message: "Trop de tentatives de connexion. Veuillez réessayer dans 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Augmentation de la limite de taille pour supporter l'upload de logo en Base64
-app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -97,20 +180,33 @@ const authenticateToken = (req, res, next) => {
   if (!token) return res.status(401).json({ message: "Accès refusé. Token manquant." });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: "Token invalide." });
+    if (err) return res.status(401).json({ message: "Token expiré ou invalide." }); // 401 déclenche le logout front
     req.user = user;
     next();
   });
 };
 
+// --- Middleware de validation des résultats ---
+const checkValidation = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Données invalides", errors: errors.array() });
+  }
+  next();
+};
+
 // --- Routes API Auth ---
 
-app.post('/api/auth/login', async (req, res) => {
+// Application du Rate Limit sur le login
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   try {
     if (mongoose.connection.readyState !== 1) return res.status(503).json({ message: "DB indisponible" });
 
-    const user = await User.findOne({ username });
+    // Sanitize implicite via mongoSanitize middleware, mais bonne pratique de ne pas truster l'input
+    const safeUsername = String(username);
+
+    const user = await User.findOne({ username: safeUsername });
     if (!user) return res.status(401).json({ message: "Identifiants incorrects" });
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -343,7 +439,19 @@ app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/concrete-tests', authenticateToken, async (req, res) => {
+// Règles de validation pour la création de fiches béton
+const validateTest = [
+  body('projectId').isMongoId().withMessage('Affaire invalide'),
+  body('slump').optional({ values: 'falsy' }).isNumeric().withMessage('Le slump doit être un nombre'),
+  body('volume').optional({ values: 'falsy' }).isNumeric().withMessage('Le volume doit être un nombre'),
+  // Validation des éprouvettes
+  body('specimens').isArray(),
+  body('specimens.*.age').isInt({ min: 1 }).withMessage("L'âge doit être un entier positif"),
+  body('specimens.*.diameter').isNumeric().withMessage('Le diamètre doit être un nombre'),
+  body('specimens.*.height').isNumeric().withMessage('La hauteur doit être un nombre')
+];
+
+app.post('/api/concrete-tests', authenticateToken, validateTest, checkValidation, async (req, res) => {
   try {
     // On laisse le pre-save hook gérer 'reference', 'sequenceNumber', 'year'
     // SECURITY: On force le userId du token

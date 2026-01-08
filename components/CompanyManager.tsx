@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Plus, Trash2, Building, Phone, Mail, User as UserIcon, Search, Pencil } from 'lucide-react';
 import { Company } from '../types';
+import { authenticatedFetch } from '../utils/api';
 
 interface CompanyManagerProps {
   token: string;
@@ -24,7 +25,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
 
   const fetchCompanies = async () => {
     try {
-      const res = await fetch('/api/companies', {
+      const res = await authenticatedFetch('/api/companies', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -65,7 +66,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
       const url = editingId ? `/api/companies/${editingId}` : '/api/companies';
       const method = editingId ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authenticatedFetch(url, {
         method: method,
         headers: { 
           'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
   const handleDelete = async (id: string) => {
     if (!confirm('Voulez-vous vraiment supprimer cette entreprise ?')) return;
     try {
-      await fetch(`/api/companies/${id}`, {
+      await authenticatedFetch(`/api/companies/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
