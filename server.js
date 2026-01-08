@@ -45,7 +45,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
+    // Modification : Ne pas forcer HTTPS si on est en local (pour tester le mode prod sur sa machine)
+    const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
+    
+    if (!isLocal && req.headers['x-forwarded-proto'] !== 'https') {
       return res.redirect(`https://${req.headers.host}${req.url}`);
     }
   }
@@ -65,9 +68,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
       // En prod, on bloque strictement. En dev, on peut être plus souple si besoin.
-      // Pour Cloud Run, souvent l'origine est "undefined" pour les appels server-to-server, 
-      // mais ici c'est le navigateur qui appelle.
-      return callback(null, true); // Fallback safe pour Monolithe (Même origine)
+      return callback(null, true); // Fallback safe pour Monolithe
     }
     return callback(null, true);
   },
@@ -85,7 +86,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'"], // Important pour que le front appelle l'API sur le même domaine
+      connectSrc: ["'self'"], 
     },
   },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
@@ -97,7 +98,7 @@ app.use(mongoSanitize());
 // --- SÉCURITÉ : Rate Limiting ---
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10, // Un peu plus large pour éviter les blocages intempestifs en prod
+  max: 10,
   message: { message: "Trop de tentatives. Réessayez dans 15 min." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -116,7 +117,6 @@ const connectDB = async () => {
     await mongoose.connect(uri, clientOptions);
     console.log(`✅ MongoDB Connecté`);
     
-    // Migration index suppression
     try {
       if (mongoose.connection.readyState === 1) {
         const collection = mongoose.connection.collection('concretetests');
@@ -130,7 +130,7 @@ const connectDB = async () => {
     await seedAdminUser();
   } catch (error) {
     console.error(`❌ Erreur MongoDB: ${error.message}`);
-    process.exit(1); // Arrêt si pas de DB en prod
+    process.exit(1); 
   }
 };
 
@@ -139,7 +139,6 @@ const seedAdminUser = async () => {
   try {
     const count = await User.countDocuments();
     
-    // Si la base est vide, on crée l'Admin Principal
     if (count === 0) {
       console.log("ℹ️ Base de données utilisateurs vide. Initialisation...");
       
@@ -193,7 +192,7 @@ const checkValidation = (req, res, next) => {
   next();
 };
 
-// --- API ROUTES (Identiques) ---
+// --- API ROUTES ---
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   try {
