@@ -2,11 +2,15 @@
   "name": "labobeton-app",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "server": "nodemon server.js",
     "client": "vite",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "tsc && vite build",
+    "build": "vite build",
+    "type-check": "tsc",
     "start": "node server.js"
   },
   "dependencies": {
