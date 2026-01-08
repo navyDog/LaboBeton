@@ -472,10 +472,12 @@ app.get('*', (req, res) => {
 });
 
 connectDB().then(() => {
-  // Logs explicites pour l'utilisateur
-  const mode = process.env.NODE_ENV === 'production' ? '🔒 PRODUCTION' : '🛠️ DÉVELOPPEMENT';
-  console.log('--------------------------------------------------');
-  console.log(`🚀 Serveur LaboBéton prêt sur http://localhost:${PORT}`);
-  console.log(`ℹ️  Mode Actuel : ${mode}`);
-  console.log('--------------------------------------------------');
+  app.listen(PORT, () => {
+    // Logs explicites pour l'utilisateur
+    const mode = process.env.NODE_ENV === 'production' ? '🔒 PRODUCTION' : '🛠️ DÉVELOPPEMENT';
+    console.log('--------------------------------------------------');
+    console.log(`🚀 Serveur LaboBéton prêt sur http://localhost:${PORT}`);
+    console.log(`ℹ️  Mode Actuel : ${mode}`);
+    console.log('--------------------------------------------------');
+  });
 });

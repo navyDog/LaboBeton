@@ -99,20 +99,20 @@ const App: React.FC = () => {
   if (currentUser.role === 'admin') {
     return (
       <div className="min-h-screen bg-concrete-100 flex flex-col">
-        <header className="bg-concrete-900 border-b border-concrete-800 sticky top-0 z-10">
+        <header className="bg-concrete-900 border-b border-concrete-800 sticky top-0 z-10 shadow-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white/10 text-white p-2 rounded-lg">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <div>
-                 <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                   LaboBéton 
-                   <span className="px-2 py-0.5 rounded-full bg-safety-orange text-white text-[10px] font-bold border border-orange-500/50 uppercase tracking-wide">
-                     Alpha v0.1.0
-                   </span>
-                 </h1>
-                 <span className="text-xs text-concrete-400">Administration</span>
+                 <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-white">LaboBéton</h1>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-safety-orange text-white border border-orange-500 uppercase tracking-widest shadow-sm">
+                      Alpha v0.1.0
+                    </span>
+                 </div>
+                 <span className="text-xs text-concrete-400">Administration Système</span>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -139,7 +139,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-concrete-50 flex flex-col">
       {/* Header Standard */}
-      <header className="bg-white border-b border-concrete-200 sticky top-0 z-10">
+      <header className="bg-white border-b border-concrete-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-concrete-900 text-white p-2 rounded-lg cursor-pointer hover:bg-black transition-colors" onClick={() => setView('dashboard')}>
@@ -148,7 +148,7 @@ const App: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-bold text-concrete-900 leading-tight cursor-pointer" onClick={() => setView('dashboard')}>LaboBéton</h1>
-                <span className="px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 text-[10px] font-bold border border-orange-200 uppercase tracking-wide shadow-sm">
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-safety-orange border border-orange-200 uppercase tracking-widest">
                   Alpha v0.1.0
                 </span>
               </div>
