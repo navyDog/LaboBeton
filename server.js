@@ -31,7 +31,19 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS ---
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error("⛔ ERREUR FATALE : JWT_SECRET n'est pas défini en production.");
+  console.error("   L'application ne peut pas démarrer avec une clé par défaut non sécurisée.");
+  process.exit(1);
+}
+
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_temporaire_labo_beton_2024';
+
+if (process.env.NODE_ENV !== 'production' && !process.env.JWT_SECRET) {
+  console.warn("⚠️ AVERTISSEMENT : Utilisation du JWT_SECRET par défaut (Développement uniquement).");
+}
 
 // --- SÉCURITÉ : Proxy & HTTPS ---
 app.set('trust proxy', 1);
@@ -177,7 +189,7 @@ const authenticateToken = (req, res, next) => {
   if (!token) return res.status(401).json({ message: "Token manquant." });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(401).json({ message: "Token invalide." });
+    if (err) return res.status(401).json({ message: "Token invalide ou expiré." });
     req.user = user;
     next();
   });

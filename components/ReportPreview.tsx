@@ -80,6 +80,10 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                 table { width: 100%; border-collapse: collapse; }
                 th, td { border: 1px solid #000; padding: 3px 5px; text-align: left; }
                 .break-inside-avoid { page-break-inside: avoid; }
+                h1 { font-size: 16px; margin-bottom: 2px; }
+                h2 { font-size: 14px; margin-bottom: 2px; }
+                h3 { font-size: 12px; margin-bottom: 4px; margin-top: 8px; }
+                p { margin-bottom: 2px; }
               }
             </style>
           </head>
@@ -135,7 +139,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
               <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-2">
                  <div className="flex gap-4 items-center">
                     {headerLogo && (
-                       <img src={headerLogo} alt="Logo" className="h-20 w-auto object-contain max-w-[120px]" />
+                       <img src={headerLogo} alt="Logo" className="h-16 w-auto object-contain max-w-[120px]" />
                     )}
                     <div>
                       <h1 className="text-lg font-black uppercase tracking-wider mb-0.5">{headerName}</h1>
