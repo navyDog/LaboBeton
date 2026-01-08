@@ -1,49 +1,70 @@
 import React from 'react';
-import { ArrowRight, Beaker, Hammer } from 'lucide-react';
+import { ArrowRight, LucideIcon } from 'lucide-react';
 
 interface MenuCardProps {
   title: string;
-  standard: string;
   description: string;
-  iconType: 'fresh' | 'hardened';
+  icon: LucideIcon;
+  variant?: 'orange' | 'blue' | 'concrete' | 'purple';
   onClick: () => void;
 }
 
-export const MenuCard: React.FC<MenuCardProps> = ({ title, standard, description, iconType, onClick }) => {
+export const MenuCard: React.FC<MenuCardProps> = ({ title, description, icon: Icon, variant = 'orange', onClick }) => {
+  
+  const styles = {
+    orange: {
+      hoverBorder: 'hover:border-safety-orange',
+      text: 'text-safety-orange',
+      bg: 'bg-orange-50',
+      groupHoverText: 'group-hover:text-safety-orange'
+    },
+    blue: {
+      hoverBorder: 'hover:border-blue-500',
+      text: 'text-blue-600',
+      bg: 'bg-blue-50',
+      groupHoverText: 'group-hover:text-blue-600'
+    },
+    concrete: {
+      hoverBorder: 'hover:border-concrete-600',
+      text: 'text-concrete-600',
+      bg: 'bg-concrete-100',
+      groupHoverText: 'group-hover:text-concrete-800'
+    },
+    purple: {
+      hoverBorder: 'hover:border-purple-500',
+      text: 'text-purple-600',
+      bg: 'bg-purple-50',
+      groupHoverText: 'group-hover:text-purple-600'
+    }
+  };
+
+  const style = styles[variant];
+
   return (
     <button 
       onClick={onClick}
-      className="group relative flex flex-col items-start p-8 bg-white border border-concrete-200 rounded-xl shadow-sm hover:shadow-md hover:border-safety-orange transition-all duration-300 w-full h-full text-left"
+      className={`group relative flex flex-col items-start p-6 bg-white border border-concrete-200 rounded-xl shadow-sm hover:shadow-lg ${style.hoverBorder} transition-all duration-300 w-full text-left h-full`}
     >
-      <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-        {iconType === 'fresh' ? (
-          <Beaker className="w-24 h-24 text-concrete-600" />
-        ) : (
-          <Hammer className="w-24 h-24 text-concrete-600" />
-        )}
+      <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+         <Icon className="w-24 h-24 text-concrete-900" />
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`p-3 rounded-lg ${iconType === 'fresh' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-safety-orange'}`}>
-          {iconType === 'fresh' ? (
-            <Beaker className="w-6 h-6" />
-          ) : (
-            <Hammer className="w-6 h-6" />
-          )}
+      <div className="flex items-center gap-3 mb-3">
+        <div className={`p-3 rounded-lg ${style.bg} ${style.text} transition-colors`}>
+           <Icon className="w-6 h-6" />
         </div>
-        <span className="text-sm font-semibold text-concrete-500 uppercase tracking-wider">Norme {standard}</span>
       </div>
 
-      <h3 className="text-2xl font-bold text-concrete-900 mb-2 group-hover:text-safety-orange transition-colors">
+      <h3 className={`text-xl font-bold text-concrete-900 mb-1 ${style.groupHoverText} transition-colors`}>
         {title}
       </h3>
       
-      <p className="text-concrete-500 mb-8 max-w-sm">
+      <p className="text-concrete-500 text-sm mb-6 max-w-xs leading-relaxed">
         {description}
       </p>
 
-      <div className="mt-auto flex items-center gap-2 text-sm font-semibold text-concrete-600 group-hover:text-safety-orange group-hover:translate-x-1 transition-all">
-        Accéder au module <ArrowRight className="w-4 h-4" />
+      <div className={`mt-auto flex items-center gap-2 text-sm font-bold text-concrete-400 ${style.groupHoverText} group-hover:translate-x-1 transition-all`}>
+        Ouvrir <ArrowRight className="w-4 h-4" />
       </div>
     </button>
   );

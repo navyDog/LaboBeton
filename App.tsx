@@ -159,50 +159,52 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2 md:gap-4">
-             {/* Navigation Menu */}
-             <div className="hidden md:flex items-center bg-concrete-100 rounded-lg p-1 gap-1">
-                <button 
-                  onClick={() => setView('fresh_tests')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'fresh_tests' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                >
-                  <FlaskConical className="w-4 h-4" /> Prélèvements
-                </button>
-                <button 
-                  onClick={() => setView('calendar')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                >
-                  <Calendar className="w-4 h-4" /> Planning
-                </button>
-                
-                {/* Onglets séparés pour Entreprises et Affaires */}
-                <button 
-                  onClick={() => setView('companies')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                >
-                  <Building className="w-4 h-4" /> Entreprises
-                </button>
-                <button 
-                  onClick={() => setView('projects')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                >
-                  <Briefcase className="w-4 h-4" /> Affaires
-                </button>
+             {/* Navigation Menu - VISIBLE SEULEMENT SI PAS SUR LE DASHBOARD */}
+             {view !== 'dashboard' && (
+               <div className="hidden md:flex items-center bg-concrete-100 rounded-lg p-1 gap-1 animate-in fade-in slide-in-from-top-2">
+                  <button 
+                    onClick={() => setView('fresh_tests')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'fresh_tests' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <FlaskConical className="w-4 h-4" /> Prélèvements
+                  </button>
+                  <button 
+                    onClick={() => setView('calendar')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Calendar className="w-4 h-4" /> Planning
+                  </button>
+                  
+                  {/* Onglets séparés pour Entreprises et Affaires */}
+                  <button 
+                    onClick={() => setView('companies')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Building className="w-4 h-4" /> Entreprises
+                  </button>
+                  <button 
+                    onClick={() => setView('projects')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Briefcase className="w-4 h-4" /> Affaires
+                  </button>
 
-                <button
-                  onClick={() => setView('settings')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                >
-                  <Settings className="w-4 h-4" /> Paramètres Labo
-                </button>
+                  <button
+                    onClick={() => setView('settings')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Settings className="w-4 h-4" /> Paramètres
+                  </button>
 
-                 <button
-                  onClick={() => setView('profile')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'profile' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
-                  title="Mon Profil & Entête"
-                >
-                  <UserIcon className="w-4 h-4" /> Mon Profil
-                </button>
-             </div>
+                   <button
+                    onClick={() => setView('profile')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'profile' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                    title="Mon Profil"
+                  >
+                    <UserIcon className="w-4 h-4" />
+                  </button>
+               </div>
+             )}
 
              <div className="hidden lg:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
                <StatusBadge status={dbStatus} />

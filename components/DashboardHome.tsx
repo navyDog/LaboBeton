@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight, Zap } from 'lucide-react';
+import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight, Zap, FlaskConical, Building, Briefcase, Settings, User } from 'lucide-react';
 import { ConcreteTest } from '../types';
 import { MenuCard } from './MenuCard';
 import { QuickEntryModal } from './QuickEntryModal';
@@ -158,20 +158,20 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
           Bonjour, <span className="text-safety-orange">{userDisplayName}</span>
         </h2>
         <p className="text-concrete-500 text-lg">
-          Voici le récapitulatif des activités de laboratoire pour aujourd'hui.
+          Tableau de bord de pilotage du laboratoire.
         </p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+      <div className="grid lg:grid-cols-12 gap-8 items-start">
         
-        {/* COLONNE GAUCHE : CENTRE DE NOTIFICATIONS */}
-        <div className="space-y-4 flex flex-col h-full">
+        {/* COLONNE GAUCHE : CENTRE DE NOTIFICATIONS (LARGEUR 5/12) */}
+        <div className="lg:col-span-5 space-y-4 flex flex-col h-full">
           
           <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider flex items-center gap-2 h-6">
             <Bell className="w-4 h-4" /> Centre de Tâches
           </h3>
 
-          <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden flex-grow flex flex-col">
+          <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden min-h-[400px]">
             <div className="px-6 py-4 border-b border-concrete-100 bg-concrete-50 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-concrete-800">Échéances & Rappels</span>
@@ -190,19 +190,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
               </div>
             </div>
 
-            <div className="p-0 flex-grow relative">
+            <div className="p-0 relative">
               {loading ? (
                 <div className="p-8 text-center text-concrete-400">Analyse des échéances...</div>
               ) : tasks.length === 0 ? (
-                <div className="absolute inset-0 p-12 text-center flex flex-col items-center justify-center">
+                <div className="p-12 text-center flex flex-col items-center justify-center h-full mt-10">
                    <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mb-4">
                      <CheckCircle2 className="w-8 h-8 text-green-600" />
                    </div>
                    <h4 className="text-lg font-bold text-concrete-800">Tout est à jour !</h4>
-                   <p className="text-concrete-500 text-sm">Aucun écrasement prévu pour aujourd'hui ou en retard.</p>
+                   <p className="text-concrete-500 text-sm mt-2">Aucun écrasement prévu pour aujourd'hui ou en retard.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-concrete-100 max-h-[400px] overflow-y-auto custom-scrollbar">
+                <div className="divide-y divide-concrete-100 max-h-[500px] overflow-y-auto custom-scrollbar">
                   {tasks.map((task, idx) => (
                     <div 
                       key={idx} 
@@ -259,19 +259,65 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
           </div>
         </div>
 
-        {/* COLONNE DROITE : ACTIONS RAPIDES (MENU) */}
-        <div className="flex flex-col gap-4 h-full">
+        {/* COLONNE DROITE : NAVIGATION PRINCIPALE (LARGEUR 7/12) */}
+        <div className="lg:col-span-7 flex flex-col gap-4 h-full">
            <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider h-6 flex items-center">
-             Accès Rapides
+             Accès Rapides & Modules
            </h3>
            
-           <div className="flex-grow">
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             {/* PRÉLÈVEMENTS */}
              <MenuCard 
                 title="Prélèvements" 
-                standard="NF EN 12350"
-                description="Saisie béton frais et fabrication."
-                iconType="fresh"
+                description="Saisie béton frais, fabrication et résultats d'écrasement."
+                icon={FlaskConical}
+                variant="orange"
                 onClick={() => onNavigate('fresh_tests')}
+              />
+
+              {/* PLANNING */}
+              <MenuCard 
+                title="Planning" 
+                description="Calendrier des écrasements et activités du laboratoire."
+                icon={Calendar}
+                variant="blue"
+                onClick={() => onNavigate('calendar')}
+              />
+
+              {/* ENTREPRISES */}
+              <MenuCard 
+                title="Entreprises" 
+                description="Annuaire des clients et partenaires."
+                icon={Building}
+                variant="concrete"
+                onClick={() => onNavigate('companies')}
+              />
+
+              {/* AFFAIRES */}
+              <MenuCard 
+                title="Affaires" 
+                description="Gestion des chantiers, MOA et MOE."
+                icon={Briefcase}
+                variant="concrete"
+                onClick={() => onNavigate('projects')}
+              />
+
+              {/* PARAMÈTRES */}
+              <MenuCard 
+                title="Paramètres Labo" 
+                description="Configuration des matériaux, normes et listes déroulantes."
+                icon={Settings}
+                variant="concrete"
+                onClick={() => onNavigate('settings')}
+              />
+
+              {/* PROFIL */}
+              <MenuCard 
+                title="Mon Profil" 
+                description="Configuration de l'entête des rapports et logo."
+                icon={User}
+                variant="concrete"
+                onClick={() => onNavigate('profile')}
               />
            </div>
         </div>

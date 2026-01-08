@@ -704,7 +704,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                      <span className="text-xs text-concrete-400 mb-1 block">Quantité</span>
                      <input 
                         type="number" min="1"
-                        className="w-20 p-1.5 border border-concrete-300 rounded text-center text-sm"
+                        className="w-16 py-1 px-2 border border-concrete-300 rounded text-center text-sm h-[30px]"
                         value={packCount}
                         onChange={e => setPackCount(parseInt(e.target.value))}
                      />
@@ -713,7 +713,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                    <div>
                      <span className="text-xs text-concrete-400 mb-1 block">Dimensions</span>
                      <select 
-                        className="p-1.5 border border-concrete-300 rounded bg-white text-sm"
+                        className="py-1 px-2 border border-concrete-300 rounded bg-white text-sm h-[30px]"
                         value={packDim}
                         onChange={e => setPackDim(e.target.value)}
                      >
@@ -726,7 +726,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                    <button 
                      type="button"
                      onClick={handleAddPack}
-                     className="px-4 py-1.5 bg-concrete-800 text-white text-sm font-medium rounded hover:bg-concrete-700 flex items-center gap-1"
+                     className="px-4 py-1.5 bg-concrete-800 text-white text-sm font-medium rounded hover:bg-concrete-700 flex items-center gap-1 h-[30px]"
                    >
                      <Plus className="w-3 h-3" /> Ajouter Pack
                    </button>
