@@ -7,7 +7,7 @@ WORKDIR /app
 # Copier les fichiers de dépendances
 COPY package*.json ./
 
-# Installer toutes les dépendances (npm install au lieu de ci pour générer le lockfile si absent)
+# Installer toutes les dépendances
 RUN npm install
 
 # Copier tout le code source
@@ -42,5 +42,5 @@ ENV PORT=8080
 # Exposer le port
 EXPOSE 8080
 
-# Démarrer le serveur
-CMD ["npm", "start"]
+# Démarrer le serveur directement avec node
+CMD ["node", "server.js"]
