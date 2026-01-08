@@ -4,12 +4,11 @@ import { ConcreteTest, Specimen, User } from '../types';
 
 interface ReportPreviewProps {
   test: ConcreteTest;
-  user?: User; // Utilisateur courant pour l'entête
-  type: 'PV' | 'RP'; // PV = 7 jours (Provisoire), RP = 28 jours (Final)
+  user?: User; 
+  type: 'PV' | 'RP'; 
   onClose: () => void;
 }
 
-// Helper pour grouper les éprouvettes par âge
 const groupSpecimensByAge = (specimens: Specimen[]) => {
   const groups: Record<number, Specimen[]> = {};
   specimens.forEach(s => {
@@ -19,10 +18,8 @@ const groupSpecimensByAge = (specimens: Specimen[]) => {
   return groups;
 };
 
-// Helper pour extraire la résistance cible (cylindre ou cube) depuis la classe (ex: C25/30)
 const getTargetStrength = (concreteClass: string, isCube: boolean): number | null => {
   if (!concreteClass) return null;
-  // Regex pour capturer C(XX)/(YY)
   const match = concreteClass.match(/C(\d+)\/(\d+)/i);
   if (match) {
     const cylinder = parseInt(match[1]);
@@ -34,13 +31,11 @@ const getTargetStrength = (concreteClass: string, isCube: boolean): number | nul
 
 export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, onClose }) => {
   
-  // Filtrage des éprouvettes selon le type de rapport
   const filteredSpecimens = test.specimens.filter(s => {
-    if (type === 'PV') return s.age <= 7; // PV : On montre jusqu'à 7 jours
-    return true; // RP : On montre tout l'historique
+    if (type === 'PV') return s.age <= 7; 
+    return true; 
   }).sort((a, b) => a.number - b.number);
 
-  // Groupement pour calcul des moyennes
   const groupedSpecimens = groupSpecimensByAge(filteredSpecimens);
   const ages = Object.keys(groupedSpecimens).map(Number).sort((a, b) => a - b);
 
@@ -50,20 +45,17 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
 
   const reportDate = new Date().toLocaleDateString('fr-FR');
 
-  // Données de l'en-tête (Défaut si non configuré)
   const headerName = user?.companyName || "Nom du Laboratoire";
   const headerAddress = user?.address || "Adresse non renseignée";
   const headerContact = user?.contact || "Contact non renseigné";
   const headerLogo = user?.logo;
 
-  // Pied de page légal
   const legalParts = [];
   if (user?.siret) legalParts.push(`SIRET : ${user.siret}`);
   if (user?.apeCode) legalParts.push(`APE : ${user.apeCode}`);
   if (user?.legalInfo) legalParts.push(user.legalInfo);
   const legalString = legalParts.join(' - ');
 
-  // Récupération des températures (avec fallback)
   const extTemp = (test as any).externalTemp;
   const concTemp = (test as any).concreteTemp;
 
@@ -82,23 +74,22 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
             <script src="https://cdn.tailwindcss.com"></script>
             <style>
               @media print {
-                @page { size: A4; margin: 15mm; }
-                body { -webkit-print-color-adjust: exact; font-family: 'Arial', sans-serif; font-size: 12px; }
+                @page { size: A4; margin: 10mm; }
+                body { -webkit-print-color-adjust: exact; font-family: 'Arial', sans-serif; font-size: 11px; line-height: 1.2; }
                 .no-print { display: none; }
                 table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid #000; padding: 6px; text-align: left; }
-                .header-box { border: 2px solid #000; padding: 10px; margin-bottom: 20px; }
+                th, td { border: 1px solid #000; padding: 3px 5px; text-align: left; }
+                .break-inside-avoid { page-break-inside: avoid; }
               }
             </style>
           </head>
-          <body class="bg-white p-8">
+          <body class="bg-white">
             ${printContent.innerHTML}
           </body>
         </html>
       `);
       printWindow.document.close();
       printWindow.focus();
-      // Petit délai pour laisser Tailwind charger
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
@@ -110,7 +101,6 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-concrete-100 w-full max-w-4xl h-[90vh] flex flex-col rounded-xl overflow-hidden shadow-2xl">
         
-        {/* Toolbar */}
         <div className="bg-concrete-900 p-4 flex justify-between items-center text-white shrink-0">
           <div className="flex items-center gap-3">
              <div className="p-2 bg-safety-orange rounded text-white">
@@ -134,114 +124,108 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
           </div>
         </div>
 
-        {/* Preview Area (Scrollable) */}
         <div className="flex-grow overflow-y-auto p-8 bg-concrete-200 flex justify-center">
            
-           {/* REPORT PAPER (A4 RATIO) */}
            <div 
              id="report-content" 
-             className="bg-white w-[210mm] min-h-[297mm] p-[15mm] shadow-xl text-black text-sm relative flex flex-col"
+             className="bg-white w-[210mm] min-h-[297mm] p-[10mm] shadow-xl text-black text-[11px] leading-tight relative flex flex-col"
              style={{ fontFamily: 'Arial, sans-serif' }}
            >
-              {/* HEADER LABO - DYNAMIQUE AVEC LOGO */}
-              <div className="flex justify-between items-start mb-8 border-b-2 border-black pb-4">
-                 <div className="flex gap-4">
-                    {/* LOGO */}
+              {/* HEADER */}
+              <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-2">
+                 <div className="flex gap-4 items-center">
                     {headerLogo && (
-                       <img src={headerLogo} alt="Logo" className="h-24 w-auto object-contain max-w-[150px]" />
+                       <img src={headerLogo} alt="Logo" className="h-20 w-auto object-contain max-w-[120px]" />
                     )}
-                    
                     <div>
-                      <h1 className="text-2xl font-black uppercase tracking-wider mb-1">{headerName}</h1>
-                      <p className="text-xs text-gray-600">Laboratoire de Contrôle des Matériaux</p>
-                      <p className="text-xs text-gray-600 whitespace-pre-wrap">{headerAddress}</p>
-                      <p className="text-xs text-gray-600">{headerContact}</p>
+                      <h1 className="text-lg font-black uppercase tracking-wider mb-0.5">{headerName}</h1>
+                      <p className="text-[10px] text-gray-600 whitespace-pre-wrap">{headerAddress}</p>
+                      <p className="text-[10px] text-gray-600">{headerContact}</p>
                     </div>
                  </div>
-                 
                  <div className="text-right">
-                    <h2 className="text-xl font-bold uppercase text-safety-orange">{type === 'PV' ? 'PROCÈS VERBAL' : 'RAPPORT FINAL'}</h2>
-                    <p className="font-mono font-bold text-lg mt-1">{test.reference}</p>
-                    <p className="text-xs mt-1">Date édition : {reportDate}</p>
+                    <h2 className="text-lg font-bold uppercase text-safety-orange">{type === 'PV' ? 'PROCÈS VERBAL' : 'RAPPORT FINAL'}</h2>
+                    <p className="font-mono font-bold text-base mt-1">{test.reference}</p>
+                    <p className="text-[10px] mt-1">Date édition : {reportDate}</p>
                  </div>
               </div>
 
-              {/* INFO CHANTIER & CLIENT */}
-              <div className="grid grid-cols-2 gap-0 border-2 border-black mb-6">
-                 <div className="p-3 border-r-2 border-black">
-                    <h4 className="font-bold uppercase text-xs text-gray-500 mb-1">Client / Demandeur</h4>
-                    <p className="font-bold text-lg">{test.companyName}</p>
+              {/* INFO CHANTIER & CLIENT - COMPACT */}
+              <div className="grid grid-cols-2 gap-0 border-2 border-black mb-4">
+                 <div className="p-2 border-r-2 border-black">
+                    <h4 className="font-bold uppercase text-[10px] text-gray-500 mb-0.5">Client / Demandeur</h4>
+                    <p className="font-bold text-sm">{test.companyName}</p>
                     <p>{test.projectName}</p>
-                    <p className="text-xs mt-1">MOE: {test.moe || 'Non renseigné'}</p>
-                    <p className="text-xs">MOA: {test.moa || 'Non renseigné'}</p>
+                    <div className="flex gap-4 mt-1 text-[10px]">
+                      <span>MOE: {test.moe || '-'}</span>
+                      <span>MOA: {test.moa || '-'}</span>
+                    </div>
                  </div>
-                 <div className="p-3">
-                    <h4 className="font-bold uppercase text-xs text-gray-500 mb-1">Localisation Ouvrage</h4>
-                    <p className="font-bold">{test.structureName}</p>
+                 <div className="p-2">
+                    <h4 className="font-bold uppercase text-[10px] text-gray-500 mb-0.5">Localisation Ouvrage</h4>
+                    <p className="font-bold text-sm">{test.structureName}</p>
                     <p>{test.elementName}</p>
-                    <p className="text-xs mt-1 italic">Coulage le : {new Date(test.samplingDate).toLocaleDateString()}</p>
+                    <p className="text-[10px] mt-1 italic">Coulage le : {new Date(test.samplingDate).toLocaleDateString()}</p>
                  </div>
               </div>
 
-              {/* CARACTERISTIQUES BETON */}
-              <div className="mb-6">
-                 <h3 className="font-bold bg-gray-100 p-2 border border-black border-b-0 uppercase text-xs">Caractéristiques du Béton & Prélèvement</h3>
-                 <table className="w-full border-collapse border border-black text-xs">
+              {/* CARACTERISTIQUES BETON - COMPACT */}
+              <div className="mb-4">
+                 <h3 className="font-bold bg-gray-100 p-1 border border-black border-b-0 uppercase text-[10px]">Caractéristiques du Béton & Prélèvement</h3>
+                 <table className="w-full border-collapse border border-black text-[10px]">
                     <tbody>
                        <tr>
-                          <td className="border border-black p-2 font-bold bg-gray-50 w-1/4">Classe & Consistance</td>
-                          <td className="border border-black p-2 w-1/4">{test.concreteClass} - {test.consistencyClass} ({test.slump}mm)</td>
-                          <td className="border border-black p-2 font-bold bg-gray-50 w-1/4">Formulation</td>
-                          <td className="border border-black p-2 w-1/4">{test.mixType}</td>
+                          <td className="font-bold bg-gray-50 w-1/6">Classe & Slump</td>
+                          <td className="w-2/6">{test.concreteClass} - {test.consistencyClass} ({test.slump}mm)</td>
+                          <td className="font-bold bg-gray-50 w-1/6">Dosage/Type</td>
+                          <td className="w-2/6">{test.mixType}</td>
                        </tr>
                        <tr>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Fabricant</td>
-                          <td className="border border-black p-2">{test.manufacturer}</td>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Températures</td>
-                          <td className="border border-black p-2">
-                             Ext: {extTemp ? extTemp + '°C' : '-'} / Béton: {concTemp ? concTemp + '°C' : '-'}
-                          </td>
+                          <td className="font-bold bg-gray-50">Fabricant</td>
+                          <td>{test.manufacturer} ({test.manufacturingPlace})</td>
+                          <td className="font-bold bg-gray-50">Températures</td>
+                          <td>Ext: {extTemp ? extTemp + '°C' : '-'} / Béton: {concTemp ? concTemp + '°C' : '-'}</td>
                        </tr>
                        <tr>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Lieu Fabrication</td>
-                          <td className="border border-black p-2">{test.manufacturingPlace}</td>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Volume</td>
-                          <td className="border border-black p-2">{test.volume} m³</td>
+                          <td className="font-bold bg-gray-50">Lieu Prélèv.</td>
+                          <td>{test.samplingPlace}</td>
+                          <td className="font-bold bg-gray-50">Volume / Livr.</td>
+                          <td>{test.volume} m³ ({test.deliveryMethod})</td>
                        </tr>
                        <tr>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Conservation</td>
-                          <td className="border border-black p-2">{test.curing}</td>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Serrage</td>
-                          <td className="border border-black p-2">{test.tightening}</td>
+                          <td className="font-bold bg-gray-50">Info Formule</td>
+                          <td>{test.formulaInfo}</td>
+                          <td className="font-bold bg-gray-50">Serrage</td>
+                          <td>{test.tightening}</td>
                        </tr>
                        <tr>
-                          <td className="border border-black p-2 font-bold bg-gray-50">Norme</td>
-                          <td className="border border-black p-2" colSpan={3}>{test.standard}</td>
+                          <td className="font-bold bg-gray-50">Conservation</td>
+                          <td>{test.curing}</td>
+                          <td className="font-bold bg-gray-50">Norme</td>
+                          <td>{test.standard}</td>
                        </tr>
                     </tbody>
                  </table>
               </div>
 
               {/* RESULTATS */}
-              <div className="mb-8">
-                 <h3 className="font-bold bg-gray-100 p-2 border border-black border-b-0 uppercase text-xs flex justify-between">
-                    <span>Résultats des Essais de Compression</span>
-                    <span>Norme NF EN 12390-3</span>
+              <div className="mb-4">
+                 <h3 className="font-bold bg-gray-100 p-1 border border-black border-b-0 uppercase text-[10px] flex justify-between">
+                    <span>Résultats des Essais (NF EN 12390-3)</span>
                  </h3>
-                 <table className="w-full border-collapse border border-black text-sm">
+                 <table className="w-full border-collapse border border-black text-[10px]">
                     <thead>
                        <tr className="bg-gray-200">
-                          <th className="border border-black p-2 text-center">N°</th>
-                          <th className="border border-black p-2 text-center">Âge</th>
-                          <th className="border border-black p-2 text-center">Date Écrasement</th>
-                          <th className="border border-black p-2 text-center">Dimensions (mm)</th>
-                          <th className="border border-black p-2 text-right">Masse Vol. (kg/m³)</th>
-                          <th className="border border-black p-2 text-right">Force (kN)</th>
-                          <th className="border border-black p-2 text-right bg-gray-300">Résistance (MPa)</th>
+                          <th className="text-center w-10">N°</th>
+                          <th className="text-center w-12">Âge</th>
+                          <th className="text-center w-20">Date</th>
+                          <th className="text-center">Dim. (mm)</th>
+                          <th className="text-right">Masse Vol. (kg/m³)</th>
+                          <th className="text-right">Force (kN)</th>
+                          <th className="text-right bg-gray-300 w-24">MPa</th>
                        </tr>
                     </thead>
                     <tbody>
-                       {/* Pour chaque groupe d'âge, on affiche les lignes puis la moyenne */}
                        {ages.map(age => {
                           const specs = groupedSpecimens[age];
                           const avgStress = specs.reduce((acc, s) => acc + (s.stress || 0), 0) / specs.length;
@@ -251,76 +235,65 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                             <React.Fragment key={age}>
                                {specs.map((s, idx) => (
                                   <tr key={`${age}-${idx}`}>
-                                     <td className="border border-black p-2 text-center font-bold">#{s.number}</td>
-                                     <td className="border border-black p-2 text-center">{s.age} jours</td>
-                                     <td className="border border-black p-2 text-center">{new Date(s.crushingDate).toLocaleDateString()}</td>
-                                     <td className="border border-black p-2 text-center">{s.diameter} x {s.height}</td>
-                                     <td className="border border-black p-2 text-right text-gray-700">{s.density ? s.density.toFixed(0) : '-'}</td>
-                                     <td className="border border-black p-2 text-right">{s.force || '-'}</td>
-                                     <td className="border border-black p-2 text-right font-bold text-base">
+                                     <td className="text-center font-bold">#{s.number}</td>
+                                     <td className="text-center">{s.age}j</td>
+                                     <td className="text-center">{new Date(s.crushingDate).toLocaleDateString()}</td>
+                                     <td className="text-center">{s.diameter} x {s.height}</td>
+                                     <td className="text-right text-gray-700">{s.density ? s.density.toFixed(0) : '-'}</td>
+                                     <td className="text-right">{s.force || '-'}</td>
+                                     <td className="text-right font-bold text-sm">
                                         {s.stress ? s.stress.toFixed(1) : '-'}
                                      </td>
                                   </tr>
                                ))}
-                               {/* Ligne Moyenne */}
-                               <tr className="bg-gray-100 font-bold">
-                                  <td colSpan={4} className="border border-black p-2 text-right uppercase text-xs">Moyenne à {age} Jours :</td>
-                                  <td className="border border-black p-2 text-right text-xs">{avgDensity > 0 ? avgDensity.toFixed(0) : '-'}</td>
-                                  <td className="border border-black p-2 text-right bg-gray-200">-</td>
-                                  <td className="border border-black p-2 text-right text-lg border-l-2 border-l-black bg-gray-300 text-black">
+                               <tr className="bg-gray-100 font-bold break-inside-avoid">
+                                  <td colSpan={4} className="text-right uppercase text-[9px]">Moyenne {age} Jours :</td>
+                                  <td className="text-right text-[10px]">{avgDensity > 0 ? avgDensity.toFixed(0) : '-'}</td>
+                                  <td className="text-right bg-gray-200">-</td>
+                                  <td className="text-right text-sm border-l-2 border-l-black bg-gray-300 text-black">
                                     {avgStress > 0 ? avgStress.toFixed(1) : '-'}
                                   </td>
                                </tr>
                             </React.Fragment>
                           );
                        })}
-
-                       {filteredSpecimens.length === 0 && (
-                          <tr>
-                             <td colSpan={7} className="border border-black p-4 text-center italic text-gray-500">
-                                Aucun résultat disponible pour cet âge.
-                             </td>
-                          </tr>
-                       )}
                     </tbody>
                  </table>
               </div>
 
               {/* OBSERVATIONS & CONCLUSION */}
-              <div className="border border-black p-4 mb-8 min-h-[100px]">
-                 <h4 className="font-bold underline mb-2 text-xs">OBSERVATIONS & CONCLUSIONS :</h4>
-                 <div className="text-sm space-y-2">
-                    {/* Logique 1 : Rappel de la classe */}
+              <div className="border border-black p-2 mb-4 flex-grow min-h-[80px]">
+                 <h4 className="font-bold underline mb-1 text-[10px]">OBSERVATIONS & CONCLUSIONS :</h4>
+                 <div className="text-[11px] space-y-1 whitespace-pre-wrap break-words">
                     {test.concreteClass && (
                       <p>Classe de résistance spécifiée : <strong>{test.concreteClass}</strong>.</p>
                     )}
 
-                    {/* Logique 2 : Conformité probable à 7 jours */}
+                    {/* Conformité Probable 7j */}
                     {type === 'PV' && filteredSpecimens.some(s => s.age === 7 && s.stress) && (
                        (() => {
                           const specimens7d = groupedSpecimens[7];
                           if(specimens7d && specimens7d.length > 0) {
                              const avg7d = specimens7d.reduce((acc, s) => acc + (s.stress || 0), 0) / specimens7d.length;
-                             
-                             // Détection type cylindre ou cube pour le target
                              const isCube = specimens7d[0].specimenType.toLowerCase().includes('cube');
                              const targetStrength = getTargetStrength(test.concreteClass, isCube);
 
                              if(targetStrength) {
-                                const required7d = targetStrength * 0.7; // 70% de fc28
+                                const required7d = targetStrength * 0.7;
                                 const percent = (avg7d / targetStrength) * 100;
                                 const isConform = avg7d >= required7d;
 
                                 return (
-                                  <p className={isConform ? "text-green-800" : "text-red-700"}>
-                                    <strong>Conformité Probable (7j) :</strong> La résistance moyenne à 7 jours est de <strong>{avg7d.toFixed(1)} MPa</strong>, 
-                                    soit <strong>{percent.toFixed(0)}%</strong> de la résistance caractéristique attendue ({targetStrength} MPa).
-                                    <br/>
-                                    Seuil de conformité probable (70% fc28) : {required7d.toFixed(1)} MPa.
-                                    <span className="block mt-1 font-bold uppercase">
-                                      {isConform ? "=> RÉSULTAT CONFORME AUX ATTENTES." : "=> ATTENTION : RÉSULTAT INFÉRIEUR AUX ATTENTES."}
-                                    </span>
-                                  </p>
+                                  <div className={`mt-1 border-l-2 pl-2 ${isConform ? "border-green-600" : "border-red-600"}`}>
+                                    <p className={isConform ? "text-green-800" : "text-red-700"}>
+                                      <strong>Conformité Probable (7j) :</strong> Résistance moyenne 7j : <strong>{avg7d.toFixed(1)} MPa</strong> ({percent.toFixed(0)}% de fc28).
+                                      <br/>
+                                      Seuil (70% fc28) : {required7d.toFixed(1)} MPa.
+                                      <span className="block font-bold uppercase">
+                                        {isConform ? "=> RÉSULTAT CONFORME AUX ATTENTES." : "=> ATTENTION : RÉSULTAT INFÉRIEUR AUX ATTENTES."}
+                                      </span>
+                                    </p>
+                                  </div>
                                 )
                              }
                           }
@@ -328,14 +301,12 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                        })()
                     )}
                     
-                    {/* Logique 3 : Conformité à 28 jours (Final) */}
+                    {/* Conformité 28j */}
                     {type === 'RP' && filteredSpecimens.some(s => s.age === 28 && s.stress) && (
                        (() => {
                           const specimens28d = groupedSpecimens[28];
                           if(specimens28d && specimens28d.length > 0) {
                              const avg28d = specimens28d.reduce((acc, s) => acc + (s.stress || 0), 0) / specimens28d.length;
-                             
-                             // Détection type cylindre ou cube pour le target
                              const isCube = specimens28d[0].specimenType.toLowerCase().includes('cube');
                              const targetStrength = getTargetStrength(test.concreteClass, isCube);
 
@@ -343,44 +314,45 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                                 const isConform = avg28d >= targetStrength;
 
                                 return (
-                                  <p className={isConform ? "text-green-800" : "text-red-700"}>
-                                    <strong>Conformité à 28 jours :</strong> La résistance moyenne obtenue est de <strong>{avg28d.toFixed(1)} MPa</strong>.
-                                    <br/>
-                                    Résistance caractéristique requise ({test.concreteClass}) : {targetStrength} MPa.
-                                    <span className="block mt-1 font-bold uppercase">
-                                      {isConform ? "=> BÉTON CONFORME (Résistance caractéristique atteinte)." : "=> BÉTON NON CONFORME (Résistance insuffisante)."}
-                                    </span>
-                                  </p>
+                                  <div className={`mt-1 border-l-2 pl-2 ${isConform ? "border-green-600" : "border-red-600"}`}>
+                                    <p className={isConform ? "text-green-800" : "text-red-700"}>
+                                      <strong>Conformité à 28 jours :</strong> Résistance moyenne 28j : <strong>{avg28d.toFixed(1)} MPa</strong>.
+                                      <br/>
+                                      Résistance caractéristique requise ({test.concreteClass}) : {targetStrength} MPa.
+                                      <span className="block font-bold uppercase">
+                                        {isConform ? "=> BÉTON CONFORME (Résistance caractéristique atteinte)." : "=> BÉTON NON CONFORME (Résistance insuffisante)."}
+                                      </span>
+                                    </p>
+                                  </div>
                                 )
                              }
                           }
-                          // Si pas de classe définie ou pas de calcul possible
-                          return <p>Les résultats sont communiqués pour validation par le maître d'oeuvre.</p>;
+                          return null;
                        })()
                     )}
                  </div>
               </div>
 
               {/* SIGNATURES */}
-              <div className="grid grid-cols-2 gap-12 mt-auto">
-                 <div className="border-t border-black pt-2">
-                    <p className="font-bold text-xs uppercase">Le Technicien Laboratoire</p>
-                    <div className="h-20"></div>
+              <div className="grid grid-cols-2 gap-12 mt-auto pt-2">
+                 <div className="border-t border-black pt-1">
+                    <p className="font-bold text-[10px] uppercase">Le Technicien</p>
+                    <div className="h-12"></div>
                  </div>
-                 <div className="border-t border-black pt-2">
-                    <p className="font-bold text-xs uppercase">Le Responsable Technique</p>
-                    <div className="h-20 flex items-center justify-center opacity-50">
-                       <CheckCircle2 className="w-12 h-12 text-gray-300" />
-                       <span className="ml-2 text-gray-400 text-xs font-mono">VALIDÉ NUMÉRIQUEMENT</span>
+                 <div className="border-t border-black pt-1">
+                    <p className="font-bold text-[10px] uppercase">Le Responsable Technique</p>
+                    <div className="h-12 flex items-center justify-center opacity-50">
+                       <CheckCircle2 className="w-8 h-8 text-gray-300" />
+                       <span className="ml-1 text-gray-400 text-[10px] font-mono">VALIDÉ</span>
                     </div>
                  </div>
               </div>
 
-              {/* FOOTER PAGE - DYNAMIQUE AVEC INFOS LEGALES */}
-              <div className="absolute bottom-4 left-0 right-0 text-center px-8">
-                 <div className="border-t border-gray-300 pt-2 text-[10px] text-gray-500">
+              {/* FOOTER */}
+              <div className="absolute bottom-2 left-0 right-0 text-center px-8">
+                 <div className="border-t border-gray-300 pt-1 text-[9px] text-gray-500">
                    <p>{headerName} - Document généré informatiquement le {reportDate}.</p>
-                   {legalString && <p className="mt-1 font-medium">{legalString}</p>}
+                   {legalString && <p>{legalString}</p>}
                  </div>
               </div>
            </div>

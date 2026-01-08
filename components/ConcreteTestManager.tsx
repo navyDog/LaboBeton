@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube } from 'lucide-react';
 import { ConcreteTest, Project, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../utils/api';
 
 interface ConcreteTestManagerProps {
   token: string;
-  user?: User; // Ajout de l'utilisateur courant pour les infos PDF
+  user?: User; 
   onBack: () => void;
 }
 
@@ -27,7 +27,6 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
 
   if (!isOpen) return null;
 
-  // Calculs dynamiques pour prévisualisation
   const surface = data.specimenType.toLowerCase().includes('cube') 
     ? data.diameter * data.diameter 
     : Math.PI * Math.pow(data.diameter / 2, 2);
@@ -42,14 +41,11 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
   };
 
   const handleSaveClick = () => {
-    // On calcule les valeurs dérivées (Stress/Density) AVANT de renvoyer au parent
-    // pour que l'affichage dans le tableau soit immédiat
     const finalSurface = data.specimenType.toLowerCase().includes('cube') 
       ? data.diameter * data.diameter 
       : Math.PI * Math.pow(data.diameter / 2, 2);
       
     const finalStress = (data.force && data.force > 0) ? (data.force * 1000) / finalSurface : null;
-    
     const finalVolume = finalSurface * data.height;
     const finalDensity = (data.weight && data.weight > 0) ? (data.weight / finalVolume) * 1000000 : null;
 
@@ -91,7 +87,6 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            {/* DIMENSIONS */}
             <div className="space-y-4">
                <h4 className="text-xs font-bold text-concrete-500 uppercase border-b border-concrete-100 pb-1">Géométrie</h4>
                <div>
@@ -112,13 +107,8 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
                    onChange={e => handleChange('height', e.target.value)}
                  />
                </div>
-               <div className="text-right">
-                 <span className="text-xs text-concrete-400">Surface: </span>
-                 <span className="font-mono text-sm font-bold text-concrete-700">{surface.toFixed(1)} mm²</span>
-               </div>
             </div>
 
-            {/* RESULTATS */}
             <div className="space-y-4">
                <h4 className="text-xs font-bold text-safety-orange uppercase border-b border-orange-100 pb-1">Mesures Labo</h4>
                <div>
@@ -148,7 +138,6 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
             </div>
           </div>
 
-          {/* CALCULS PREVISUALISATION */}
           <div className="bg-concrete-900 text-white rounded-lg p-4 grid grid-cols-2 gap-4">
              <div>
                <span className="block text-concrete-400 text-xs uppercase">Résistance (MPa)</span>
@@ -209,17 +198,11 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  // Specimen Modal State
   const [selectedSpecimenIdx, setSelectedSpecimenIdx] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Report Modal State
   const [reportState, setReportState] = useState<{ test: ConcreteTest, type: 'PV'|'RP' } | null>(null);
 
-  // Initial Form State
   const initialFormState = {
     projectId: '',
     structureName: '',
@@ -239,7 +222,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     slump: 0,               
     samplingPlace: '',
 
-    // New Fields
     externalTemp: 0,
     concreteTemp: 0,
     
@@ -258,12 +240,10 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
   const [formData, setFormData] = useState(initialFormState);
   
-  // State pour l'ajout de packs
   const [packAge, setPackAge] = useState(28);
   const [packCount, setPackCount] = useState(3);
-  const [packDim, setPackDim] = useState('160x320'); // Simple sélecteur rapide
+  const [packDim, setPackDim] = useState('160x320');
 
-  // Data Fetching
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -285,7 +265,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     fetchData();
   }, [token]);
 
-  // Reset form helper
   const resetForm = () => {
     setFormData(initialFormState);
     setEditingId(null);
@@ -294,7 +273,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setIsModalOpen(false);
   };
 
-  // Gestion des packs d'éprouvettes
   const handleAddPack = () => {
     if (packCount <= 0) return;
 
@@ -305,9 +283,8 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     let height = 320;
     
     if (packDim === '110x220') { diameter = 110; height = 220; }
-    if (packDim === '150x150') { diameter = 150; height = 150; } // Cube
+    if (packDim === '150x150') { diameter = 150; height = 150; } 
     
-    // Calcul Surface (mm2)
     const isCube = packDim.includes('Cube') || packDim === '150x150';
     const surface = isCube 
       ? diameter * diameter 
@@ -333,25 +310,22 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   };
 
   const handleRemoveSpecimen = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Empêcher l'ouverture de la modale
+    e.stopPropagation();
     const updated = formData.specimens.filter((_, i) => i !== index);
     const renumbered = updated.map((s, i) => ({ ...s, number: i + 1 }));
     setFormData({ ...formData, specimens: renumbered });
   };
 
-  // Open Modal
   const handleSpecimenClick = (index: number) => {
     setSelectedSpecimenIdx(index);
     setIsModalOpen(true);
   };
 
-  // Inline Change Handler
   const handleInlineChange = (index: number, field: keyof Specimen, value: string) => {
     const numValue = value === '' ? undefined : parseFloat(value);
     const updatedSpecimens = [...formData.specimens];
     const specimen = { ...updatedSpecimens[index], [field]: numValue };
 
-    // Recalculations automatiques
     if (specimen.force !== undefined && specimen.force !== null && specimen.surface > 0) {
        specimen.stress = (specimen.force * 1000) / specimen.surface;
     } else {
@@ -369,7 +343,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setFormData({ ...formData, specimens: updatedSpecimens });
   };
 
-  // Save Modal
   const handleSaveSpecimen = (updated: Specimen) => {
     if (selectedSpecimenIdx === null) return;
     
@@ -381,7 +354,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setSelectedSpecimenIdx(null);
   };
 
-  // Prepare Edit
   const handleEdit = (test: ConcreteTest) => {
     const projectValue = (test.projectId && typeof test.projectId === 'object') 
       ? (test.projectId as any)._id 
@@ -424,7 +396,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     setViewMode('create');
   };
 
-  // Handlers
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.projectId) return alert("Veuillez sélectionner une affaire.");
@@ -455,13 +426,11 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
       if (res.ok) {
         const updatedTest = await res.json();
-        
         if (editingId) {
           setTests(tests.map(t => t._id === editingId ? updatedTest : t));
         } else {
           setTests([updatedTest, ...tests]);
         }
-        
         resetForm();
       } else {
         const errorData = await res.json();
@@ -492,13 +461,11 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     t.structureName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // --- RENDER CREATE MODE ---
   if (viewMode === 'create') {
     const calculatedConsistency = calculateConsistency(formData.slump);
 
     return (
       <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
-        {/* Modale */}
         {isModalOpen && selectedSpecimenIdx !== null && (
           <SpecimenModal 
             specimen={formData.specimens[selectedSpecimenIdx]}
@@ -521,7 +488,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
         
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
            
-           {/* SECTION 1: IDENTIFICATION */}
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
                 <FileText className="w-5 h-5 text-safety-orange" /> Identification Chantier
@@ -589,7 +555,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               </div>
            </div>
 
-           {/* SECTION 2: BETON & SLUMP & CONTEXTE (Réorganisé pour inclure tout) */}
+           {/* SECTION 2: BETON & SLUMP & CONTEXTE (Réorganisé et Complet) */}
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2">
                 <Factory className="w-5 h-5 text-safety-orange" /> Béton & Contexte
@@ -683,9 +649,11 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     </select>
                  </div>
 
-                 {/* Ligne 3 : Détails Techniques */}
+                 {/* Ligne 3 : Détails Techniques & Lieux */}
                  <div className="lg:col-span-2">
-                    <label className="block text-xs font-bold text-concrete-500 mb-1">Info Complémentaire Formule</label>
+                    <label className="block text-xs font-bold text-concrete-500 mb-1 flex items-center gap-1">
+                       <TestTube className="w-3 h-3"/> Info Complémentaire Formule
+                    </label>
                     <input 
                       className="w-full p-2 border border-concrete-300 rounded"
                       placeholder="ex: Ajout retardateur, Fibres..."
@@ -704,7 +672,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     />
                  </div>
 
-                 {/* Ligne 4 : Températures */}
+                 {/* Ligne 4 : Températures (Nouveau) */}
                  <div>
                     <label className="block text-xs font-bold text-concrete-500 mb-1 flex items-center gap-1"><Thermometer className="w-3 h-3"/> T° Extérieure (°C)</label>
                     <input 
@@ -816,7 +784,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                           </td>
                           <td className="px-3 py-2 text-xs text-concrete-500">{s.diameter}x{s.height}</td>
                           
-                          {/* INLINE EDIT: Masse */}
                           <td className="px-3 py-2 text-right">
                             <input 
                               type="number"
@@ -829,7 +796,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                             />
                           </td>
 
-                          {/* INLINE EDIT: Force */}
                           <td className="px-3 py-2 text-right">
                             <input 
                               type="number"
@@ -842,7 +808,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                             />
                           </td>
 
-                          {/* Contrainte (Calculée) */}
                           <td className="px-3 py-2 text-right font-mono">
                              {s.stress ? (
                                <span className="font-bold text-safety-orange">{s.stress.toFixed(1)}</span>
@@ -886,7 +851,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               )}
            </div>
 
-           {/* SECTION 4: CONTEXTE TECHNIQUE */}
            <div className="space-y-4 pt-4 border-t border-concrete-100">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <div>
@@ -946,15 +910,13 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     );
   }
 
-  // --- RENDER LIST MODE ---
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
        
-       {/* Modale Rapport */}
        {reportState && (
          <ReportPreview 
            test={reportState.test} 
-           user={user} // Transmission des données utilisateur (Company name, etc.)
+           user={user} 
            type={reportState.type} 
            onClose={() => setReportState(null)} 
          />
@@ -980,7 +942,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       </div>
 
       <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden">
-        {/* Toolbar */}
         <div className="p-4 border-b border-concrete-100 bg-concrete-50 flex items-center gap-3">
           <div className="relative flex-grow max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
@@ -1013,7 +974,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               </thead>
               <tbody className="divide-y divide-concrete-100">
                 {filteredTests.map(test => {
-                  // Vérification de la disponibilité des rapports
                   const has7d = test.specimens.some(s => s.age <= 7);
                   const has28d = test.specimens.some(s => s.age === 28);
 
@@ -1031,7 +991,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                       {test.structureName} <span className="text-concrete-400">- {test.elementName}</span>
                     </td>
                     
-                    {/* COLONNE ACTIONS RAPPORTS */}
                     <td className="px-4 py-3 text-center">
                        <div className="flex items-center justify-center gap-2">
                           {has7d ? (
