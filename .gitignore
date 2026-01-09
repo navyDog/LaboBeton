@@ -95,5 +95,7 @@ dist/
 dist-ssr/
 *.local
 
+package-lock.json
+
 # Ne pas toucher au Dockerfile lors des synchronisations
-# Dockerfile
+Dockerfile
