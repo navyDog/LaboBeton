@@ -1,6 +1,6 @@
 {
   "name": "labobeton-app",
-  "version": "0.1.0-alpha2",
+  "version": "0.1.1-alpha2",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
