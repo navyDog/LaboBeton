@@ -68,7 +68,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             {/* BADGE ALPHA */}
             <div className="flex items-center gap-3">
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-safety-orange text-white border border-orange-500 shadow-lg shadow-orange-500/20 uppercase tracking-widest">
-                Alpha v0.1.0-alpha2
+                Alpha v0.10-alpha2
               </span>
               <span className="text-concrete-400 text-xs font-medium border-l border-concrete-700 pl-3">
                 Accès Professionnel
