@@ -34,7 +34,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const port = process.env.PORT || 8080;
-  await app.listen(port);
+  // Écoute explicite sur 0.0.0.0 pour Docker
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Serveur NestJS démarré sur le port ${port}`);
 }
 bootstrap();
