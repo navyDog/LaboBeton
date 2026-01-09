@@ -466,10 +466,21 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
 
 app.put('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
-    // CASTING EXPLICITE ID + userId pour scoping
+    const companyId = String(req.params.id);
+    // White-listing explicite : On extrait les champs autorisés du body
+    const { name, contactName, email, phone } = req.body;
+    
+    // Construction de l'objet de mise à jour sécurisé
+    const updates = {};
+    if (name !== undefined) updates.name = String(name);
+    if (contactName !== undefined) updates.contactName = String(contactName);
+    if (email !== undefined) updates.email = String(email);
+    if (phone !== undefined) updates.phone = String(phone);
+
+    // CASTING EXPLICITE ID + userId pour scoping + Utilisation de $set avec l'objet white-listé
     const updated = await Company.findOneAndUpdate(
-        { _id: String(req.params.id), userId: req.user.id }, 
-        req.body, // Mongoose sanitize déjà via le Schema, et mongoSanitize a retiré les $
+        { _id: companyId, userId: req.user.id }, 
+        { $set: updates },
         { new: true }
     );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
@@ -584,10 +595,24 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
 
 app.put('/api/projects/:id', authenticateToken, async (req, res) => {
   try {
+    const projectId = String(req.params.id);
+    // White-listing explicite
+    const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
+    
+    const updates = {};
+    if (name !== undefined) updates.name = String(name);
+    if (companyId !== undefined) updates.companyId = String(companyId);
+    if (companyName !== undefined) updates.companyName = String(companyName);
+    if (contactName !== undefined) updates.contactName = String(contactName);
+    if (email !== undefined) updates.email = String(email);
+    if (phone !== undefined) updates.phone = String(phone);
+    if (moa !== undefined) updates.moa = String(moa);
+    if (moe !== undefined) updates.moe = String(moe);
+
     // CASTING EXPLICITE ID
     const updated = await Project.findOneAndUpdate(
-        { _id: String(req.params.id), userId: req.user.id }, 
-        req.body, 
+        { _id: projectId, userId: req.user.id }, 
+        { $set: updates }, 
         { new: true }
     );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
@@ -629,9 +654,28 @@ app.post('/api/concrete-tests', authenticateToken, validateTest, checkValidation
 app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
   try {
     // CASTING EXPLICITE ID
-    const test = await ConcreteTest.findOne({ _id: String(req.params.id), userId: req.user.id });
+    const testId = String(req.params.id);
+    const test = await ConcreteTest.findOne({ _id: testId, userId: req.user.id });
     if (!test) return res.status(404).json({ message: "Non trouvé" });
-    Object.assign(test, req.body);
+    
+    // WHITE-LISTING: On remplace Object.assign par une affectation contrôlée
+    // Cela empêche l'injection de champs non désirés et satisfait CodeQL
+    const allowedFields = [
+        'projectId', 'projectName', 'companyName', 'moe', 'moa', 
+        'structureName', 'elementName', 'receptionDate', 'samplingDate',
+        'volume', 'concreteClass', 'mixType', 'formulaInfo', 
+        'manufacturer', 'manufacturingPlace', 'deliveryMethod',
+        'slump', 'samplingPlace', 'tightening', 'vibrationTime',
+        'layers', 'curing', 'testType', 'standard', 'preparation',
+        'pressMachine', 'externalTemp', 'concreteTemp', 'specimens'
+    ];
+
+    allowedFields.forEach(field => {
+        if (req.body[field] !== undefined) {
+            test[field] = req.body[field];
+        }
+    });
+
     await test.save();
     res.json(test);
   } catch (error) { res.status(400).json({ message: "Erreur modification" }); }
