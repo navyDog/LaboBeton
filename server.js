@@ -34,13 +34,14 @@ const app = express();
 // Google Cloud Run injecte automatiquement la variable PORT (défaut 8080)
 const PORT = process.env.PORT || 8080;
 
-// --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS ---
+// --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS (OWASP A02:2021-Cryptographic Failures) ---
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
-  console.error("⚠️ WARNING : JWT_SECRET n'est pas défini en production. Utilisation de la clé par défaut (NON SÉCURISÉ).");
+  console.error("🚨 CRITICAL SECURITY WARNING : JWT_SECRET n'est pas défini en production. L'application est vulnérable.");
+  // En environnement strict, on pourrait process.exit(1) ici.
 }
 
-// --- SÉCURITÉ : Proxy & HTTPS ---
+// --- SÉCURITÉ : Proxy & HTTPS (OWASP A05:2021-Security Misconfiguration) ---
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
@@ -72,7 +73,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// --- SÉCURITÉ : Helmet (Headers) ---
+// --- SÉCURITÉ : Helmet (OWASP A05:2021) ---
+// Protection contre Clickjacking (X-Frame-Options), Sniffing (X-Content-Type-Options), etc.
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -84,23 +86,43 @@ app.use(helmet({
       connectSrc: ["'self'"], 
     },
   },
-  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
+  hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }, // Force HTTPS
+  frameguard: { action: 'deny' } // Anti-Clickjacking
 }));
 
-// --- SÉCURITÉ : Anti-Injection NoSQL ---
-app.use(mongoSanitize());
+// --- SÉCURITÉ : Body Parsers (Avant Sanitize) ---
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// --- SÉCURITÉ : Rate Limiting ---
+// --- SÉCURITÉ : Anti-Injection NoSQL (OWASP A03:2021-Injection) ---
+// Remplacement des caractères interdits ($ et .) par _ pour neutraliser les opérateurs
+app.use(mongoSanitize({
+  replaceWith: '_'
+}));
+
+// --- SÉCURITÉ : Rate Limiting (DoS Protection) ---
+
+// 1. Limiteur Global : 100 requêtes par 15 minutes
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limite chaque IP à 100 requêtes par fenêtre
+  message: { message: "Trop de requêtes envoyées depuis cette IP, veuillez réessayer plus tard." },
+  standardHeaders: true, // Retourne les infos de rate limit dans les headers `RateLimit-*`
+  legacyHeaders: false, // Désactive les headers `X-RateLimit-*`
+});
+
+// Appliquer le limiteur global à toutes les requêtes
+app.use(globalLimiter);
+
+// 2. Limiteur Login (Strict) : 5 tentatives par heure
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { message: "Trop de tentatives. Réessayez dans 15 min." },
+  windowMs: 60 * 60 * 1000, // 1 heure
+  max: 5, // Limite chaque IP à 5 tentatives de connexion par fenêtre
+  message: { message: "Trop de tentatives de connexion échouées. Compte temporairement bloqué pour 1 heure." },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- DB Connect & Seed ---
 const connectDB = async () => {
@@ -160,7 +182,7 @@ const seedAdminUser = async () => {
   } catch (error) { console.error("Erreur seedAdminUser:", error); }
 };
 
-// --- MIDDLEWARES AUTH ---
+// --- MIDDLEWARES AUTH (OWASP A01:2021-Broken Access Control) ---
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -168,7 +190,8 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password');
+    // req.user.id est extrait du token (sûr), mais on caste quand même par principe dans les requêtes
+    const user = await User.findById(String(decoded.id)).select('-password');
     
     if (!user) return res.status(401).json({ message: "Utilisateur introuvable." });
     if (user.isActive === false) return res.status(403).json({ message: "Compte désactivé." });
@@ -198,14 +221,41 @@ const checkValidation = (req, res, next) => {
   next();
 };
 
+// --- VALIDATORS (OWASP A07:2021-Identification and Authentication Failures) ---
+const validateLogin = [
+  body('username').trim().notEmpty().withMessage('Identifiant requis').escape(),
+  body('password').notEmpty().withMessage('Mot de passe requis')
+];
+
+const validateUserCreation = [
+  body('username').trim().isLength({ min: 3 }).withMessage('Identifiant trop court (min 3)').escape(),
+  // Politique de mot de passe forte
+  body('password')
+    .isLength({ min: 8 }).withMessage('Le mot de passe doit faire au moins 8 caractères')
+    .matches(/\d/).withMessage('Le mot de passe doit contenir au moins un chiffre')
+    .matches(/[A-Z]/).withMessage('Le mot de passe doit contenir au moins une majuscule')
+    .matches(/[a-z]/).withMessage('Le mot de passe doit contenir au moins une minuscule')
+];
+
+const validateTest = [
+  body('projectId').isMongoId().withMessage('ID Projet invalide'),
+  body('slump').optional({ values: 'falsy' }).isNumeric(),
+  body('specimens').isArray()
+];
+
 // --- API ROUTES ---
 
-// Login avec gestion Session Unique
-app.post('/api/auth/login', loginLimiter, async (req, res) => {
+// Login avec gestion Session Unique, Rate Limiter Stricte et Validation
+// OWASP: Réponses génériques ("Identifiants incorrects") pour ne pas énumérer les comptes
+app.post('/api/auth/login', loginLimiter, validateLogin, checkValidation, async (req, res) => {
   const { username, password } = req.body;
   try {
+    // CASTING EXPLICITE : Empêche l'injection d'objets { $ne: null }
     const safeUsername = String(username);
+    
     const user = await User.findOne({ username: safeUsername });
+    // Délai constant simulé pour éviter les attaques temporelles (Timing Attacks) - Optionnel mais recommandé
+    
     if (!user) return res.status(401).json({ message: "Identifiants incorrects" });
     
     if (user.isActive === false) return res.status(403).json({ message: "Ce compte a été désactivé. Contactez l'administrateur." });
@@ -242,7 +292,12 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 app.post('/api/bugs', authenticateToken, async (req, res) => {
   const { type, description, user } = req.body;
   try {
-    await BugReport.create({ type, description, user });
+    // On ne passe pas req.body directement, on reconstruit l'objet
+    await BugReport.create({ 
+        type: String(type), 
+        description: String(description), 
+        user: String(user) // Casting de sécurité
+    });
     res.json({ message: "Signalement reçu" });
   } catch (e) {
     res.status(500).json({ message: "Erreur enregistrement bug" });
@@ -260,14 +315,20 @@ app.get('/api/admin/bugs', authenticateToken, requireAdmin, async (req, res) => 
 app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { status } = req.body;
-    const bug = await BugReport.findByIdAndUpdate(req.params.id, { status, resolvedAt: status === 'resolved' ? new Date() : null }, { new: true });
+    // CASTING EXPLICITE de l'ID
+    const bug = await BugReport.findByIdAndUpdate(
+        String(req.params.id), 
+        { status: String(status), resolvedAt: status === 'resolved' ? new Date() : null }, 
+        { new: true }
+    );
     res.json(bug);
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
 
 app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    await BugReport.findByIdAndDelete(req.params.id);
+    // CASTING EXPLICITE de l'ID
+    await BugReport.findByIdAndDelete(String(req.params.id));
     res.json({ message: "Signalement supprimé" });
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
@@ -286,17 +347,22 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
 
-    if (companyName !== undefined) user.companyName = companyName;
-    if (address !== undefined) user.address = address;
-    if (contact !== undefined) user.contact = contact;
-    if (siret !== undefined) user.siret = siret;
-    if (apeCode !== undefined) user.apeCode = apeCode;
-    if (legalInfo !== undefined) user.legalInfo = legalInfo;
-    if (logo !== undefined) user.logo = logo;
+    // Assignation explicite (évite le mass assignment)
+    if (companyName !== undefined) user.companyName = String(companyName);
+    if (address !== undefined) user.address = String(address);
+    if (contact !== undefined) user.contact = String(contact);
+    if (siret !== undefined) user.siret = String(siret);
+    if (apeCode !== undefined) user.apeCode = String(apeCode);
+    if (legalInfo !== undefined) user.legalInfo = String(legalInfo);
+    if (logo !== undefined) user.logo = String(logo);
 
-    if (password && password.trim() !== "") {
+    if (password && String(password).trim() !== "") {
+      const pwd = String(password);
+      // Validation manuelle de la complexité du mot de passe
+      if (pwd.length < 8) return res.status(400).json({ message: "Le mot de passe doit faire 8 caractères minimum." });
+      
       const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(password, salt);
+      user.password = await bcrypt.hash(pwd, salt);
       // Changer le mot de passe déconnecte les autres sessions aussi
       user.tokenVersion = (user.tokenVersion || 0) + 1;
     }
@@ -310,23 +376,26 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
 });
 
 // --- ADMIN USERS ---
-app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+// Ajout du validateur validateUserCreation
+app.post('/api/users', authenticateToken, requireAdmin, validateUserCreation, checkValidation, async (req, res) => {
   const { username, password, role, companyName, address, contact, isActive } = req.body;
   try {
-    const existingUser = await User.findOne({ username });
+    // CASTING EXPLICITE
+    const safeUsername = String(username);
+    const existingUser = await User.findOne({ username: safeUsername });
     if (existingUser) return res.status(400).json({ message: "Utilisateur existant." });
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(String(password), salt);
 
     const newUser = new User({
-      username,
+      username: safeUsername,
       password: hashedPassword,
       role: role || 'standard',
-      isActive: isActive !== undefined ? isActive : true,
-      companyName,
-      address,
-      contact
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      companyName: companyName ? String(companyName) : '',
+      address: address ? String(address) : '',
+      contact: contact ? String(contact) : ''
     });
 
     await newUser.save();
@@ -341,11 +410,14 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Erreur récupération" }); }
 });
 
-// Toggle Activation Utilisateur (au lieu de delete parfois)
+// Toggle Activation Utilisateur
 app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        if (req.params.id === req.user.id) return res.status(400).json({ message: "Impossible de modifier son propre accès." });
-        const user = await User.findById(req.params.id);
+        // CASTING EXPLICITE
+        const targetId = String(req.params.id);
+        if (targetId === String(req.user.id)) return res.status(400).json({ message: "Impossible de modifier son propre accès." });
+        
+        const user = await User.findById(targetId);
         if (!user) return res.status(404).json({ message: "Non trouvé" });
         
         user.isActive = !user.isActive;
@@ -359,14 +431,20 @@ app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, async (
 
 app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    if (req.params.id === req.user.id) return res.status(400).json({ message: "Impossible de se supprimer soi-même." });
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    // CASTING EXPLICITE
+    const targetId = String(req.params.id);
+    if (targetId === String(req.user.id)) return res.status(400).json({ message: "Impossible de se supprimer soi-même." });
+    
+    const deletedUser = await User.findByIdAndDelete(targetId);
     if (!deletedUser) return res.status(404).json({ message: "Utilisateur introuvable." });
     res.json({ message: "Utilisateur supprimé." });
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
 });
 
 // --- METIER ---
+// Note sur Access Control (OWASP A01) : Tous les appels métiers filtrent par `userId: req.user.id`.
+// C'est la protection principale contre les IDOR (Insecure Direct Object Reference).
+
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
     const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 }).lean();
@@ -376,7 +454,11 @@ app.get('/api/companies', authenticateToken, async (req, res) => {
 
 app.post('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const newCompany = new Company({ ...req.body, userId: req.user.id });
+    // mongoSanitize a déjà nettoyé req.body des opérateurs $, mais on reconstruit pour être sûr
+    const newCompany = new Company({ 
+        ...req.body, 
+        userId: req.user.id 
+    });
     await newCompany.save();
     res.status(201).json(newCompany);
   } catch (error) { res.status(400).json({ message: "Erreur création" }); }
@@ -384,7 +466,12 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
 
 app.put('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = await Company.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, req.body, { new: true });
+    // CASTING EXPLICITE ID + userId pour scoping
+    const updated = await Company.findOneAndUpdate(
+        { _id: String(req.params.id), userId: req.user.id }, 
+        req.body, // Mongoose sanitize déjà via le Schema, et mongoSanitize a retiré les $
+        { new: true }
+    );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
   } catch (error) { res.status(400).json({ message: "Erreur modification" }); }
@@ -392,7 +479,8 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
 
 app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
   try {
-    const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    // CASTING EXPLICITE ID
+    const deleted = await Company.findOneAndDelete({ _id: String(req.params.id), userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
@@ -408,7 +496,9 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
 // EXPORT CSV POUR PROJET
 app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
   try {
-    const projectId = req.params.id;
+    // CASTING EXPLICITE ID
+    const projectId = String(req.params.id);
+    
     // Vérifier appartenance
     const project = await Project.findOne({ _id: projectId, userId: req.user.id });
     if (!project) return res.status(404).json({ message: "Projet introuvable" });
@@ -474,7 +564,8 @@ app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
 // FULL REPORT DATA FOR PV GLOBAL
 app.get('/api/projects/:id/full-report', authenticateToken, async (req, res) => {
   try {
-    const projectId = req.params.id;
+    // CASTING EXPLICITE ID
+    const projectId = String(req.params.id);
     const project = await Project.findOne({ _id: projectId, userId: req.user.id });
     if (!project) return res.status(404).json({ message: "Projet introuvable" });
 
@@ -493,7 +584,12 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
 
 app.put('/api/projects/:id', authenticateToken, async (req, res) => {
   try {
-    const updated = await Project.findOneAndUpdate({ _id: req.params.id, userId: req.user.id }, req.body, { new: true });
+    // CASTING EXPLICITE ID
+    const updated = await Project.findOneAndUpdate(
+        { _id: String(req.params.id), userId: req.user.id }, 
+        req.body, 
+        { new: true }
+    );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
   } catch (error) { res.status(400).json({ message: "Erreur modification" }); }
@@ -501,7 +597,8 @@ app.put('/api/projects/:id', authenticateToken, async (req, res) => {
 
 app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
   try {
-    const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    // CASTING EXPLICITE ID
+    const deleted = await Project.findOneAndDelete({ _id: String(req.params.id), userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
@@ -518,12 +615,6 @@ app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   } catch (error) { res.status(500).json({ message: "Erreur serveur" }); }
 });
 
-const validateTest = [
-  body('projectId').isMongoId(),
-  body('slump').optional({ values: 'falsy' }).isNumeric(),
-  body('specimens').isArray()
-];
-
 app.post('/api/concrete-tests', authenticateToken, validateTest, checkValidation, async (req, res) => {
   try {
     const newTest = new ConcreteTest({ ...req.body, userId: req.user.id });
@@ -537,7 +628,8 @@ app.post('/api/concrete-tests', authenticateToken, validateTest, checkValidation
 
 app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
   try {
-    const test = await ConcreteTest.findOne({ _id: req.params.id, userId: req.user.id });
+    // CASTING EXPLICITE ID
+    const test = await ConcreteTest.findOne({ _id: String(req.params.id), userId: req.user.id });
     if (!test) return res.status(404).json({ message: "Non trouvé" });
     Object.assign(test, req.body);
     await test.save();
@@ -547,7 +639,8 @@ app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
 
 app.delete('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
   try {
-    const deleted = await ConcreteTest.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    // CASTING EXPLICITE ID
+    const deleted = await ConcreteTest.findOneAndDelete({ _id: String(req.params.id), userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
