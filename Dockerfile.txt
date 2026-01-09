@@ -25,18 +25,15 @@ WORKDIR /app
 # Copier les fichiers de dépendances
 COPY package*.json ./
 
-# Installer les dépendances de production (incluant ts-node et typescript)
+# Installer uniquement les dépendances de production
 RUN npm install --omit=dev
 
-# Copier les artefacts construits depuis l'étape précédente (Frontend)
+# Copier les artefacts construits depuis l'étape précédente
 COPY --from=builder /app/dist ./dist
 
-# Copier le code source du Backend NestJS
-COPY --from=builder /app/src ./src
-
-# Copier la configuration TypeScript
-COPY --from=builder /app/tsconfig.json ./
-COPY --from=builder /app/tsconfig.server.json ./
+# Copier le serveur et les modèles (Backend)
+COPY --from=builder /app/server.js ./
+COPY --from=builder /app/models ./models
 
 # Définir les variables d'environnement par défaut
 ENV NODE_ENV=production
@@ -45,5 +42,5 @@ ENV PORT=8080
 # Exposer le port
 EXPOSE 8080
 
-# Démarrer le serveur NestJS via npm start (configuré avec ts-node ESM)
-CMD ["npm", "start"]
+# Démarrer le serveur directement avec node
+CMD ["node", "server.js"]
