@@ -1,6 +1,6 @@
 {
   "name": "labobeton-app",
-  "version": "0.1.1-alpha2",
+  "version": "0.1.1-alpha3",
   "type": "module",
   "engines": {
     "node": ">=18.0.0"
@@ -36,9 +36,15 @@
     "nodemon": "^3.0.1",
     "concurrently": "^8.2.0",
     "@types/bcryptjs": "^2.4.2",
-    "@types/jsonwebtoken": "^9.0.2"
+    "@types/jsonwebtoken": "^9.0.2",
+    "glob": "^10.5.0",
+    "cross-spawn": "^7.0.5"
   },
   "overrides": {
+    "glob": "^10.5.0",
+    "cross-spawn": "^7.0.5"
+  },
+  "resolutions": {
     "glob": "^10.5.0",
     "cross-spawn": "^7.0.5"
   }
