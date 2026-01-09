@@ -159,7 +159,7 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-bold text-concrete-900 leading-tight">LaboBéton</h1>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-safety-orange border border-orange-200 uppercase tracking-widest">
-                    Alpha v0.1.1-alpha2
+                    v0.2.0-alpha.1
                   </span>
                 </div>
                 {currentUser.companyName && (
@@ -300,7 +300,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-concrete-200 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-             <p className="text-xs text-concrete-400">&copy; {new Date().getFullYear()} LaboBéton v0.1.1-alpha2 - Normes NF EN</p>
+             <p className="text-xs text-concrete-400">&copy; {new Date().getFullYear()} LaboBéton v0.2.0-alpha.1 - Normes NF EN</p>
              
              <div className="flex items-center gap-2">
                <span className="text-[10px] text-concrete-400 font-medium">Developed by</span>
