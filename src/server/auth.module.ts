@@ -1,6 +1,6 @@
 import { Module, Injectable, Controller, Post, Body, UnauthorizedException, ForbiddenException, UseGuards, Get, Request, Put } from '@nestjs/common';
 import { JwtService, JwtModule } from '@nestjs/jwt';
-import { PassportModule, AuthGuard } from '@nestjs/passport';
+import { PassportModule, AuthGuard, PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { InjectModel, MongooseModule } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,7 +10,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 // --- JWT STRATEGY ---
 @Injectable()
-export class JwtStrategy extends Strategy {
+export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService, @InjectModel(User.name) private userModel: Model<User>) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

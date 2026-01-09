@@ -70,26 +70,29 @@ export class SettingsController {
 
   @Get()
   async find(@Request() req: any) {
-    let settings = await this.settingsModel.findOne({ userId: req.user._id }).lean();
-    if (!settings) {
-       // Defaults
-       const def = new this.settingsModel({
-        userId: req.user._id,
-        specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15', 'Cubique 10x10'],
-        deliveryMethods: ['Toupie', 'Benne', 'Mixer', 'Sur site'],
-        manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier', 'Préfabrication'],
-        mixTypes: ['CEM II/A-LL 42.5N - 350kg', 'Béton B25 - Gravillon 20mm'],
-        concreteClasses: ['C20/25', 'C25/30', 'C30/37', 'C35/45'],
-        consistencyClasses: ['S1', 'S2', 'S3', 'S4', 'S5'],
-        curingMethods: ['Eau 20°C +/- 2°C', 'Salle Humide', 'Air ambiant'],
-        testTypes: ['Compression', 'Fendage', 'Flexion'],
-        preparations: ['Surfaçage Soufre', 'Rectification', 'Boîte à Sable'],
-        nfStandards: ['NF EN 206/CN', 'NF EN 12350', 'NF EN 12390']
-       });
-       await def.save();
-       settings = def.toObject();
+    const settings = await this.settingsModel.findOne({ userId: req.user._id }).lean();
+    if (settings) {
+        return settings;
     }
-    return settings;
+    
+    // Si pas de settings, création des défauts et retour en POJO
+    const def = new this.settingsModel({
+    userId: req.user._id,
+    specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15', 'Cubique 10x10'],
+    deliveryMethods: ['Toupie', 'Benne', 'Mixer', 'Sur site'],
+    manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier', 'Préfabrication'],
+    mixTypes: ['CEM II/A-LL 42.5N - 350kg', 'Béton B25 - Gravillon 20mm'],
+    concreteClasses: ['C20/25', 'C25/30', 'C30/37', 'C35/45'],
+    consistencyClasses: ['S1', 'S2', 'S3', 'S4', 'S5'],
+    curingMethods: ['Eau 20°C +/- 2°C', 'Salle Humide', 'Air ambiant'],
+    testTypes: ['Compression', 'Fendage', 'Flexion'],
+    preparations: ['Surfaçage Soufre', 'Rectification', 'Boîte à Sable'],
+    nfStandards: ['NF EN 206/CN', 'NF EN 12350', 'NF EN 12390']
+    });
+    await def.save();
+    
+    // Conversion explicite en objet JS pour correspondre au type de retour de .lean()
+    return def.toObject();
   }
 
   @Put()
