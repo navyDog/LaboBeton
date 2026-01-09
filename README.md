@@ -1,4 +1,4 @@
-# 🏗️ LaboBeton
+# LaboBeton
 
 **LaboBeton** est une application métier dédiée à la gestion et au suivi complet des laboratoires d'essais béton. 
 
@@ -19,7 +19,7 @@ Le but de **LaboBeton** est de fournir un outil professionnel permettant de pilo
 
 ---
 
-## ✨ Fonctionnalités Clés / Key Features
+## Fonctionnalités Clés / Key Features
 
 - **Traçabilité totale** : Du prélèvement sur chantier jusqu'à l'écrasement à 28 jours.
 - **Calculs Normatifs** : Calcul automatique des masses volumiques et résistances (MPa) selon les normes NF EN 12350 / 12390.
