@@ -1,7 +1,10 @@
 {
   "name": "labobeton-app",
-  "version": "1.0.0",
+  "version": "0.1.0-alpha2",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "server": "nodemon server.js",
     "client": "vite",

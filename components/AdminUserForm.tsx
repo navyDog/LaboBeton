@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, Save, X, Building, MapPin, Phone, User, Lock, Loader2 } from 'lucide-react';
+import { UserPlus, Save, X, Building, MapPin, Phone, User, Lock, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { User as UserType } from '../types';
 import { authenticatedFetch } from '../utils/api';
 
@@ -14,6 +14,7 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
     username: '',
     password: '',
     role: 'standard',
+    isActive: true,
     companyName: '',
     address: '',
     contact: ''
@@ -40,18 +41,7 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'Utilisateur créé avec succès !' });
-        setFormData({
-          username: '',
-          password: '',
-          role: 'standard',
-          companyName: '',
-          address: '',
-          contact: ''
-        });
-        // Notifier le parent après un court délai pour laisser lire le message
-        setTimeout(() => {
-          onSuccess();
-        }, 1500);
+        setTimeout(() => { onSuccess(); }, 1500);
       } else {
         setMessage({ type: 'error', text: data.message || 'Erreur lors de la création.' });
       }
@@ -63,7 +53,8 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const value = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.value;
+    setFormData({ ...formData, [e.target.name]: value });
   };
 
   return (
@@ -79,7 +70,6 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
       </div>
 
       <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-        
         {message && (
           <div className={`md:col-span-2 p-3 rounded-lg text-sm font-medium ${
             message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -88,125 +78,56 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
           </div>
         )}
 
-        {/* Section Identifiants */}
-        <div className="md:col-span-2">
-           <h4 className="text-sm font-bold text-concrete-500 uppercase tracking-wider mb-4 border-b border-concrete-100 pb-2">Identifiants de connexion</h4>
+        <div className="md:col-span-2"><h4 className="text-sm font-bold text-concrete-500 uppercase tracking-wider mb-4 border-b border-concrete-100 pb-2">Identifiants</h4></div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-concrete-700">Nom d'utilisateur *</label>
+          <input type="text" name="username" required value={formData.username} onChange={handleChange} className="w-full rounded-md border-concrete-300 shadow-sm border p-2" />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-concrete-700">Nom d'utilisateur <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <User className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
-            <input
-              type="text"
-              name="username"
-              required
-              value={formData.username}
-              onChange={handleChange}
-              className="pl-9 block w-full rounded-md border-concrete-300 shadow-sm focus:border-safety-orange focus:ring-safety-orange sm:text-sm py-2 border"
-              placeholder="ex: entreprise_abc"
-            />
-          </div>
+          <label className="block text-sm font-medium text-concrete-700">Mot de passe *</label>
+          <input type="password" name="password" required value={formData.password} onChange={handleChange} className="w-full rounded-md border-concrete-300 shadow-sm border p-2" />
         </div>
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-concrete-700">Mot de passe <span className="text-red-500">*</span></label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
-            <input
-              type="password"
-              name="password"
-              required
-              value={formData.password}
-              onChange={handleChange}
-              className="pl-9 block w-full rounded-md border-concrete-300 shadow-sm focus:border-safety-orange focus:ring-safety-orange sm:text-sm py-2 border"
-              placeholder="••••••••"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1 md:col-span-2">
           <label className="block text-sm font-medium text-concrete-700">Rôle</label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="block w-full rounded-md border-concrete-300 shadow-sm focus:border-safety-orange focus:ring-safety-orange sm:text-sm py-2 border"
-          >
-            <option value="standard">Client / Standard (Accès limité)</option>
-            <option value="admin">Administrateur (Accès total)</option>
+          <select name="role" value={formData.role} onChange={handleChange} className="w-full rounded-md border-concrete-300 shadow-sm border p-2 bg-white">
+            <option value="standard">Client / Standard</option>
+            <option value="admin">Administrateur</option>
           </select>
         </div>
 
-        {/* Section Entreprise */}
-        <div className="md:col-span-2 mt-2">
-           <h4 className="text-sm font-bold text-concrete-500 uppercase tracking-wider mb-4 border-b border-concrete-100 pb-2">Informations Entreprise</h4>
+        <div className="space-y-1 flex items-center pt-6">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} className="w-5 h-5 text-safety-orange rounded border-concrete-300 focus:ring-safety-orange" />
+            <span className="text-sm font-medium text-concrete-700">Compte Actif (Connexion autorisée)</span>
+          </label>
         </div>
+
+        <div className="md:col-span-2 mt-2"><h4 className="text-sm font-bold text-concrete-500 uppercase tracking-wider mb-4 border-b border-concrete-100 pb-2">Informations Entreprise</h4></div>
 
         <div className="space-y-1 md:col-span-2">
           <label className="block text-sm font-medium text-concrete-700">Nom de l'entreprise</label>
-          <div className="relative">
-            <Building className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
-            <input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleChange}
-              className="pl-9 block w-full rounded-md border-concrete-300 shadow-sm focus:border-safety-orange focus:ring-safety-orange sm:text-sm py-2 border"
-              placeholder="ex: BTP Construction SA"
-            />
-          </div>
+          <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} className="w-full rounded-md border-concrete-300 shadow-sm border p-2" />
         </div>
 
         <div className="space-y-1 md:col-span-2">
           <label className="block text-sm font-medium text-concrete-700">Adresse</label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="pl-9 block w-full rounded-md border-concrete-300 shadow-sm focus:border-safety-orange focus:ring-safety-orange sm:text-sm py-2 border"
-              placeholder="ex: 12 Rue du Béton, 75000 Paris"
-            />
-          </div>
+          <input type="text" name="address" value={formData.address} onChange={handleChange} className="w-full rounded-md border-concrete-300 shadow-sm border p-2" />
         </div>
 
         <div className="space-y-1 md:col-span-2">
-          <label className="block text-sm font-medium text-concrete-700">Contact (Tel / Email)</label>
-          <div className="relative">
-            <Phone className="absolute left-3 top-2.5 h-4 w-4 text-concrete-400" />
-            <input
-              type="text"
-              name="contact"
-              value={formData.contact}
-              onChange={handleChange}
-              className="pl-9 block w-full rounded-md border-concrete-300 shadow-sm focus:border-safety-orange focus:ring-safety-orange sm:text-sm py-2 border"
-              placeholder="ex: M. Dupont - 06 12 34 56 78"
-            />
-          </div>
+          <label className="block text-sm font-medium text-concrete-700">Contact</label>
+          <input type="text" name="contact" value={formData.contact} onChange={handleChange} className="w-full rounded-md border-concrete-300 shadow-sm border p-2" />
         </div>
 
-        {/* Footer Actions */}
         <div className="md:col-span-2 flex justify-end gap-3 mt-4 border-t border-concrete-100 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-concrete-700 bg-white border border-concrete-300 rounded-md hover:bg-concrete-50 transition-colors"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-safety-orange rounded-md hover:bg-orange-600 transition-colors disabled:opacity-50"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Créer l'utilisateur
+          <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-concrete-700 bg-white border border-concrete-300 rounded-md hover:bg-concrete-50">Annuler</button>
+          <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-safety-orange rounded-md hover:bg-orange-600 disabled:opacity-50">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Créer l'utilisateur
           </button>
         </div>
-
       </form>
     </div>
   );

@@ -94,3 +94,6 @@ public
 dist/
 dist-ssr/
 *.local
+
+# Ne pas toucher au Dockerfile lors des synchronisations
+# Dockerfile

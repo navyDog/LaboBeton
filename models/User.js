@@ -17,6 +17,16 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'standard'], 
     default: 'standard' 
   },
+  // Contrôle d'accès
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  // Gestion Session Unique (Invalider tokens précédents)
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
   // Nouveaux champs pour les clients/entreprises
   companyName: {
     type: String,

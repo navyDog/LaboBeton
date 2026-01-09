@@ -31,9 +31,18 @@ const getTargetStrength = (concreteClass: string, isCube: boolean): number | nul
 
 export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, onClose }) => {
   
+  // FILTRAGE LOGIQUE
+  // PV : Provisoire -> Souvent les 7 jours ou tout ce qui est dispo
+  // RP : Rapport Final -> UNIQUEMENT les éprouvettes avec résultat (écrasées)
   const filteredSpecimens = test.specimens.filter(s => {
-    if (type === 'PV') return s.age <= 7; 
-    return true; 
+    if (type === 'RP') {
+      // Pour le rapport final, on ne veut que ce qui a été écrasé (stress existe)
+      return s.stress !== null && s.stress !== undefined;
+    }
+    // Pour le PV, on peut afficher les jeunes âges (<=7j) ou tout
+    // Ici on garde la logique précédente : <= 7j pour PV "Provisoire" ou tout si on veut tout voir
+    // La demande précédente était PV = 7j.
+    return s.age <= 7; 
   }).sort((a, b) => a.number - b.number);
 
   const groupedSpecimens = groupSpecimensByAge(filteredSpecimens);
@@ -217,52 +226,56 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                  <h3 className="font-bold bg-gray-100 p-1 border border-black border-b-0 uppercase text-[10px] flex justify-between">
                     <span>Résultats des Essais (NF EN 12390-3)</span>
                  </h3>
-                 <table className="w-full border-collapse border border-black text-[10px]">
-                    <thead>
-                       <tr className="bg-gray-200">
-                          <th className="text-center w-10">N°</th>
-                          <th className="text-center w-12">Âge</th>
-                          <th className="text-center w-20">Date</th>
-                          <th className="text-center">Dim. (mm)</th>
-                          <th className="text-right">Masse Vol. (kg/m³)</th>
-                          <th className="text-right">Force (kN)</th>
-                          <th className="text-right bg-gray-300 w-24">MPa</th>
-                       </tr>
-                    </thead>
-                    <tbody>
-                       {ages.map(age => {
-                          const specs = groupedSpecimens[age];
-                          const avgStress = specs.reduce((acc, s) => acc + (s.stress || 0), 0) / specs.length;
-                          const avgDensity = specs.reduce((acc, s) => acc + (s.density || 0), 0) / specs.length;
-                          
-                          return (
-                            <React.Fragment key={age}>
-                               {specs.map((s, idx) => (
-                                  <tr key={`${age}-${idx}`}>
-                                     <td className="text-center font-bold">#{s.number}</td>
-                                     <td className="text-center">{s.age}j</td>
-                                     <td className="text-center">{new Date(s.crushingDate).toLocaleDateString()}</td>
-                                     <td className="text-center">{s.diameter} x {s.height}</td>
-                                     <td className="text-right text-gray-700">{s.density ? s.density.toFixed(0) : '-'}</td>
-                                     <td className="text-right">{s.force || '-'}</td>
-                                     <td className="text-right font-bold text-sm">
-                                        {s.stress ? s.stress.toFixed(1) : '-'}
-                                     </td>
-                                  </tr>
-                               ))}
-                               <tr className="bg-gray-100 font-bold break-inside-avoid">
-                                  <td colSpan={4} className="text-right uppercase text-[9px]">Moyenne {age} Jours :</td>
-                                  <td className="text-right text-[10px]">{avgDensity > 0 ? avgDensity.toFixed(0) : '-'}</td>
-                                  <td className="text-right bg-gray-200">-</td>
-                                  <td className="text-right text-sm border-l-2 border-l-black bg-gray-300 text-black">
-                                    {avgStress > 0 ? avgStress.toFixed(1) : '-'}
-                                  </td>
-                               </tr>
-                            </React.Fragment>
-                          );
-                       })}
-                    </tbody>
-                 </table>
+                 {ages.length === 0 ? (
+                   <p className="text-center italic p-4 border border-black">Aucun résultat disponible pour ce rapport.</p>
+                 ) : (
+                   <table className="w-full border-collapse border border-black text-[10px]">
+                      <thead>
+                         <tr className="bg-gray-200">
+                            <th className="text-center w-10">N°</th>
+                            <th className="text-center w-12">Âge</th>
+                            <th className="text-center w-20">Date</th>
+                            <th className="text-center">Dim. (mm)</th>
+                            <th className="text-right">Masse Vol. (kg/m³)</th>
+                            <th className="text-right">Force (kN)</th>
+                            <th className="text-right bg-gray-300 w-24">MPa</th>
+                         </tr>
+                      </thead>
+                      <tbody>
+                         {ages.map(age => {
+                            const specs = groupedSpecimens[age];
+                            const avgStress = specs.reduce((acc, s) => acc + (s.stress || 0), 0) / specs.length;
+                            const avgDensity = specs.reduce((acc, s) => acc + (s.density || 0), 0) / specs.length;
+                            
+                            return (
+                              <React.Fragment key={age}>
+                                 {specs.map((s, idx) => (
+                                    <tr key={`${age}-${idx}`}>
+                                       <td className="text-center font-bold">#{s.number}</td>
+                                       <td className="text-center">{s.age}j</td>
+                                       <td className="text-center">{new Date(s.crushingDate).toLocaleDateString()}</td>
+                                       <td className="text-center">{s.diameter} x {s.height}</td>
+                                       <td className="text-right text-gray-700">{s.density ? s.density.toFixed(0) : '-'}</td>
+                                       <td className="text-right">{s.force || '-'}</td>
+                                       <td className="text-right font-bold text-sm">
+                                          {s.stress ? s.stress.toFixed(1) : '-'}
+                                       </td>
+                                    </tr>
+                                 ))}
+                                 <tr className="bg-gray-100 font-bold break-inside-avoid">
+                                    <td colSpan={4} className="text-right uppercase text-[9px]">Moyenne {age} Jours :</td>
+                                    <td className="text-right text-[10px]">{avgDensity > 0 ? avgDensity.toFixed(0) : '-'}</td>
+                                    <td className="text-right bg-gray-200">-</td>
+                                    <td className="text-right text-sm border-l-2 border-l-black bg-gray-300 text-black">
+                                      {avgStress > 0 ? avgStress.toFixed(1) : '-'}
+                                    </td>
+                                 </tr>
+                              </React.Fragment>
+                            );
+                         })}
+                      </tbody>
+                   </table>
+                 )}
               </div>
 
               {/* OBSERVATIONS & CONCLUSION */}
