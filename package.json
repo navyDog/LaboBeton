@@ -10,7 +10,7 @@
     "client": "vite",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "build": "tsc && vite build",
-    "start": "ts-node --esm src/server/main.ts",
+    "start": "node --loader ts-node/esm --experimental-specifier-resolution=node --no-warnings src/server/main.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {
