@@ -99,3 +99,6 @@ package-lock.json
 
 # Ne pas toucher au Dockerfile lors des synchronisations
 Dockerfile
+
+#intellIJ
+.idea/*
