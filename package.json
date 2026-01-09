@@ -13,31 +13,33 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "cross-spawn": "^7.0.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2",
-    "express-mongo-sanitize": "^2.2.0",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1",
-    "glob": "^10.5.0",
-    "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.1",
-    "lucide-react": "^0.263.1",
-    "mongoose": "^7.4.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.263.1",
+    "express": "^4.18.2",
+    "mongoose": "^7.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.1",
+    "helmet": "^7.1.0",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-validator": "^7.0.1",
+    "express-rate-limit": "^7.1.5"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.2",
-    "@types/jsonwebtoken": "^9.0.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
-    "concurrently": "^8.2.0",
-    "nodemon": "^3.0.1",
     "typescript": "^5.0.2",
-    "vite": "^7.3.1"
+    "vite": "^4.4.5",
+    "nodemon": "^3.0.1",
+    "concurrently": "^8.2.0",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/jsonwebtoken": "^9.0.2"
+  },
+  "overrides": {
+    "glob": "^10.5.0",
+    "cross-spawn": "^7.0.5"
   }
 }
