@@ -1,0 +1,298 @@
+import React, { useState, useEffect } from 'react';
+import { ConnectionStatus, User } from './types';
+import { StatusBadge } from './components/StatusBadge';
+import { LoginScreen } from './components/LoginScreen';
+import { AdminDashboard } from './components/AdminDashboard'; 
+import { SettingsManager } from './components/SettingsManager';
+import { ConcreteTestManager } from './components/ConcreteTestManager';
+import { CalendarView } from './components/CalendarView'; 
+import { DashboardHome } from './components/DashboardHome';
+import { CompanyManager } from './components/CompanyManager';
+import { ProjectManager } from './components/ProjectManager';
+import { UserProfile } from './components/UserProfile';
+import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Briefcase, User as UserIcon } from 'lucide-react';
+
+const App: React.FC = () => {
+  const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
+  // Vue principale
+  const [view, setView] = useState<string>('dashboard');
+
+  // --- PERSISTANCE SESSION STORAGE ---
+  useEffect(() => {
+    // Récupération de l'utilisateur au chargement
+    const storedUser = sessionStorage.getItem('labobeton_user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setCurrentUser(parsedUser);
+      } catch (e) {
+        sessionStorage.removeItem('labobeton_user');
+      }
+    }
+  }, []);
+
+  // --- GESTION DECONNEXION AUTOMATIQUE (401) ---
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      handleLogout();
+    };
+
+    // On écoute l'événement dispatché par authenticatedFetch
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  // Vérification connexion DB
+  useEffect(() => {
+    const checkConnection = async () => {
+      setDbStatus(ConnectionStatus.CHECKING);
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        if (response.ok && data.status === 'CONNECTED') {
+          setDbStatus(ConnectionStatus.CONNECTED);
+        } else {
+          setDbStatus(ConnectionStatus.ERROR);
+        }
+      } catch (error) {
+        setDbStatus(ConnectionStatus.ERROR);
+      }
+    };
+    checkConnection();
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Gestion Connexion
+  const handleLogin = (user: User, token: string) => {
+    const userWithToken = { ...user, token };
+    // Stockage en sessionStorage (perdu à la fermeture du navigateur)
+    sessionStorage.setItem('labobeton_user', JSON.stringify(userWithToken));
+    setCurrentUser(userWithToken); 
+  };
+
+  // Gestion Déconnexion
+  const handleLogout = () => {
+    sessionStorage.removeItem('labobeton_user');
+    setCurrentUser(null);
+    setView('dashboard');
+  };
+
+  // Callback pour mettre à jour les données de l'utilisateur courant sans relogin
+  const handleUserUpdate = (updatedUser: User) => {
+    // Mise à jour de l'état et du sessionStorage
+    sessionStorage.setItem('labobeton_user', JSON.stringify(updatedUser));
+    setCurrentUser(updatedUser);
+  };
+
+  // 1. Si pas connecté, afficher Login
+  if (!currentUser) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+
+  // 2. Si ADMIN : Affichage spécifique Admin
+  if (currentUser.role === 'admin') {
+    return (
+      <div className="min-h-screen bg-concrete-100 flex flex-col">
+        <header className="bg-concrete-900 border-b border-concrete-800 sticky top-0 z-10 shadow-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/10 text-white p-2 rounded-lg">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                 <div className="flex items-center gap-3">
+                    <h1 className="text-xl font-bold text-white">LaboBéton</h1>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-safety-orange text-white border border-orange-500 uppercase tracking-widest shadow-sm">
+                      Alpha v0.1.0
+                    </span>
+                 </div>
+                 <span className="text-xs text-concrete-400">Administration Système</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-xs text-concrete-400">Connecté en tant que <strong>{currentUser.username}</strong></span>
+              <button 
+                onClick={handleLogout}
+                className="p-2 text-concrete-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                title="Déconnexion"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-grow flex p-6 md:p-10">
+           <AdminDashboard currentUser={currentUser} />
+        </main>
+      </div>
+    );
+  }
+
+  // 3. Si UTILISATEUR STANDARD : Affichage Application
+  return (
+    <div className="min-h-screen bg-concrete-50 flex flex-col">
+      {/* Header Standard */}
+      <header className="bg-white border-b border-concrete-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-concrete-900 text-white p-2 rounded-lg cursor-pointer hover:bg-black transition-colors" onClick={() => setView('dashboard')}>
+              <Building2 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-concrete-900 leading-tight cursor-pointer" onClick={() => setView('dashboard')}>LaboBéton</h1>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-50 text-safety-orange border border-orange-200 uppercase tracking-widest">
+                  Alpha v0.1.0
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-concrete-500 font-medium"><strong>{currentUser.companyName || currentUser.username}</strong></span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 md:gap-4">
+             {/* Navigation Menu - VISIBLE SEULEMENT SI PAS SUR LE DASHBOARD */}
+             {view !== 'dashboard' && (
+               <div className="hidden md:flex items-center bg-concrete-100 rounded-lg p-1 gap-1 animate-in fade-in slide-in-from-top-2">
+                  <button 
+                    onClick={() => setView('fresh_tests')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'fresh_tests' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <FlaskConical className="w-4 h-4" /> Prélèvements
+                  </button>
+                  <button 
+                    onClick={() => setView('calendar')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Calendar className="w-4 h-4" /> Planning
+                  </button>
+                  
+                  {/* Onglets séparés pour Entreprises et Affaires */}
+                  <button 
+                    onClick={() => setView('companies')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'companies' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Building className="w-4 h-4" /> Entreprises
+                  </button>
+                  <button 
+                    onClick={() => setView('projects')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'projects' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Briefcase className="w-4 h-4" /> Affaires
+                  </button>
+
+                  <button
+                    onClick={() => setView('settings')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                  >
+                    <Settings className="w-4 h-4" /> Paramètres
+                  </button>
+
+                   <button
+                    onClick={() => setView('profile')}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'profile' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}
+                    title="Mon Profil"
+                  >
+                    <UserIcon className="w-4 h-4" />
+                  </button>
+               </div>
+             )}
+
+             <div className="hidden lg:block text-xs text-concrete-400 border-l border-concrete-200 pl-4">
+               <StatusBadge status={dbStatus} />
+             </div>
+             
+             <button 
+                onClick={handleLogout}
+                className="ml-2 p-2 text-concrete-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                title="Déconnexion"
+             >
+               <LogOut className="w-5 h-5" />
+             </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-grow flex items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-7xl">
+          
+          {/* Connection Error State */}
+          {dbStatus === ConnectionStatus.ERROR && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center max-w-2xl mx-auto mb-8">
+              <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FlaskConical className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-red-900 mb-2">Serveur déconnecté</h3>
+              <p className="text-red-700 mb-6">Impossible de joindre la base de données.</p>
+            </div>
+          )}
+
+          {/* View: CALENDRIER */}
+          {view === 'calendar' && (
+            <CalendarView token={currentUser.token || ''} />
+          )}
+
+          {/* View: CLIENTS / ENTREPRISES */}
+          {view === 'companies' && (
+            <CompanyManager token={currentUser.token || ''} />
+          )}
+
+          {/* View: AFFAIRES / CHANTIERS */}
+          {view === 'projects' && (
+            <ProjectManager token={currentUser.token || ''} />
+          )}
+
+          {/* View: SETTINGS */}
+          {view === 'settings' && (
+            <SettingsManager token={currentUser.token || ''} />
+          )}
+
+          {/* View: USER PROFILE */}
+          {view === 'profile' && (
+            <UserProfile 
+              token={currentUser.token || ''} 
+              currentUser={currentUser}
+              onUpdate={handleUserUpdate}
+            />
+          )}
+
+          {/* View: FRESH CONCRETE TESTS (PRÉLÈVEMENTS) */}
+          {view === 'fresh_tests' && (
+            <ConcreteTestManager 
+              token={currentUser.token || ''} 
+              user={currentUser}
+              onBack={() => setView('dashboard')} 
+            />
+          )}
+
+          {/* View: DASHBOARD HOME */}
+          {view === 'dashboard' && dbStatus !== ConnectionStatus.ERROR && (
+             <DashboardHome 
+               token={currentUser.token || ''} 
+               userDisplayName={currentUser.companyName || currentUser.username}
+               onNavigate={setView}
+             />
+          )}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-concrete-200 py-6 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-concrete-400">
+          <p>&copy; {new Date().getFullYear()} LaboBéton - Conformité Normes NF EN</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
