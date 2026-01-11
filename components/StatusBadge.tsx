@@ -10,7 +10,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   if (status === ConnectionStatus.CHECKING) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium border border-blue-200">
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-4 h-4 animate-spin" data-testid="loader-icon" />
         <span>Connexion...</span>
       </div>
     );
@@ -19,7 +19,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   if (status === ConnectionStatus.CONNECTED) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-200">
-        <Wifi className="w-4 h-4" />
+        <Wifi className="w-4 h-4" data-testid="wifi-icon" />
         <span>Système Connecté</span>
       </div>
     );
@@ -27,7 +27,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-sm font-medium border border-red-200">
-      <WifiOff className="w-4 h-4" />
+      <WifiOff className="w-4 h-4" data-testid="wifi-off-icon" />
       <span>Erreur Connexion</span>
     </div>
   );

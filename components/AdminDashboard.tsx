@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Search, ShieldCheck, User as UserIcon, Building, Clock, Users, Trash2, Lock, Unlock, Bug, CheckCircle } from 'lucide-react';
+import { UserPlus, Search, ShieldCheck, User as UserIcon, Building, Trash2, Lock, Unlock, Bug, CheckCircle } from 'lucide-react';
 import { User } from '../types';
 import { AdminUserForm } from './AdminUserForm';
 import { authenticatedFetch } from '../utils/api';
@@ -215,9 +215,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                     )}
                     
                     <button 
-                      onClick={() => handleDeleteBug(bug._id)} 
+                      onClick={() => handleDeleteBug(bug._id)}
                       className="text-concrete-300 hover:text-red-500 p-1 hover:bg-red-50 rounded transition-colors"
                       title="Supprimer ce rapport"
+                      data-testid={`delete-bug-${bug._id}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
