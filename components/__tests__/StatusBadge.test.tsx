@@ -1,28 +1,24 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, test, expect } from '@jest/globals';
-import { StatusBadge } from '../StatusBadge';
+import { render } from '@testing-library/react';
 import { ConnectionStatus } from '../../types';
+import { StatusBadge } from '../StatusBadge';
 
-describe('StatusBadge Component', () => {
-  test('affiche l\'état de chargement', () => {
-    render(<StatusBadge status={ConnectionStatus.CHECKING} />);
-    const badge = screen.getByText(/Connexion.../i);
-    expect(badge).toBeInTheDocument();
-    expect(badge.parentElement).toHaveClass('bg-blue-50');
+describe('StatusBadge', () => {
+  it('renders checking status correctly', () => {
+    const { getByText, getByTestId } = render(<StatusBadge status={ConnectionStatus.CHECKING} />);
+    expect(getByText('Connexion...')).toBeInTheDocument();
+    expect(getByTestId('loader-icon')).toBeInTheDocument();
   });
 
-  test('affiche l\'état connecté', () => {
-    render(<StatusBadge status={ConnectionStatus.CONNECTED} />);
-    const badge = screen.getByText(/Système Connecté/i);
-    expect(badge).toBeInTheDocument();
-    expect(badge.parentElement).toHaveClass('bg-green-50');
+  it('renders connected status correctly', () => {
+    const { getByText, getByTestId } = render(<StatusBadge status={ConnectionStatus.CONNECTED} />);
+    expect(getByText('Système Connecté')).toBeInTheDocument();
+    expect(getByTestId('wifi-icon')).toBeInTheDocument();
   });
 
-  test('affiche l\'état d\'erreur', () => {
-    render(<StatusBadge status={ConnectionStatus.ERROR} />);
-    const badge = screen.getByText(/Erreur Connexion/i);
-    expect(badge).toBeInTheDocument();
-    expect(badge.parentElement).toHaveClass('bg-red-50');
+  it('renders disconnected status correctly', () => {
+    const { getByText, getByTestId } = render(<StatusBadge status={ConnectionStatus.ERROR} />);
+    expect(getByText('Erreur Connexion')).toBeInTheDocument();
+    expect(getByTestId('wifi-off-icon')).toBeInTheDocument();
   });
 });

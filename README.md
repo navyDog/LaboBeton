@@ -34,5 +34,8 @@ Le but de **LaboBeton** est de fournir un outil professionnel permettant de pilo
 - **Containerization** : Docker
 - **Cloud** : Google Cloud Run
 
+## SONAR
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=AchilleMonod_LaboBeton&metric=alert_status)](https://sonarcloud.io/dashboard?id=AchilleMonod_LaboBeton)
+
 
 *Développé pour moderniser et fiabiliser le contrôle qualité dans le secteur du BTP.*
