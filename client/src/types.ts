@@ -20,6 +20,7 @@ export interface User {
   apeCode?: string;
   legalInfo?: string; // Pour RCS, Capital Social...
   logo?: string;      // Base64 string
+  isActive?: boolean;
 }
 
 export interface Company {
