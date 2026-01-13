@@ -31,15 +31,15 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 1. Copier le package.json du serveur pour la prod
-COPY server/package.json ./
+COPY Server/package.json ./
 
 # 2. Installer uniquement les dépendances de production du serveur
 RUN npm install --omit=dev
 
 # 3. Copier le code du serveur
 # Note: On suppose que server.js est dans le dossier server/
-COPY server/server.js ./
-COPY server/models ./models
+COPY Server/server.js ./
+COPY Server/models ./models
 
 # 4. Copier le build frontend (dist) généré à l'étape précédente
 # On le place dans un dossier 'dist' à la racine de l'image, car server.js sert 'dist'
@@ -55,3 +55,4 @@ EXPOSE 8080
 # Démarrer le serveur
 
 CMD ["node", "server.js"]
+
