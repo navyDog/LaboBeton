@@ -1,6 +1,6 @@
 {
   "name": "labobeton-monorepo",
-  "version": "1.0.0",
+  "version": "0.2.1-alpha.1",
   "private": true,
   "scripts": {
     "install:all": "npm install && npm install --prefix client && npm install --prefix server",
