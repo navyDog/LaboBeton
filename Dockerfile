@@ -5,10 +5,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 1. Copier les fichiers de définition de dépendances (Racine + Client + Serveur)
-RUN ls -R
 COPY package.json ./
-COPY Client/package.json ./client/
-COPY Server/package.json ./server/
+COPY client/package.json ./client/
+COPY server/package.json ./server/
 
 # 2. Installer les dépendances
 # Racine (pour concurrently etc)
@@ -23,8 +22,7 @@ COPY . .
 
 # 4. Construire l'application React (dans client/)
 # Cela va créer le dossier /app/client/dist
-RUN cd client && ./node_modules/.bin/tsc && ./node_modules/.bin/vite build
-#RUN npm run build --prefix client
+RUN npm run build --prefix client
 
 # Étape 2 : Image de Production (Runner)
 FROM node:20-alpine
@@ -40,12 +38,12 @@ RUN npm install --omit=dev
 
 # 3. Copier le code du serveur
 # Note: On suppose que server.js est dans le dossier server/
-COPY Server/server.js ./
-COPY Server/models ./models
+COPY server/server.js ./
+COPY server/models ./models
 
 # 4. Copier le build frontend (dist) généré à l'étape précédente
 # On le place dans un dossier 'dist' à la racine de l'image, car server.js sert 'dist'
-COPY --from=builder /app/Client/dist ./dist
+COPY --from=builder /app/client/dist ./dist
 
 # Variables d'environnement
 ENV NODE_ENV=production
@@ -57,7 +55,5 @@ EXPOSE 8080
 # Démarrer le serveur
 
 CMD ["node", "server.js"]
-
-
 
 
