@@ -41,7 +41,7 @@ export const BugReporter: React.FC<BugReporterProps> = ({ token, username }) => 
 
   if (!isOpen) {
     return (
-      <button 
+      <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 z-50 p-3 bg-concrete-800 text-white rounded-full shadow-lg hover:bg-concrete-900 transition-transform hover:scale-110"
         title="Signaler un problème"
@@ -57,7 +57,11 @@ export const BugReporter: React.FC<BugReporterProps> = ({ token, username }) => 
         <h3 className="text-sm font-bold flex items-center gap-2">
           <MessageSquare className="w-4 h-4" /> Support & Bugs
         </h3>
-        <button onClick={() => setIsOpen(false)} className="hover:text-red-300">
+        <button
+          onClick={() => setIsOpen(false)}
+          className="hover:text-red-300"
+          aria-label="Close"
+        >
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -69,8 +73,9 @@ export const BugReporter: React.FC<BugReporterProps> = ({ token, username }) => 
       ) : (
         <form onSubmit={handleSubmit} className="p-4 space-y-3">
            <div>
-             <label className="text-xs font-bold text-concrete-500">Type de message</label>
-             <select 
+             <label htmlFor="messageType" className="text-xs font-bold text-concrete-500">Type de message</label>
+             <select
+               id="messageType"
                className="w-full text-sm p-1.5 border rounded mt-1"
                value={type}
                onChange={e => setType(e.target.value)}
@@ -81,8 +86,9 @@ export const BugReporter: React.FC<BugReporterProps> = ({ token, username }) => 
              </select>
            </div>
            <div>
-             <label className="text-xs font-bold text-concrete-500">Description</label>
-             <textarea 
+             <label htmlFor="description" className="text-xs font-bold text-concrete-500">Description</label>
+             <textarea
+               id="description"
                required
                className="w-full text-sm p-2 border rounded mt-1 h-24 resize-none"
                placeholder="Décrivez le problème..."
@@ -90,9 +96,9 @@ export const BugReporter: React.FC<BugReporterProps> = ({ token, username }) => 
                onChange={e => setDescription(e.target.value)}
              />
            </div>
-           <button 
+           <button
              disabled={sending}
-             type="submit" 
+             type="submit"
              className="w-full py-2 bg-safety-orange text-white text-sm font-bold rounded hover:bg-orange-600 flex items-center justify-center gap-2"
            >
              {sending ? 'Envoi...' : <><Send className="w-3 h-3" /> Envoyer</>}
