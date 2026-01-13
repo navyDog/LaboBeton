@@ -22,7 +22,8 @@ COPY . .
 
 # 4. Construire l'application React (dans client/)
 # Cela va créer le dossier /app/client/dist
-RUN npm run build --prefix client
+RUN npm run build 
+#--prefix client
 
 # Étape 2 : Image de Production (Runner)
 FROM node:20-alpine
@@ -55,4 +56,5 @@ EXPOSE 8080
 # Démarrer le serveur
 
 CMD ["node", "server.js"]
+
 
