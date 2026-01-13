@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Save, X, Building, MapPin, Phone, User, Lock, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { User as UserType } from '../types';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface AdminUserFormProps {
   currentUser: UserType;

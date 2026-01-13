@@ -1,64 +1,14 @@
 {
-  "name": "labobeton-app",
-  "version": "0.2.0-alpha.1",
-  "type": "module",
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "name": "labobeton-monorepo",
+  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "server": "nodemon server.js",
-    "client": "vite",
-    "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "tsc && vite build",
-    "start": "node server.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
-  },
-  "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "lucide-react": "^0.378.0",
-    "express": "^4.21.2",
-    "mongoose": "^7.6.13",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "helmet": "^7.1.0",
-    "express-mongo-sanitize": "^2.2.0",
-    "express-validator": "^7.0.1",
-    "express-rate-limit": "^7.2.0",
-    "winston": "^3.11.0"
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server"
   },
   "devDependencies": {
-    "@types/react": "^18.3.1",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.2.1",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.11",
-    "nodemon": "^3.1.0",
-    "concurrently": "^8.2.2",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/jsonwebtoken": "^9.0.6",
-    "@testing-library/react": "^14.2.0",
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/user-event": "^14.5.0",
-    "@types/jest": "^29.5.0",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "ts-jest": "^29.1.0",
-    "identity-obj-proxy": "^3.0.0"
-  },
-  "overrides": {
-    "glob": "10.5.0",
-    "cross-spawn": "7.0.5",
-    "rimraf": {
-      "glob": "10.5.0"
-    }
-  },
-  "resolutions": {
-    "glob": "10.5.0",
-    "cross-spawn": "7.0.5"
+    "concurrently": "^8.2.2"
   }
 }

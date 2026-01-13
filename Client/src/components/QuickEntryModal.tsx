@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Save, Hammer, Scale, Loader2 } from 'lucide-react';
 import { ConcreteTest, Specimen } from '../types';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface QuickEntryModalProps {
   testId: string;

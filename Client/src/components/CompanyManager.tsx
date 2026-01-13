@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Plus, Trash2, Building, Phone, Mail, User as UserIcon, Search, Pencil } from 'lucide-react';
 import { Company } from '../types';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface CompanyManagerProps {
   token: string;

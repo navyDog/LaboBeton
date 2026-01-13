@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserPlus, Search, ShieldCheck, User as UserIcon, Building, Clock, Users, Trash2, Lock, Unlock, Bug, CheckCircle } from 'lucide-react';
 import { User } from '../types';
 import { AdminUserForm } from './AdminUserForm';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface AdminDashboardProps {
   currentUser: User;

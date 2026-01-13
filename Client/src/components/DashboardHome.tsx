@@ -3,7 +3,7 @@ import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight, Zap, Fl
 import { ConcreteTest } from '../types';
 import { MenuCard } from './MenuCard';
 import { QuickEntryModal } from './QuickEntryModal';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface DashboardHomeProps {
   token: string;

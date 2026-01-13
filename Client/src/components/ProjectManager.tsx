@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { Project, Company, ConcreteTest } from '../types';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 import { GlobalProjectReport } from './GlobalProjectReport';
 
 interface ProjectManagerProps {

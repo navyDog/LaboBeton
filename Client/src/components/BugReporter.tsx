@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bug, X, Send, MessageSquare } from 'lucide-react';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface BugReporterProps {
   token: string;

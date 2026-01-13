@@ -11,6 +11,7 @@ import mongoSanitize from 'express-mongo-sanitize';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import winston from 'winston';
+import os from 'os';
 
 import User from './models/User.js';
 import Company from './models/Company.js';
@@ -23,17 +24,14 @@ import BugReport from './models/BugReport.js';
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'labobeton-api' },
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
+    winston.format.timestamp({ format: 'HH:mm:ss' }),
+    winston.format.printf(({ level, message, timestamp }) => {
+      // Format plus lisible pour la console
+      return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
     })
+  ),
+  transports: [
+    new winston.transports.Console()
   ]
 });
 
@@ -148,6 +146,11 @@ const connectDB = async () => {
         logger.warn("⚠️ MONGO_URI manquant. Mode hors ligne.");
         return;
     }
+    
+    // Masked URI for logs
+    const maskedUri = uri.replace(/:([^:@]+)@/, ':****@');
+    logger.info(`🔌 Tentative connexion MongoDB...`);
+
     await mongoose.connect(uri, { dbName: 'labobeton' });
     logger.info(`✅ MongoDB Connecté`);
     await seedAdminUser();
@@ -173,7 +176,7 @@ const seedAdminUser = async () => {
           companyName: 'ADMIN SYSTEM',
           tokenVersion: 0
         });
-        logger.info(`✅ Compte Admin initial créé.`);
+        logger.info(`👤 Compte Admin initial créé.`);
       }
     }
   } catch (error) { logger.error("Erreur seedAdminUser", error); }
@@ -656,15 +659,62 @@ app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, r
 });
 
 // --- SERVING FRONTEND ---
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '../Client/dist')));
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '../Client/dist', 'index.html'));
 });
+
+// --- HELPER DE LOGS DE DÉMARRAGE ---
+const printStartupSummary = () => {
+  const separator = "=".repeat(60);
+  const getLocalIP = () => {
+    const nets = os.networkInterfaces();
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          return net.address;
+        }
+      }
+    }
+    return '127.0.0.1';
+  };
+
+  logger.info(separator);
+  logger.info(`🚀 LABOBÉTON SERVER STARTUP - ${process.env.NODE_ENV?.toUpperCase() || 'DEV'}`);
+  logger.info(separator);
+  
+  // SYSTEM
+  logger.info(`🖥️  OS: ${os.type()} ${os.release()} (${os.arch()})`);
+  logger.info(`📦 Node: ${process.version} | PID: ${process.pid}`);
+  logger.info(`💾 Mem: ${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)} MB`);
+
+  // NETWORK
+  logger.info(`🌐 Local:   http://localhost:${PORT}`);
+  logger.info(`📡 Network: http://${getLocalIP()}:${PORT}`);
+
+  // SECURITY
+  logger.info(`🛡️  Security:`);
+  logger.info(`   - CORS: ${allowedOrigins.length > 0 ? allowedOrigins.length + ' origins allowed' : 'Open (Dev)'}`);
+  logger.info(`   - Helmet: Enabled`);
+  logger.info(`   - RateLimit: Enabled`);
+  logger.info(`   - Mongo Sanitize: Enabled`);
+
+  // DB STATUS
+  const dbState = mongoose.connection.readyState;
+  const dbStatusText = ['Disconnected', 'Connected', 'Connecting', 'Disconnecting'][dbState] || 'Unknown';
+  logger.info(`🗄️  Database: ${dbStatusText} (LaboBéton)`);
+
+  logger.info(separator);
+  logger.info(`✅ Ready to accept connections!`);
+  logger.info(separator);
+};
 
 // --- START SERVER & GRACEFUL SHUTDOWN ---
 server = app.listen(PORT, () => {
-  logger.info(`🚀 Serveur Securisé LaboBéton démarré sur port ${PORT}`);
-  connectDB();
+  connectDB().then(() => {
+    // On affiche le résumé une fois la DB connectée (ou échouée)
+    printStartupSummary();
+  });
 });
 
 const gracefulShutdown = () => {

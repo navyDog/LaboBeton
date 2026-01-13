@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase, User as UserIcon } from 'lucide-react';
 import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 interface ConcreteTestManagerProps {
   token: string;
