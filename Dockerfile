@@ -31,7 +31,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 1. Copier le package.json du serveur pour la prod
-COPY Server/package.json ./
+COPY server/package.json ./
 
 # 2. Installer uniquement les dépendances de production du serveur
 RUN npm install --omit=dev
@@ -55,5 +55,6 @@ EXPOSE 8080
 # Démarrer le serveur
 
 CMD ["node", "server.js"]
+
 
 
