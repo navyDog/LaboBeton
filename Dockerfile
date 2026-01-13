@@ -5,6 +5,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # 1. Copier les fichiers de définition de dépendances (Racine + Client + Serveur)
+RUN ls -R
 COPY package.json ./
 COPY Client/package.json ./client/
 COPY Server/package.json ./server/
@@ -22,7 +23,8 @@ COPY . .
 
 # 4. Construire l'application React (dans client/)
 # Cela va créer le dossier /app/client/dist
-RUN npm run build --prefix client
+RUN cd client && ./node_modules/.bin/tsc && ./node_modules/.bin/vite build
+#RUN npm run build --prefix client
 
 # Étape 2 : Image de Production (Runner)
 FROM node:20-alpine
@@ -55,6 +57,7 @@ EXPOSE 8080
 # Démarrer le serveur
 
 CMD ["node", "server.js"]
+
 
 
 
