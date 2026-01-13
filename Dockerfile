@@ -6,8 +6,8 @@ WORKDIR /app
 
 # 1. Copier les fichiers de définition de dépendances (Racine + Client + Serveur)
 COPY package.json ./
-COPY client/package.json ./client/
-COPY server/package.json ./server/
+COPY Client/package.json ./client/
+COPY Server/package.json ./server/
 
 # 2. Installer les dépendances
 # Racine (pour concurrently etc)
@@ -53,4 +53,5 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Démarrer le serveur
+
 CMD ["node", "server.js"]
