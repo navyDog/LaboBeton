@@ -1,0 +1,6 @@
+{
+    "sonarlint.connectedMode.project": {
+        "connectionId": "navydog",
+        "projectKey": "navyDog_LaboBeton"
+    }
+}
