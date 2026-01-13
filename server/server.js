@@ -659,9 +659,9 @@ app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, r
 });
 
 // --- SERVING FRONTEND ---
-app.use(express.static(path.join(__dirname, '../Client/dist')));
+app.use(express.static(path.join(__dirname, '../client/dist')));
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../Client/dist', 'index.html'));
+  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
 });
 
 // --- HELPER DE LOGS DE DÉMARRAGE ---
