@@ -13,6 +13,9 @@ jobs:
   frontend:
     name: Frontend - Tests & Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
 
     steps:
       - name: Checkout code
@@ -26,20 +29,16 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: ./client
 
       - name: Build project
         run: npm run build
-        working-directory: ./client
 
       - name: Run linter
         run: npm run lint
-        working-directory: ./client
         continue-on-error: true
 
       - name: Run tests with coverage
         run: npm test -- --coverage
-        working-directory: ./client
         continue-on-error: true
 
       - name: Upload coverage report
@@ -47,12 +46,15 @@ jobs:
         if: always()
         with:
           name: frontend-coverage-report
-          path: client/coverage
+          path: coverage
         continue-on-error: true
 
   backend:
     name: Backend - Tests & Lint
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
 
     steps:
       - name: Checkout code
@@ -66,20 +68,16 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        working-directory: ./server
 
       - name: Build project
         run: npm run build
-        working-directory: ./server
 
       - name: Run linter
         run: npm run lint
-        working-directory: ./server
         continue-on-error: true
 
       - name: Run tests with coverage
         run: npm test -- --coverage
-        working-directory: ./server
         continue-on-error: true
 
       - name: Upload coverage report
@@ -87,7 +85,7 @@ jobs:
         if: always()
         with:
           name: backend-coverage-report
-          path: server/coverage
+          path: coverage
         continue-on-error: true
 
   sonar-scan:
