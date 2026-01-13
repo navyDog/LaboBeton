@@ -1,4 +1,4 @@
-name: CI - LaboBeton (React)
+name: CI - LaboBeton (React & Node)
 
 permissions:
   contents: read
@@ -10,9 +10,12 @@ on:
     branches: [ "*" ]
 
 jobs:
-  test-and-lint:
-    name: Tests & Lint
+  frontend:
+    name: Frontend - Build & Test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
 
     steps:
       - name: Checkout code
@@ -30,21 +33,54 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Run linter
-        run: npm run lint
-        continue-on-error: true
-
       - name: Run tests with coverage
         run: npm test -- --coverage
-        continue-on-error: true
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-report
+          name: frontend-coverage-report
           path: coverage
         continue-on-error: true
+
+  backend:
+    name: Backend - Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+  sonar-scan:
+    name: SonarQube Scan
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9

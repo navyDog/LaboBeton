@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, Truck, X, FileText, MapPin, Beaker, Download, ArrowRight, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, X, FileText, Download, ArrowRight } from 'lucide-react';
 import { ConcreteTest } from '../types';
 import { authenticatedFetch } from '../../utils/api';
 
@@ -33,7 +33,7 @@ const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose, onNaviga
         {/* Header Simple */}
         <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center shrink-0">
           <h3 className="text-white font-bold text-lg">Détails de l'événement</h3>
-          <button onClick={onClose} className="text-concrete-400 hover:text-white transition-colors">
+          <button onClick={onClose} className="text-concrete-400 hover:text-white transition-colors" aria-label="Close">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -42,7 +42,7 @@ const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose, onNaviga
            <div className="inline-flex p-3 bg-concrete-100 rounded-full mb-2">
               <FileText className="w-8 h-8 text-safety-orange" />
            </div>
-           
+
            <div>
              <h2 className="text-xl font-bold text-concrete-900">{test.reference}</h2>
              <p className="text-sm text-concrete-500 font-medium mt-1">{test.projectName}</p>
@@ -65,8 +65,8 @@ const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose, onNaviga
            </div>
 
            {onNavigate && (
-            <button 
-              onClick={() => onNavigate(test._id)} 
+            <button
+              onClick={() => onNavigate(test._id)}
               className="w-full py-3 bg-safety-orange text-white hover:bg-orange-600 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow-md mt-4"
             >
               Accéder à la fiche complète <ArrowRight className="w-4 h-4" />
@@ -128,7 +128,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
       icsContent += "END:VEVENT\n";
     });
     icsContent += "END:VCALENDAR";
-    
+
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -148,7 +148,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => {
     const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1; 
+    return day === 0 ? 6 : day - 1;
   };
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -174,8 +174,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
           </div>
           <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
             {dayEvents.map(ev => (
-              <div 
-                key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedTest(tests.find(t => t._id === ev.testId) || null); setIsModalOpen(true); }} 
+              <div
+                key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedTest(tests.find(t => t._id === ev.testId) || null); setIsModalOpen(true); }}
                 className={`text-[10px] px-2 py-1 rounded border shadow-sm flex flex-col cursor-pointer ${
                   ev.type === 'crushing' ? 'bg-orange-100 text-orange-900 border-orange-200' :
                   ev.type === 'sampling' ? 'bg-blue-100 text-blue-900 border-blue-200' :
@@ -202,15 +202,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 relative">
       {selectedTest && <EventModal test={selectedTest} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onNavigate={handleNavigateToTest} />}
-      
+
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-xl border border-concrete-200 shadow-sm gap-4">
         <div><h2 className="text-2xl font-bold text-concrete-900 flex items-center gap-2"><CalendarIcon className="w-6 h-6 text-concrete-500" />Planning Laboratoire</h2></div>
         <div className="flex items-center gap-2">
            <button onClick={handleExportICS} className="flex items-center gap-2 px-3 py-1.5 border border-concrete-300 rounded text-sm hover:bg-concrete-50"><Download className="w-4 h-4" /> Export .ics</button>
            <div className="flex items-center bg-concrete-100 rounded-lg p-1 gap-1">
-             <button onClick={handlePrevMonth} className="p-2 hover:bg-white rounded-md"><ChevronLeft className="w-5 h-5" /></button>
+             <button onClick={handlePrevMonth} className="p-2 hover:bg-white rounded-md" aria-label="Previous Month"><ChevronLeft className="w-5 h-5" /></button>
              <div className="px-4 py-1 font-bold text-concrete-800 min-w-[140px] text-center">{monthNames[month]} {year}</div>
-             <button onClick={handleNextMonth} className="p-2 hover:bg-white rounded-md"><ChevronRight className="w-5 h-5" /></button>
+             <button onClick={handleNextMonth} className="p-2 hover:bg-white rounded-md" aria-label="Next Month"><ChevronRight className="w-5 h-5" /></button>
              <button onClick={handleToday} className="ml-2 px-3 py-1 text-xs font-medium uppercase hover:text-safety-orange">Aujourd'hui</button>
            </div>
         </div>

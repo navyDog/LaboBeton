@@ -53,7 +53,7 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
+server/.env
 .env.test
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -95,12 +95,12 @@ dist/
 dist-ssr/
 *.local
 
-package-lock.json
 eslint-report.json
 
 # Ne pas toucher au Dockerfile lors des synchronisations
 Dockerfile
 
-
-#intellIJ
-.idea/*
+# Dossiers IDE
+.vscode/
+.idea/
+.continue/

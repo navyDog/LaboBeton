@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Plus, Trash2, Building, Phone, Mail, User as UserIcon, Search, Pencil } from 'lucide-react';
+import { Plus, Trash2, Building, Phone, Mail, User as UserIcon, Pencil } from 'lucide-react';
 import { Company } from '../types';
 import { authenticatedFetch } from '../../utils/api';
 
@@ -11,7 +11,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  
+
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -68,13 +68,13 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
 
       const res = await authenticatedFetch(url, {
         method: method,
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(formData)
       });
-      
+
       if (res.ok) {
         resetForm();
         fetchCompanies();
@@ -104,12 +104,13 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
           <h2 className="text-2xl font-bold text-concrete-900">Mes Entreprises</h2>
           <p className="text-concrete-500">Gérez votre liste de clients et partenaires.</p>
         </div>
-        <button 
+        <button
           onClick={() => {
             if(showForm) resetForm();
             else setShowForm(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-medium"
+          aria-label={showForm ? 'Annuler ajout entreprise' : 'Nouvelle Entreprise'}
         >
           {showForm ? <UserIcon className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
           {showForm ? 'Annuler' : 'Nouvelle Entreprise'}
@@ -123,9 +124,10 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
           </h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'entreprise *</label>
-              <input 
-                required 
+              <label htmlFor="name" className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'entreprise *</label>
+              <input
+                id="name"
+                required
                 className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
                 value={formData.name}
                 onChange={e => setFormData({...formData, name: e.target.value})}
@@ -133,8 +135,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Contact Principal</label>
-              <input 
+              <label htmlFor="contactName" className="block text-xs font-medium text-concrete-500 mb-1">Contact Principal</label>
+              <input
+                id="contactName"
                 className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
                 value={formData.contactName}
                 onChange={e => setFormData({...formData, contactName: e.target.value})}
@@ -142,8 +145,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Email</label>
-              <input 
+              <label htmlFor="email" className="block text-xs font-medium text-concrete-500 mb-1">Email</label>
+              <input
+                id="email"
                 type="email"
                 className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
                 value={formData.email}
@@ -152,8 +156,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Téléphone</label>
-              <input 
+              <label htmlFor="phone" className="block text-xs font-medium text-concrete-500 mb-1">Téléphone</label>
+              <input
+                id="phone"
                 className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
@@ -161,10 +166,11 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
               />
             </div>
             <div className="md:col-span-2 flex justify-end gap-2">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={resetForm}
                 className="px-4 py-2 border border-concrete-300 text-concrete-600 rounded hover:bg-concrete-50 transition-colors"
+                aria-label="Annuler formulaire"
               >
                 Annuler
               </button>
@@ -230,14 +236,14 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({ token }) => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button 
+                        <button
                           onClick={() => handleEdit(company)}
                           className="text-concrete-400 hover:text-safety-orange transition-colors p-2 hover:bg-orange-50 rounded-full"
                           title="Modifier"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDelete(company._id)}
                           className="text-concrete-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-full"
                           title="Supprimer"
