@@ -12,6 +12,8 @@ import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import winston from 'winston';
 import os from 'os';
+import fs from 'fs';
+
 
 import User from './models/User.js';
 import Company from './models/Company.js';
@@ -658,11 +660,41 @@ app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, r
     res.json({ success: true });
 });
 
-// --- SERVING FRONTEND ---
-app.use(express.static(path.join(__dirname, '../client/dist')));
+
+
+
+// --- DÉTECTION DU DOSSIER FRONTEND ---
+// On regarde si "dist" est à côté du serveur (Docker) 
+// ou dans le dossier Client (Local)
+const distPath = fs.existsSync(path.join(__dirname, 'dist')) 
+    ? path.join(__dirname, 'dist') 
+    : path.join(__dirname, '../Client/dist');
+
+console.log("Dossier frontend détecté :", distPath);
+// --- MIDDLEWARES ---
+
+app.use(express.static(distPath));
+
+
+// --- SERVIR LE FRONTEND (React Router) ---
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+    const indexPath = path.join(distPath, 'index.html');
+    
+    // Petite sécurité pour éviter le crash si le build a échoué
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send("Erreur : Le build du frontend (index.html) est introuvable.");
+    }
 });
+
+
+
+// --- SERVING FRONTEND ---
+//app.use(express.static(path.join(__dirname, '../client/dist')));
+//app.get('*', (req, res) => {
+ // res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
+//});
 
 // --- HELPER DE LOGS DE DÉMARRAGE ---
 const printStartupSummary = () => {
