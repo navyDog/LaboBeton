@@ -13,17 +13,16 @@ COPY Server/package.json ./server/
 # Racine (pour concurrently etc)
 RUN npm install
 # Client
-RUN cd client && npm install
+RUN cd Client && npm install
 # Serveur
-RUN cd server && npm install
+RUN cd Server && npm install
 
 # 3. Copier tout le code source
 COPY . .
 
 # 4. Construire l'application React (dans client/)
 # Cela va créer le dossier /app/client/dist
-RUN npm run build 
-#--prefix client
+RUN npm run build --prefix client
 
 # Étape 2 : Image de Production (Runner)
 FROM node:20-alpine
@@ -44,7 +43,7 @@ COPY Server/models ./models
 
 # 4. Copier le build frontend (dist) généré à l'étape précédente
 # On le place dans un dossier 'dist' à la racine de l'image, car server.js sert 'dist'
-COPY --from=builder /app/client/dist ./dist
+COPY --from=builder /app/Client/dist ./dist
 
 # Variables d'environnement
 ENV NODE_ENV=production
