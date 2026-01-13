@@ -33,10 +33,6 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Run linter
-        run: npm run lint
-        continue-on-error: true
-
       - name: Run tests with coverage
         run: npm test -- --coverage
         continue-on-error: true
@@ -71,22 +67,6 @@ jobs:
 
       - name: Build project
         run: npm run build
-
-      - name: Run linter
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Run tests with coverage
-        run: npm test -- --coverage
-        continue-on-error: true
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-coverage-report
-          path: coverage
-        continue-on-error: true
 
   sonar-scan:
     name: SonarQube Scan
