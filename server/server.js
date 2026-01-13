@@ -465,6 +465,56 @@ app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
     res.json({ message: "Supprimé" });
 });
 
+app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
+    try {
+        const project = await Project.findOne({ _id: req.params.id, userId: req.user.id });
+        if (!project) return res.status(404).json({ message: "Projet introuvable" });
+
+        const tests = await ConcreteTest.find({ projectId: req.params.id, userId: req.user.id }).sort({ samplingDate: -1 });
+
+        // Simple CSV generation
+        const headers = ["Reference", "Date", "Ouvrage", "Partie", "Classe", "Volume", "Eprouvettes"];
+        let csv = headers.join(';') + '\n';
+
+        tests.forEach(test => {
+            const date = test.samplingDate ? new Date(test.samplingDate).toLocaleDateString('fr-FR') : '';
+            const row = [
+                test.reference || '',
+                date,
+                (test.structureName || '').replace(/;/g, ','),
+                (test.elementName || '').replace(/;/g, ','),
+                test.concreteClass || '',
+                (test.volume || 0).toString().replace('.', ','),
+                (test.specimenCount || 0).toString()
+            ];
+            csv += row.join(';') + '\n';
+        });
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`export_affaire_${project.name.replace(/\s/g, '_')}.csv`);
+        return res.send(csv);
+
+    } catch (error) {
+        logger.error(`CSV Export Error: ${error.message}`);
+        res.status(500).json({ message: "Erreur export CSV" });
+    }
+});
+
+app.get('/api/projects/:id/full-report', authenticateToken, async (req, res) => {
+    try {
+        const project = await Project.findOne({ _id: req.params.id, userId: req.user.id });
+        if (!project) return res.status(404).json({ message: "Projet introuvable" });
+
+        const tests = await ConcreteTest.find({ projectId: req.params.id, userId: req.user.id }).sort({ samplingDate: 1 });
+        
+        // Retourne le JSON attendu par le composant GlobalProjectReport
+        res.json({ project, tests });
+    } catch (error) {
+        logger.error(`Report Error: ${error.message}`);
+        res.status(500).json({ message: "Erreur génération rapport" });
+    }
+});
+
 // Concrete Tests (Le plus critique pour le Mass Assignment)
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   const tests = await ConcreteTest.find({ userId: req.user.id })
