@@ -13,9 +13,9 @@ COPY Server/package.json ./server/
 # Racine (pour concurrently etc)
 RUN npm install
 # Client
-RUN cd Client && npm install
+RUN cd client && npm install
 # Serveur
-RUN cd Server && npm install
+RUN cd server && npm install
 
 # 3. Copier tout le code source
 COPY . .
@@ -55,5 +55,6 @@ EXPOSE 8080
 # Démarrer le serveur
 
 CMD ["node", "server.js"]
+
 
 
