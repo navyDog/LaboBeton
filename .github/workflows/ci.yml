@@ -11,7 +11,7 @@ on:
 
 jobs:
   frontend:
-    name: Frontend - Tests & Lint
+    name: Frontend - Build & Test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,7 +35,6 @@ jobs:
 
       - name: Run tests with coverage
         run: npm test -- --coverage
-        continue-on-error: true
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -46,7 +45,7 @@ jobs:
         continue-on-error: true
 
   backend:
-    name: Backend - Tests & Lint
+    name: Backend - Build
     runs-on: ubuntu-latest
     defaults:
       run:
