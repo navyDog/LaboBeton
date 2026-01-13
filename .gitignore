@@ -95,7 +95,6 @@ dist/
 dist-ssr/
 *.local
 
-package-lock.json
 eslint-report.json
 
 # Ne pas toucher au Dockerfile lors des synchronisations
