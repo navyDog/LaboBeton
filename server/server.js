@@ -80,21 +80,11 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // Autorise les requêtes sans origine (ex : Postman, curl)
-    
-    // En développement, autoriser toutes les origines locales
-    if (process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
+      return callback(null, true); 
     }
-    
-    // En production, vérifier que l'origine est dans la liste des allowedOrigins
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Si l'origine n'est pas autorisée, refuser la requête
-    logger.warn(`Tentative de connexion depuis une origine non autorisée : ${origin}`);
-    return callback(new Error('Not allowed by CORS'));
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
