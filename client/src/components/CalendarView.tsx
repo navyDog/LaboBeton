@@ -78,6 +78,94 @@ const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose, onNaviga
   );
 };
 
+// --- Refactored helpers for event generation ---
+
+const createCrushingEvents = (test: ConcreteTest): CalendarEvent[] => {
+    if (!test.specimens) return [];
+
+    const crushingGroups = test.specimens.reduce((groups, specimen) => {
+        if (specimen.crushingDate) {
+            const dateStr = new Date(specimen.crushingDate).toISOString().split('T')[0];
+            groups[dateStr] = (groups[dateStr] || 0) + 1;
+        }
+        return groups;
+    }, {} as Record<string, number>);
+
+    return Object.entries(crushingGroups).map(([dateStr, count]) => ({
+        id: `${test._id}-crush-${dateStr}`,
+        testId: test._id,
+        dateStr: dateStr,
+        type: 'crushing',
+        title: `Écrasement ${test.reference}`,
+        details: `${count} ép.`,
+    }));
+};
+
+const createTestEvents = (test: ConcreteTest): CalendarEvent[] => {
+    const events: CalendarEvent[] = [];
+    if (test.receptionDate) {
+        events.push({
+            id: `${test._id}-rec`,
+            testId: test._id,
+            dateStr: new Date(test.receptionDate).toISOString().split('T')[0],
+            type: 'reception',
+            title: `Réception ${test.reference}`,
+            details: test.projectName || '',
+        });
+    }
+    if (test.samplingDate) {
+        events.push({
+            id: `${test._id}-samp`,
+            testId: test._id,
+            dateStr: new Date(test.samplingDate).toISOString().split('T')[0],
+            type: 'sampling',
+            title: `Prélèvement ${test.reference}`,
+            details: `${test.structureName} (${test.concreteClass})`,
+        });
+    }
+    return [...events, ...createCrushingEvents(test)];
+};
+
+// --- Calendar Day Component ---
+
+interface CalendarDayProps {
+  day: number;
+  isToday: boolean;
+  events: CalendarEvent[];
+  onEventClick: (event: React.MouseEvent, testId: string) => void;
+}
+
+const CalendarDay: React.FC<CalendarDayProps> = ({ day, isToday, events, onEventClick }) => {
+  return (
+    <div className={`border-r border-b border-concrete-200 min-h-[120px] bg-white hover:bg-concrete-50 transition-colors p-2 flex flex-col gap-1 ${isToday ? 'bg-blue-50/30' : ''}`}>
+      <div className="flex justify-between items-start mb-1">
+        <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-safety-orange text-white shadow-sm' : 'text-concrete-700'}`}>{day}</span>
+        {events.length > 0 && <span className="text-[10px] bg-concrete-100 text-concrete-500 px-1.5 rounded-full font-medium">{events.length}</span>}
+      </div>
+      <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
+        {events.map(ev => (
+          <div
+            key={ev.id}
+            onClick={(e) => onEventClick(e, ev.testId)}
+            className={`text-[10px] px-2 py-1 rounded border shadow-sm flex flex-col cursor-pointer ${
+              ev.type === 'crushing' ? 'bg-orange-100 text-orange-900 border-orange-200' :
+              ev.type === 'sampling' ? 'bg-blue-100 text-blue-900 border-blue-200' :
+              'bg-gray-100 text-gray-800 border-gray-300'
+            }`}
+          >
+            <div className="flex items-center gap-1 font-bold truncate">
+              {ev.type === 'crushing' && <Hammer className="w-3 h-3" />}
+              {ev.type === 'sampling' && <Factory className="w-3 h-3" />}
+              <span>{ev.title}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+
 export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate }) => {
   const [tests, setTests] = useState<ConcreteTest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,27 +183,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
     fetchTests();
   }, [token]);
 
-  const events = useMemo(() => {
-    const list: CalendarEvent[] = [];
-    tests.forEach(test => {
-      const ref = test.reference;
-      if (test.receptionDate) list.push({ id: `${test._id}-rec`, testId: test._id, dateStr: new Date(test.receptionDate).toISOString().split('T')[0], type: 'reception', title: `Réception ${ref}`, details: test.projectName || '' });
-      if (test.samplingDate) list.push({ id: `${test._id}-samp`, testId: test._id, dateStr: new Date(test.samplingDate).toISOString().split('T')[0], type: 'sampling', title: `Prélèvement ${ref}`, details: `${test.structureName} (${test.concreteClass})` });
-      if (test.specimens) {
-        const crushingGroups: Record<string, number> = {};
-        test.specimens.forEach(s => {
-          if (s.crushingDate) {
-            const d = new Date(s.crushingDate).toISOString().split('T')[0];
-            crushingGroups[d] = (crushingGroups[d] || 0) + 1;
-          }
-        });
-        Object.entries(crushingGroups).forEach(([dateStr, count]) => {
-          list.push({ id: `${test._id}-crush-${dateStr}`, testId: test._id, dateStr: dateStr, type: 'crushing', title: `Écrasement ${ref}`, details: `${count} ép.` });
-        });
-      }
-    });
-    return list;
-  }, [tests]);
+  const events = useMemo(() => tests.flatMap(createTestEvents), [tests]);
 
   const handleExportICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//LaboBeton//NONSGML v1.0//EN\n";
@@ -144,54 +212,43 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
     if (onNavigate) onNavigate('fresh_tests', testId);
   };
 
-  // Logic rendering...
-  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1;
+  const handleEventClick = (event: React.MouseEvent, testId: string) => {
+    event.stopPropagation();
+    const test = tests.find(t => t._id === testId);
+    if (test) {
+      setSelectedTest(test);
+      setIsModalOpen(true);
+    }
   };
+
+  // Calendar rendering logic
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDayIndex = getFirstDayOfMonth(year, month);
+  const firstDayIndex = new Date(year, month, 1).getDay() === 0 ? 6 : new Date(year, month, 1).getDay() - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
   const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
   const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
   const handleToday = () => setCurrentDate(new Date());
 
   const renderCalendarDays = () => {
     const days = [];
-    for (let i = 0; i < firstDayIndex; i++) days.push(<div key={`empty-${i}`} className="bg-concrete-50/50 border-r border-b border-concrete-100 min-h-[120px]"></div>);
+    for (let i = 0; i < firstDayIndex; i++) {
+        days.push(<div key={`empty-${i}`} className="bg-concrete-50/50 border-r border-b border-concrete-100 min-h-[120px]"></div>);
+    }
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const dayEvents = events.filter(e => e.dateStr === dateStr);
-      const isToday = new Date().toISOString().split('T')[0] === dateStr;
-
-      days.push(
-        <div key={d} className={`border-r border-b border-concrete-200 min-h-[120px] bg-white hover:bg-concrete-50 transition-colors p-2 flex flex-col gap-1 ${isToday ? 'bg-blue-50/30' : ''}`}>
-          <div className="flex justify-between items-start mb-1">
-             <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-safety-orange text-white shadow-sm' : 'text-concrete-700'}`}>{d}</span>
-             {dayEvents.length > 0 && <span className="text-[10px] bg-concrete-100 text-concrete-500 px-1.5 rounded-full font-medium">{dayEvents.length}</span>}
-          </div>
-          <div className="flex flex-col gap-1 overflow-y-auto max-h-[100px] custom-scrollbar">
-            {dayEvents.map(ev => (
-              <div
-                key={ev.id} onClick={(e) => { e.stopPropagation(); setSelectedTest(tests.find(t => t._id === ev.testId) || null); setIsModalOpen(true); }}
-                className={`text-[10px] px-2 py-1 rounded border shadow-sm flex flex-col cursor-pointer ${
-                  ev.type === 'crushing' ? 'bg-orange-100 text-orange-900 border-orange-200' :
-                  ev.type === 'sampling' ? 'bg-blue-100 text-blue-900 border-blue-200' :
-                  'bg-gray-100 text-gray-800 border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-1 font-bold truncate">
-                  {ev.type === 'crushing' && <Hammer className="w-3 h-3" />}
-                  {ev.type === 'sampling' && <Factory className="w-3 h-3" />}
-                  <span>{ev.title}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const dayEvents = events.filter(e => e.dateStr === dateStr);
+        const isToday = new Date().toISOString().split('T')[0] === dateStr;
+        days.push(
+            <CalendarDay 
+                key={d} 
+                day={d} 
+                isToday={isToday} 
+                events={dayEvents} 
+                onEventClick={handleEventClick} 
+            />
+        );
     }
     return days;
   };
