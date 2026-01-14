@@ -649,43 +649,62 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (re
   try {
     const input = req.body;
     
-    // Whitelist des champs modifiables UNIQUEMENT
-    const allowedFields = [
-        'structureName', 'elementName', 'receptionDate', 'samplingDate',
-        'volume', 'concreteClass', 'mixType', 'formulaInfo', 
-        'manufacturer', 'manufacturingPlace', 'deliveryMethod',
-        'slump', 'samplingPlace', 'tightening', 'vibrationTime',
-        'layers', 'curing', 'testType', 'standard', 'preparation',
-        'pressMachine', 'externalTemp', 'concreteTemp'
-    ];
-
     const updates = {};
-    allowedFields.forEach(field => {
-        if (input[field] !== undefined) updates[field] = input[field];
+    
+    // Champs de type String
+    ['structureName', 'elementName', 'mixType', 'formulaInfo', 
+     'manufacturer', 'manufacturingPlace', 'deliveryMethod', 
+     'samplingPlace', 'tightening', 'curing', 'testType', 
+     'standard', 'preparation', 'pressMachine', 'concreteClass'].forEach(field => {
+        if (input[field] !== undefined) updates[field] = String(input[field]);
     });
 
-    // Gestion spécifique des specimens (Array)
+    // Champs de type Number
+    ['volume', 'slump', 'vibrationTime', 'layers', 'externalTemp', 'concreteTemp'].forEach(field => {
+        if (input[field] != null) {
+            updates[field] = Number(input[field]);
+        } else if (input.hasOwnProperty(field)) {
+            updates[field] = null;
+        }
+    });
+
+    // Champs de type Date
+    ['receptionDate', 'samplingDate'].forEach(field => {
+        if (input[field]) {
+            updates[field] = new Date(input[field]);
+        } else if (input.hasOwnProperty(field)) {
+            updates[field] = null;
+        }
+    });
+
+    // Gestion spécifique et sécurisée des specimens (Array)
     if (Array.isArray(input.specimens)) {
-        updates.specimens = input.specimens.map(s => ({
-            number: Number(s.number),
-            age: Number(s.age),
-            castingDate: s.castingDate,
-            crushingDate: s.crushingDate,
-            specimenType: String(s.specimenType || ''),
-            diameter: Number(s.diameter),
-            height: Number(s.height),
-            surface: Number(s.surface),
-            weight: s.weight ? Number(s.weight) : null,
-            force: s.force ? Number(s.force) : null,
-            stress: s.stress ? Number(s.stress) : null,
-            density: s.density ? Number(s.density) : null
-        }));
+        updates.specimens = input.specimens.map(s => {
+            const newSpecimen = {
+                number: Number(s.number),
+                age: Number(s.age),
+                castingDate: s.castingDate ? new Date(s.castingDate) : null,
+                crushingDate: s.crushingDate ? new Date(s.crushingDate) : null,
+                specimenType: String(s.specimenType || ''),
+                diameter: Number(s.diameter),
+                height: Number(s.height),
+                surface: Number(s.surface),
+                weight: s.weight != null ? Number(s.weight) : null,
+                force: s.force != null ? Number(s.force) : null,
+                stress: s.stress != null ? Number(s.stress) : null,
+                density: s.density != null ? Number(s.density) : null
+            };
+            if (s._id) {
+                newSpecimen._id = String(s._id);
+            }
+            return newSpecimen;
+        });
     }
 
     const test = await ConcreteTest.findOneAndUpdate(
         { _id: req.params.id, userId: req.user.id },
         { $set: updates },
-        { new: true }
+        { new: true, runValidators: true, context: 'query' }
     );
     
     if (!test) return res.status(404).json({ message: "Non trouvé" });
