@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
-import { body, validationResult } from 'express-validator';
+import { body, param, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import winston from 'winston';
 import os from 'os';
@@ -226,6 +226,11 @@ const checkValidation = (req, res, next) => {
   next();
 };
 
+const validateMongoId = [
+  param('id').isMongoId().withMessage('ID de format invalide.'),
+  checkValidation
+];
+
 // --- ROUTES ---
 
 // Health Check Robuste
@@ -343,10 +348,13 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await User.find({}, '-password -tokenVersion').sort({ createdAt: -1 });
     res.json(users);
-  } catch (error) { res.status(500).json({ message: "Erreur récupération" }); }
+  } catch (error) { 
+    logger.error(`Get Users Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur récupération" }); 
+  }
 });
 
-app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, async (req, res) => {
+app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
     try {
         if (req.params.id === req.user.id) return res.status(400).json({ message: "Action interdite sur soi-même." });
         const user = await User.findById(req.params.id);
@@ -355,23 +363,34 @@ app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, async (
         if (!user.isActive) user.tokenVersion = (user.tokenVersion || 0) + 1;
         await user.save();
         res.json({ message: "Accès modifié" });
-    } catch (error) { res.status(500).json({message: "Erreur serveur"}); }
+    } catch (error) { 
+      logger.error(`Toggle User Access Error: ${error.message}`);
+      res.status(500).json({message: "Erreur serveur"}); 
+    }
 });
 
-app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+app.delete('/api/users/:id', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
     try {
         if (req.params.id === req.user.id) return res.status(400).json({ message: "Action interdite." });
         await User.findByIdAndDelete(req.params.id);
         res.json({ message: "Utilisateur supprimé." });
-    } catch (error) { res.status(500).json({ message: "Erreur suppression" }); }
+    } catch (error) { 
+      logger.error(`Delete User Error: ${error.message}`);
+      res.status(500).json({ message: "Erreur suppression" }); 
+    }
 });
 
 // --- MODULES METIERS (Whitelisting Strict) ---
 
 // Companies
 app.get('/api/companies', authenticateToken, async (req, res) => {
-  const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 }).lean();
-  res.json(companies);
+  try {
+    const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 }).lean();
+    res.json(companies);
+  } catch (error) {
+    logger.error(`Get Companies Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 app.post('/api/companies', authenticateToken, async (req, res) => {
@@ -387,10 +406,14 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
     });
     await newCompany.save();
     res.status(201).json(newCompany);
-  } catch (error) { res.status(400).json({ message: "Erreur création" }); }
+  } catch (error) { 
+    logger.error(`Create Company Error: ${error.message}`);
+    res.status(400).json({ message: "Erreur création" }); 
+  }
 });
 
-app.put('/api/companies/:id', authenticateToken, async (req, res) => {
+app.put('/api/companies/:id', authenticateToken, validateMongoId, async (req, res) => {
+  try {
     const { name, contactName, email, phone } = req.body;
     const updates = {};
     if (name !== undefined) updates.name = String(name);
@@ -405,18 +428,32 @@ app.put('/api/companies/:id', authenticateToken, async (req, res) => {
     );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
+  } catch (error) {
+    logger.error(`Update Company Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
-app.delete('/api/companies/:id', authenticateToken, async (req, res) => {
+app.delete('/api/companies/:id', authenticateToken, validateMongoId, async (req, res) => {
+  try {
     const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
+  } catch (error) {
+    logger.error(`Delete Company Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 // Projects
 app.get('/api/projects', authenticateToken, async (req, res) => {
-  const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
-  res.json(projects);
+  try {
+    const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+    res.json(projects);
+  } catch (error) {
+    logger.error(`Get Projects Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 app.post('/api/projects', authenticateToken, async (req, res) => {
@@ -435,10 +472,14 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
     });
     await newProject.save();
     res.status(201).json(newProject);
-  } catch (error) { res.status(400).json({ message: "Erreur création" }); }
+  } catch (error) { 
+    logger.error(`Create Project Error: ${error.message}`);
+    res.status(400).json({ message: "Erreur création" }); 
+  }
 });
 
-app.put('/api/projects/:id', authenticateToken, async (req, res) => {
+app.put('/api/projects/:id', authenticateToken, validateMongoId, async (req, res) => {
+  try {
     const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
     const updates = {};
     if (name !== undefined) updates.name = String(name);
@@ -457,15 +498,24 @@ app.put('/api/projects/:id', authenticateToken, async (req, res) => {
     );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
+  } catch (error) {
+    logger.error(`Update Project Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
-app.delete('/api/projects/:id', authenticateToken, async (req, res) => {
+app.delete('/api/projects/:id', authenticateToken, validateMongoId, async (req, res) => {
+  try {
     const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
+  } catch (error) {
+    logger.error(`Delete Project Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
-app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
+app.get('/api/projects/:id/export/csv', authenticateToken, validateMongoId, async (req, res) => {
     try {
         const project = await Project.findOne({ _id: req.params.id, userId: req.user.id });
         if (!project) return res.status(404).json({ message: "Projet introuvable" });
@@ -500,7 +550,7 @@ app.get('/api/projects/:id/export/csv', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/api/projects/:id/full-report', authenticateToken, async (req, res) => {
+app.get('/api/projects/:id/full-report', authenticateToken, validateMongoId, async (req, res) => {
     try {
         const project = await Project.findOne({ _id: req.params.id, userId: req.user.id });
         if (!project) return res.status(404).json({ message: "Projet introuvable" });
@@ -517,11 +567,16 @@ app.get('/api/projects/:id/full-report', authenticateToken, async (req, res) => 
 
 // Concrete Tests (Le plus critique pour le Mass Assignment)
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
-  const tests = await ConcreteTest.find({ userId: req.user.id })
-    .sort({ sequenceNumber: -1 })
-    .populate('projectId', 'name')
-    .lean();
-  res.json(tests);
+  try {
+    const tests = await ConcreteTest.find({ userId: req.user.id })
+      .sort({ sequenceNumber: -1 })
+      .populate('projectId', 'name')
+      .lean();
+    res.json(tests);
+  } catch (error) {
+    logger.error(`Get Concrete Tests Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 app.post('/api/concrete-tests', authenticateToken, [
@@ -590,7 +645,7 @@ app.post('/api/concrete-tests', authenticateToken, [
   }
 });
 
-app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
+app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (req, res) => {
   try {
     const input = req.body;
     
@@ -635,17 +690,26 @@ app.put('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
     
     if (!test) return res.status(404).json({ message: "Non trouvé" });
     res.json(test);
-  } catch (error) { res.status(400).json({ message: "Erreur modification" }); }
+  } catch (error) { 
+    logger.error(`Update Concrete Test Error: ${error.message}`);
+    res.status(400).json({ message: "Erreur modification" }); 
+  }
 });
 
-app.delete('/api/concrete-tests/:id', authenticateToken, async (req, res) => {
+app.delete('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (req, res) => {
+  try {
     const deleted = await ConcreteTest.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
+  } catch (error) {
+    logger.error(`Delete Concrete Test Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 // Settings (Arrays)
 app.get('/api/settings', authenticateToken, async (req, res) => {
+  try {
     let settings = await Settings.findOne({ userId: req.user.id }).lean();
     if (!settings) {
         // Defaults
@@ -658,9 +722,14 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
         };
     }
     res.json(settings);
+  } catch (error) {
+    logger.error(`Get Settings Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 app.put('/api/settings', authenticateToken, async (req, res) => {
+  try {
     const allowedArrays = [
         'specimenTypes', 'deliveryMethods', 'manufacturingPlaces', 'mixTypes',
         'concreteClasses', 'consistencyClasses', 'curingMethods', 'testTypes',
@@ -679,10 +748,15 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
         { new: true, upsert: true, setDefaultsOnInsert: true }
     );
     res.json(settings);
+  } catch (error) {
+    logger.error(`Update Settings Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 // Bugs
 app.post('/api/bugs', authenticateToken, async (req, res) => {
+  try {
     const { type, description } = req.body;
     await BugReport.create({ 
         type: String(type), 
@@ -690,24 +764,43 @@ app.post('/api/bugs', authenticateToken, async (req, res) => {
         user: req.user.username 
     });
     res.json({ message: "Signalement reçu" });
+  } catch (error) {
+    logger.error(`Create Bug Report Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 app.get('/api/admin/bugs', authenticateToken, requireAdmin, async (req, res) => {
+  try {
     const bugs = await BugReport.find().sort({ createdAt: -1 });
     res.json(bugs);
+  } catch (error) {
+    logger.error(`Get Bug Reports Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
-app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res) => {
+app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
+  try {
     await BugReport.findByIdAndUpdate(req.params.id, { 
         status: String(req.body.status), 
         resolvedAt: req.body.status === 'resolved' ? new Date() : null 
     });
     res.json({ success: true });
+  } catch (error) {
+    logger.error(`Update Bug Report Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
-app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, async (req, res) => {
+app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
+  try {
     await BugReport.findByIdAndDelete(req.params.id);
     res.json({ success: true });
+  } catch (error) {
+    logger.error(`Delete Bug Report Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 
