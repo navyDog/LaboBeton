@@ -713,15 +713,25 @@ app.post('/api/concrete-tests', authenticateToken, [
   }
 });
 
+
 app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. Sécurisation des IDs (Casting explicite)
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
+    
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
-    const input = req.body;
-    
+    // Vérification et conversion de l'ID du test
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Format ID invalide' });
+    }
+    const testId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 2. Recherche sécurisée
     const test = await ConcreteTest.findOne({ 
-      _id: req.params.id, 
+      _id: testId, // Utilisation de l'ID casté
       userId: userObjectId 
     });
 
@@ -729,6 +739,8 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
       return res.status(404).json({ message: "Non trouvé" });
     }
 
+    const input = req.body;
+    
     // Appliquer les mises à jour champ par champ
     ['structureName', 'elementName', 'mixType', 'formulaInfo', 
      'manufacturer', 'manufacturingPlace', 'deliveryMethod', 
@@ -781,6 +793,7 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
     res.status(400).json({ message: "Erreur modification" }); 
   }
 });
+
 
 
 
