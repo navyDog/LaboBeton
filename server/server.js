@@ -649,37 +649,42 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (re
   try {
     const input = req.body;
     
-    const updates = {};
+    const test = await ConcreteTest.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!test) {
+        return res.status(404).json({ message: "Non trouvé" });
+    }
+
+    // Appliquer les mises à jour champ par champ pour la sécurité et la clarté
     
     // Champs de type String
     ['structureName', 'elementName', 'mixType', 'formulaInfo', 
      'manufacturer', 'manufacturingPlace', 'deliveryMethod', 
      'samplingPlace', 'tightening', 'curing', 'testType', 
      'standard', 'preparation', 'pressMachine', 'concreteClass'].forEach(field => {
-        if (input[field] !== undefined) updates[field] = String(input[field]);
+        if (input[field] !== undefined) test[field] = String(input[field]);
     });
 
     // Champs de type Number
     ['volume', 'slump', 'vibrationTime', 'layers', 'externalTemp', 'concreteTemp'].forEach(field => {
         if (input[field] != null) {
-            updates[field] = Number(input[field]);
+            test[field] = Number(input[field]);
         } else if (input.hasOwnProperty(field)) {
-            updates[field] = null;
+            test[field] = null;
         }
     });
 
     // Champs de type Date
     ['receptionDate', 'samplingDate'].forEach(field => {
         if (input[field]) {
-            updates[field] = new Date(input[field]);
+            test[field] = new Date(input[field]);
         } else if (input.hasOwnProperty(field)) {
-            updates[field] = null;
+            test[field] = null;
         }
     });
 
     // Gestion spécifique et sécurisée des specimens (Array)
     if (Array.isArray(input.specimens)) {
-        updates.specimens = input.specimens.map(s => {
+        test.specimens = input.specimens.map(s => {
             const newSpecimen = {
                 number: Number(s.number),
                 age: Number(s.age),
@@ -701,14 +706,9 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (re
         });
     }
 
-    const test = await ConcreteTest.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { $set: updates },
-        { new: true, runValidators: true, context: 'query' }
-    );
+    const updatedTest = await test.save();
     
-    if (!test) return res.status(404).json({ message: "Non trouvé" });
-    res.json(test);
+    res.json(updatedTest);
   } catch (error) { 
     logger.error(`Update Concrete Test Error: ${error.message}`);
     res.status(400).json({ message: "Erreur modification" }); 
