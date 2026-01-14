@@ -698,7 +698,7 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (re
 
 app.delete('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (req, res) => {
   try {
-    const deleted = await ConcreteTest.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const deleted = await ConcreteTest.findOneAndDelete({ _id: new mongoose.Types.ObjectId(req.params.id), userId: req.user.id });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) {
