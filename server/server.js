@@ -782,23 +782,42 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
   }
 });
 
+
+
 app.delete('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. Sécurisation de l'ID utilisateur
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
+
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
+    // 2. Sécurisation de l'ID du test (Protection contre l'injection NoSQL)
+    // On vérifie si l'ID est valide AVANT de l'utiliser
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Format ID invalide' });
+    }
+
+    // On transforme la chaîne brute en objet ObjectId
+    const testId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 3. Exécution de la requête avec les objets typés
     const deleted = await ConcreteTest.findOneAndDelete({ 
-      _id: req.params.id, 
+      _id: testId, 
       userId: userObjectId 
     });
 
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
+
   } catch (error) {
     logger.error(`Delete Concrete Test Error: ${error.message}`);
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+
+
 
 // --- SETTINGS (CORRIGÉ) ---
 

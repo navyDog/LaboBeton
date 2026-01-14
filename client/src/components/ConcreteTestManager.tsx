@@ -3,7 +3,6 @@ import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, 
 import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../../utils/api';
-
 interface ConcreteTestManagerProps {
   token: string;
   user?: User; 
@@ -446,7 +445,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                           <td className="px-3 py-2 text-right"><input type="number" className="w-20 p-1 text-right border-transparent hover:border-concrete-300 bg-transparent" onClick={e=>e.stopPropagation()} value={s.weight||''} onChange={e=>handleInlineChange(idx,'weight',e.target.value)}/></td>
                           <td className="px-3 py-2 text-right"><input type="number" className="w-20 p-1 text-right border-transparent hover:border-concrete-300 bg-transparent" onClick={e=>e.stopPropagation()} value={s.force||''} onChange={e=>handleInlineChange(idx,'force',e.target.value)}/></td>
                           <td className="px-3 py-2 text-right font-mono font-bold text-safety-orange">{s.stress?.toFixed(1) || '-'}</td>
-                          <td className="px-3 py-2 text-right"><button onClick={e=>handleRemoveSpecimen(idx,e)} className="text-concrete-300 hover:text-red-500"><Trash2 className="w-3 h-3"/></button></td>
+                          <td className="px-3 py-2 text-right"><button type="button" onClick={e=>handleRemoveSpecimen(idx,e)} className="text-concrete-300 hover:text-red-500"><Trash2 className="w-3 h-3"/></button></td>
                         </tr>
                       ))}
                     </tbody>
