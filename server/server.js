@@ -446,21 +446,38 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
   }
 });
 
+
+
 app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. Sécurisation de l'ID utilisateur
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
+    // 2. Validation et Casting de l'ID de l'entreprise (Correction SonarCloud)
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'ID entreprise invalide' });
+    }
+    const companyId = new mongoose.Types.ObjectId(req.params.id);
+
     const { name, contactName, email, phone } = req.body;
     const updates = {};
+    
+    // Protection contre l'injection de types dans le body
     if (name !== undefined) updates.name = String(name);
     if (contactName !== undefined) updates.contactName = String(contactName);
     if (email !== undefined) updates.email = String(email);
     if (phone !== undefined) updates.phone = String(phone);
+
+    // 3. Mise à jour sécurisée avec l'ID casté
     const updated = await Company.findOneAndUpdate(
-      { _id: req.params.id, userId: userObjectId },
+      { _id: companyId, userId: userObjectId }, // Utilisation de l'ID sécurisé
       { $set: updates },
       { new: true }
     );
+
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
   } catch (error) {
@@ -469,11 +486,28 @@ app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, 
   }
 });
 
+
+
 app.delete('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. Sécurisation de l'ID utilisateur
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
-    const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: userObjectId });
+
+    // 2. Validation et Casting de l'ID de l'entreprise (Protection NoSQL)
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Format ID entreprise invalide' });
+    }
+    const companyId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 3. Exécution de la suppression avec l'ID casté
+    const deleted = await Company.findOneAndDelete({ 
+      _id: companyId, // Utilisation de la variable sécurisée
+      userId: userObjectId 
+    });
+
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) {
@@ -520,12 +554,26 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
   }
 });
 
+
+
 app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. Sécurisation de l'ID utilisateur
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
+    // 2. Validation et Casting de l'ID du projet (Correction SonarCloud)
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'ID projet invalide' });
+    }
+    const projectId = new mongoose.Types.ObjectId(req.params.id);
+
     const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
     const updates = {};
+    
+    // Ton mapping de champs (déjà bien sécurisé avec String())
     if (name !== undefined) updates.name = String(name);
     if (companyName !== undefined) updates.companyName = String(companyName);
     if (contactName !== undefined) updates.contactName = String(contactName);
@@ -533,6 +581,7 @@ app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, r
     if (phone !== undefined) updates.phone = String(phone);
     if (moa !== undefined) updates.moa = String(moa);
     if (moe !== undefined) updates.moe = String(moe);
+
     if (companyId !== undefined) {
       const validCompanyId = safeObjectId(companyId);
       if (companyId && !validCompanyId) {
@@ -540,11 +589,14 @@ app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, r
       }
       updates.companyId = validCompanyId;
     }
+
+    // 3. Exécution de la requête avec l'ID sécurisé
     const updated = await Project.findOneAndUpdate(
-      { _id: req.params.id, userId: userObjectId },
+      { _id: projectId, userId: userObjectId }, // On utilise projectId (casté)
       { $set: updates },
       { new: true }
     );
+
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
   } catch (error) {
@@ -555,26 +607,59 @@ app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, r
 
 app.delete('/api/projects/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. On sécurise l'ID de l'utilisateur
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
-    const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: userObjectId });
+
+    // 2. On valide et on cast l'ID du projet (Protection NoSQL Injection)
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Format ID projet invalide' });
+    }
+    const projectId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 3. On utilise l'ID casté pour la suppression
+    const deleted = await Project.findOneAndDelete({ 
+      _id: projectId, // Utilisation de la variable sécurisée
+      userId: userObjectId 
+    });
+
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
+    
     res.json({ message: "Supprimé" });
   } catch (error) {
     logger.error(`Delete Project Error: ${error.message}`);
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
-
 app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    // 1. Sécurisation de l'ID utilisateur
+    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
+                         ? new mongoose.Types.ObjectId(req.user.id) 
+                         : null;
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
-    const project = await Project.findOne({ _id: req.params.id, userId: userObjectId });
+
+    // 2. Validation et Casting de l'ID du projet (Protection NoSQL Injection)
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Format ID projet invalide' });
+    }
+    const projectId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 3. Requêtes sécurisées avec les IDs castés
+    const project = await Project.findOne({ _id: projectId, userId: userObjectId });
     if (!project) return res.status(404).json({ message: "Projet introuvable" });
-    const tests = await ConcreteTest.find({ projectId: req.params.id, userId: userObjectId }).sort({ samplingDate: -1 });
+
+    const tests = await ConcreteTest.find({ 
+      projectId: projectId, // On utilise la variable castée ici
+      userId: userObjectId 
+    }).sort({ samplingDate: -1 });
+
+    // --- Génération du CSV (Le reste de ton code) ---
     const headers = ["Reference", "Date", "Ouvrage", "Partie", "Classe", "Volume", "Eprouvettes"];
     let csv = headers.join(';') + '\n';
+
     tests.forEach(test => {
       const date = test.samplingDate ? new Date(test.samplingDate).toLocaleDateString('fr-FR') : '';
       const row = [
@@ -585,22 +670,46 @@ app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), as
       ];
       csv += row.join(';') + '\n';
     });
+
+    // Nettoyage du nom de fichier pour les headers HTTP
+    const safeProjectName = project.name.replace(/[^a-z0-9]/gi, '_');
+
     res.header('Content-Type', 'text/csv; charset=utf-8');
-    res.attachment(`export_affaire_${project.name.replace(/\s/g, '_')}.csv`);
+    res.attachment(`export_affaire_${safeProjectName}.csv`);
     return res.send('\uFEFF' + csv);
+
   } catch (error) {
     logger.error(`CSV Export Error: ${error.message}`);
     res.status(500).json({ message: "Erreur export CSV" });
   }
 });
 
+
 app.get('/api/projects/:id/full-report', authenticateToken, validateParamId(), async (req, res) => {
   try {
     const userObjectId = safeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
-    const project = await Project.findOne({ _id: req.params.id, userId: userObjectId });
+
+    // 1. On valide et on cast l'ID du projet
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Format ID projet invalide' });
+    }
+    const projectId = new mongoose.Types.ObjectId(req.params.id);
+
+    // 2. Utilisation de l'ID casté pour trouver le projet
+    const project = await Project.findOne({ 
+      _id: projectId, 
+      userId: userObjectId 
+    });
+    
     if (!project) return res.status(404).json({ message: "Projet introuvable" });
-    const tests = await ConcreteTest.find({ projectId: req.params.id, userId: userObjectId }).sort({ samplingDate: 1 });
+
+    // 3. Utilisation de l'ID casté pour trouver les tests (Correction SonarCloud)
+    const tests = await ConcreteTest.find({ 
+      projectId: projectId, // On utilise la variable sécurisée ici
+      userId: userObjectId 
+    }).sort({ samplingDate: 1 });
+
     res.json({ project, tests });
   } catch (error) {
     logger.error(`Report Error: ${error.message}`);
