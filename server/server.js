@@ -14,7 +14,6 @@ import winston from 'winston';
 import os from 'os';
 import fs from 'fs';
 
-
 import User from './models/User.js';
 import Company from './models/Company.js';
 import Project from './models/Project.js';
@@ -28,13 +27,10 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp({ format: 'HH:mm:ss' }),
     winston.format.printf(({ level, message, timestamp }) => {
-      // Format plus lisible pour la console
       return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
     })
   ),
-  transports: [
-    new winston.transports.Console()
-  ]
+  transports: [new winston.transports.Console()]
 });
 
 // --- Hack pour masquer l'avertissement de dépréciation util._extend ---
@@ -50,28 +46,63 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-let server; // Référence pour le Graceful Shutdown
+let server;
 
 // --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS ---
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   logger.error("🚨 CRITICAL SECURITY WARNING : JWT_SECRET n'est pas défini en production.");
-  process.exit(1); // Arrêt forcé en prod si pas de secret
+  process.exit(1);
 }
 
-// --- SÉCURITÉ : Proxy & HTTPS ---
+// ============================================================================
+// HELPERS DE SÉCURITÉ - NoSQL INJECTION PREVENTION
+// ============================================================================
+
+const safeObjectId = (id) => {
+  if (!id || typeof id !== 'string') return null;
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  try {
+    return new mongoose.Types.ObjectId(id);
+  } catch {
+    return null;
+  }
+};
+
+const validateParamId = (paramName = 'id') => (req, res, next) => {
+  const id = req.params[paramName];
+  const objectId = safeObjectId(id);
+  if (!objectId) return res.status(400).json({ message: 'ID invalide' });
+  req.params[paramName] = objectId;
+  next();
+};
+
+const sanitizeCSV = (value) => {
+  if (!value) return '';
+  const str = String(value);
+  if (/^[=+\-@]/.test(str)) return `'${str}`;
+  return str.replace(/;/g, ',').replace(/"/g, '""');
+};
+
+// --- SÉCURITÉ : Proxy & HTTPS (CORRIGÉ) ---
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
     const isLocal = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
     if (!isLocal && req.headers['x-forwarded-proto'] !== 'https') {
-      return res.redirect(`https://${req.headers.host}${req.url}`);
+      const configuredDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\//, '');
+      if (!configuredDomain) {
+        logger.error('❌ FRONTEND_URL not configured');
+        return res.status(500).json({ message: 'Server misconfiguration' });
+      }
+      const safePath = req.url.split('?')[0].replace(/[^\w\s\-\/\.]/gi, '');
+      return res.redirect(301, `https://${configuredDomain}${safePath}`);
     }
   }
   next();
 });
 
-// --- SÉCURITÉ : CORS ---
+// --- SÉCURITÉ : CORS (CORRIGÉ) ---
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
@@ -80,33 +111,21 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // 1. Autoriser les requêtes sans origin (mobile apps, Postman, curl)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // 2. Vérifier si l'origin est dans la whitelist
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    }
-    
-    // 3. COMPORTEMENT DIFFÉRENT selon l'environnement
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
     if (process.env.NODE_ENV === 'production') {
-      // EN PRODUCTION : REJETER les origines non autorisées
       logger.warn(`❌ CORS Blocked: ${origin}`);
       const error = new Error('Not allowed by CORS');
       error.status = 403;
       return callback(error);
-    } else {
-      // EN DÉVELOPPEMENT : Autoriser (avec log)
-      logger.warn(`⚠️ CORS Dev Mode: Allowing ${origin}`);
-      return callback(null, true);
     }
+    logger.warn(`⚠️ CORS Dev Mode: Allowing ${origin}`);
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 204 // Pour les anciens navigateurs
+  optionsSuccessStatus: 204
 }));
 
 // --- SÉCURITÉ : Helmet ---
@@ -126,22 +145,15 @@ app.use(helmet({
   hidePoweredBy: true
 }));
 
-// --- SÉCURITÉ : Body Parsers ---
-app.use(express.json({ limit: '2mb' })); // Limite réduite pour éviter DoS
+app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
-
-// --- SÉCURITÉ : Anti-Injection NoSQL ---
 app.use(mongoSanitize({ replaceWith: '_' }));
 
-// --- SÉCURITÉ : Rate Limiting Differencié ---
-
-// 1. Limiteur Global API
+// --- Rate Limiting ---
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, 
-  max: 200, // Un peu plus large pour les appels API légitimes
+  windowMs: 15 * 60 * 1000, max: 200,
   message: { message: "Trop de requêtes, veuillez patienter." },
-  standardHeaders: true,
-  legacyHeaders: false,
+  standardHeaders: true, legacyHeaders: false,
   handler: (req, res) => {
     logger.warn(`Rate Limit Exceeded: ${req.ip}`);
     res.status(429).json({ message: "Trop de requêtes." });
@@ -149,13 +161,10 @@ const globalLimiter = rateLimit({
 });
 app.use('/api/', globalLimiter);
 
-// 2. Limiteur Auth (Strict)
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, 
-  max: 10, // Très strict pour login/register
+  windowMs: 60 * 60 * 1000, max: 10,
   message: { message: "Trop de tentatives de connexion. Réessayez dans 1 heure." },
-  standardHeaders: true,
-  legacyHeaders: false,
+  standardHeaders: true, legacyHeaders: false,
 });
 
 // --- DB Connect ---
@@ -163,14 +172,10 @@ const connectDB = async () => {
   try {
     const uri = process.env.MONGO_URI;
     if (!uri) {
-        logger.warn("⚠️ MONGO_URI manquant. Mode hors ligne.");
-        return;
+      logger.warn("⚠️ MONGO_URI manquant. Mode hors ligne.");
+      return;
     }
-    
-    // Masked URI for logs
-    const maskedUri = uri.replace(/:([^:@]+)@/, ':****@');
     logger.info(`🔌 Tentative connexion MongoDB...`);
-
     await mongoose.connect(uri, { dbName: 'labobeton' });
     logger.info(`✅ MongoDB Connecté`);
     await seedAdminUser();
@@ -190,11 +195,8 @@ const seedAdminUser = async () => {
         const salt = await bcrypt.genSalt(10);
         const hashed = await bcrypt.hash(initPass, salt);
         await User.create({ 
-          username: initUser, 
-          password: hashed, 
-          role: 'admin', 
-          companyName: 'ADMIN SYSTEM',
-          tokenVersion: 0
+          username: initUser, password: hashed, role: 'admin', 
+          companyName: 'ADMIN SYSTEM', tokenVersion: 0
         });
         logger.info(`👤 Compte Admin initial créé.`);
       }
@@ -202,7 +204,7 @@ const seedAdminUser = async () => {
   } catch (error) { logger.error("Erreur seedAdminUser", error); }
 };
 
-// --- MIDDLEWARES AUTH ---
+// --- MIDDLEWARES AUTH (CORRIGÉ) ---
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -210,15 +212,12 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    // Validation IDOR: on s'assure que l'ID est valide
-    if (!mongoose.Types.ObjectId.isValid(decoded.id)) {
-        return res.status(403).json({ message: "Token invalide." });
-    }
+    const userObjectId = safeObjectId(decoded.id);
+    if (!userObjectId) return res.status(403).json({ message: "Token invalide." });
 
-    const user = await User.findById(decoded.id).select('-password');
+    const user = await User.findById(userObjectId).select('-password');
     if (!user) return res.status(401).json({ message: "Utilisateur introuvable." });
     if (user.isActive === false) return res.status(403).json({ message: "Compte désactivé." });
-    
     if (decoded.tokenVersion !== user.tokenVersion) {
       return res.status(401).json({ message: "Session expirée." });
     }
@@ -240,26 +239,21 @@ const requireAdmin = (req, res, next) => {
 
 const checkValidation = (req, res, next) => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: "Données invalides", errors: errors.array() });
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ message: "Données invalides", errors: errors.array() });
+  }
   next();
 };
 
-const validateMongoId = [
-  param('id').isMongoId().withMessage('ID de format invalide.'),
-  checkValidation
-];
-
 // --- ROUTES ---
 
-// Health Check Robuste
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   const status = dbState === 1 ? 'CONNECTED' : 'ERROR';
-  
   if (status === 'ERROR') {
-      res.status(503).json({ status, timestamp: new Date(), dbState });
+    res.status(503).json({ status, timestamp: new Date(), dbState });
   } else {
-      res.status(200).json({ status, timestamp: new Date(), uptime: process.uptime() });
+    res.status(200).json({ status, timestamp: new Date(), uptime: process.uptime() });
   }
 });
 
@@ -270,13 +264,13 @@ app.post('/api/auth/login', authLimiter, [
 ], checkValidation, async (req, res) => {
   const { username, password } = req.body;
   try {
-    const safeUsername = String(username); // Force type string
+    const safeUsername = String(username);
     const user = await User.findOne({ username: safeUsername });
     
-    // Protection contre Time-Based Enumeration (simple)
     if (!user) {
-        await new Promise(resolve => setTimeout(resolve, 200)); 
-        return res.status(401).json({ message: "Identifiants incorrects" });
+      const delay = Math.floor(Math.random() * 200) + 100;
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return res.status(401).json({ message: "Identifiants incorrects" });
     }
     
     if (user.isActive === false) return res.status(403).json({ message: "Compte désactivé." });
@@ -290,12 +284,14 @@ app.post('/api/auth/login', authLimiter, [
 
     const token = jwt.sign(
       { id: user._id, role: user.role, username: user.username, tokenVersion: user.tokenVersion }, 
-      JWT_SECRET, 
-      { expiresIn: '12h' }
+      JWT_SECRET, { expiresIn: '12h' }
     );
 
     logger.info(`Login success: ${safeUsername}`);
-    res.json({ token, user: { id: user._id, username: user.username, role: user.role, companyName: user.companyName, logo: user.logo } });
+    res.json({ 
+      token, 
+      user: { id: user._id, username: user.username, role: user.role, companyName: user.companyName, logo: user.logo } 
+    });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
     res.status(500).json({ message: "Erreur serveur" });
@@ -305,21 +301,28 @@ app.post('/api/auth/login', authLimiter, [
 // Profile Update
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    // Whitelisting strict des champs
     const { companyName, address, contact, password, siret, apeCode, legalInfo, logo } = req.body;
     
-    const user = await User.findById(req.user.id);
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    
+    const user = await User.findById(userObjectId);
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
 
-    // Assignation explicite avec Type Casting (Nettoyage)
     if (companyName !== undefined) user.companyName = String(companyName).substring(0, 100);
     if (address !== undefined) user.address = String(address).substring(0, 300);
     if (contact !== undefined) user.contact = String(contact).substring(0, 100);
     if (siret !== undefined) user.siret = String(siret).substring(0, 50);
     if (apeCode !== undefined) user.apeCode = String(apeCode).substring(0, 20);
     if (legalInfo !== undefined) user.legalInfo = String(legalInfo).substring(0, 200);
-    // Pour le logo (Base64), on vérifie juste que c'est une string, la limite de taille est gérée par express.json limit
-    if (logo !== undefined) user.logo = String(logo);
+    
+    if (logo !== undefined) {
+      const logoStr = String(logo);
+      if (logoStr.length > 1400000) {
+        return res.status(400).json({ message: "Logo trop volumineux (max 1MB)" });
+      }
+      user.logo = logoStr;
+    }
 
     if (password && String(password).trim() !== "") {
       const pwd = String(password);
@@ -334,18 +337,19 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     delete userObj.password;
     delete userObj.tokenVersion;
     res.json(userObj);
-  } catch (error) { logger.error(error); res.status(400).json({ message: "Erreur mise à jour" }); }
+  } catch (error) { 
+    logger.error(error); 
+    res.status(400).json({ message: "Erreur mise à jour" }); 
+  }
 });
 
-// Admin Users Create
+// Admin Users
 app.post('/api/users', authenticateToken, requireAdmin, [
-    body('username').trim().isLength({ min: 3 }).escape(),
-    body('password').isLength({ min: 8 })
+  body('username').trim().isLength({ min: 3 }).escape(),
+  body('password').isLength({ min: 8 })
 ], checkValidation, async (req, res) => {
   try {
     const { username, password, role, companyName, address, contact, isActive } = req.body;
-    
-    // Whitelisting
     const newUser = new User({
       username: String(username),
       password: await bcrypt.hash(String(password), 10),
@@ -355,11 +359,13 @@ app.post('/api/users', authenticateToken, requireAdmin, [
       address: String(address || ''),
       contact: String(contact || '')
     });
-
     await newUser.save();
     logger.info(`Admin created user: ${username}`);
     res.status(201).json({ message: "Utilisateur créé", user: { username: newUser.username } });
-  } catch (error) { logger.error(error); res.status(500).json({ message: "Erreur création" }); }
+  } catch (error) { 
+    logger.error(error); 
+    res.status(500).json({ message: "Erreur création" }); 
+  }
 });
 
 app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
@@ -372,38 +378,47 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
-app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
-    try {
-        if (req.params.id === req.user.id) return res.status(400).json({ message: "Action interdite sur soi-même." });
-        const user = await User.findById(req.params.id);
-        if (!user) return res.status(404).json({ message: "Non trouvé" });
-        user.isActive = !user.isActive;
-        if (!user.isActive) user.tokenVersion = (user.tokenVersion || 0) + 1;
-        await user.save();
-        res.json({ message: "Accès modifié" });
-    } catch (error) { 
-      logger.error(`Toggle User Access Error: ${error.message}`);
-      res.status(500).json({message: "Erreur serveur"}); 
+app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, validateParamId(), async (req, res) => {
+  try {
+    const paramId = req.params.id.toString();
+    const currentUserId = req.user.id.toString();
+    if (paramId === currentUserId) {
+      return res.status(400).json({ message: "Action interdite sur soi-même." });
     }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "Non trouvé" });
+    user.isActive = !user.isActive;
+    if (!user.isActive) user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+    res.json({ message: "Accès modifié" });
+  } catch (error) { 
+    logger.error(`Toggle User Access Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" }); 
+  }
 });
 
-app.delete('/api/users/:id', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
-    try {
-        if (req.params.id === req.user.id) return res.status(400).json({ message: "Action interdite." });
-        await User.findByIdAndDelete(req.params.id);
-        res.json({ message: "Utilisateur supprimé." });
-    } catch (error) { 
-      logger.error(`Delete User Error: ${error.message}`);
-      res.status(500).json({ message: "Erreur suppression" }); 
+app.delete('/api/users/:id', authenticateToken, requireAdmin, validateParamId(), async (req, res) => {
+  try {
+    const paramId = req.params.id.toString();
+    const currentUserId = req.user.id.toString();
+    if (paramId === currentUserId) {
+      return res.status(400).json({ message: "Action interdite." });
     }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "Utilisateur supprimé." });
+  } catch (error) { 
+    logger.error(`Delete User Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur suppression" }); 
+  }
 });
 
-// --- MODULES METIERS (Whitelisting Strict) ---
+// --- COMPANIES (CORRIGÉ) ---
 
-// Companies
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const companies = await Company.find({ userId: req.user.id }).sort({ name: 1 }).lean();
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    const companies = await Company.find({ userId: userObjectId }).sort({ name: 1 }).lean();
     res.json(companies);
   } catch (error) {
     logger.error(`Get Companies Error: ${error.message}`);
@@ -413,14 +428,15 @@ app.get('/api/companies', authenticateToken, async (req, res) => {
 
 app.post('/api/companies', authenticateToken, async (req, res) => {
   try {
-    // Whitelisting explicite
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const { name, contactName, email, phone } = req.body;
     const newCompany = new Company({ 
-        userId: req.user.id, // IDOR Protection
-        name: String(name),
-        contactName: String(contactName || ''),
-        email: String(email || ''),
-        phone: String(phone || '')
+      userId: userObjectId,
+      name: String(name),
+      contactName: String(contactName || ''),
+      email: String(email || ''),
+      phone: String(phone || '')
     });
     await newCompany.save();
     res.status(201).json(newCompany);
@@ -430,19 +446,20 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/companies/:id', authenticateToken, validateMongoId, async (req, res) => {
+app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const { name, contactName, email, phone } = req.body;
     const updates = {};
     if (name !== undefined) updates.name = String(name);
     if (contactName !== undefined) updates.contactName = String(contactName);
     if (email !== undefined) updates.email = String(email);
     if (phone !== undefined) updates.phone = String(phone);
-
     const updated = await Company.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id }, // IDOR Protection
-        { $set: updates },
-        { new: true }
+      { _id: req.params.id, userId: userObjectId },
+      { $set: updates },
+      { new: true }
     );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
@@ -452,9 +469,11 @@ app.put('/api/companies/:id', authenticateToken, validateMongoId, async (req, re
   }
 });
 
-app.delete('/api/companies/:id', authenticateToken, validateMongoId, async (req, res) => {
+app.delete('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    const deleted = await Company.findOneAndDelete({ _id: req.params.id, userId: userObjectId });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) {
@@ -463,10 +482,13 @@ app.delete('/api/companies/:id', authenticateToken, validateMongoId, async (req,
   }
 });
 
-// Projects
+// --- PROJECTS (CORRIGÉ) ---
+
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
-    const projects = await Project.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    const projects = await Project.find({ userId: userObjectId }).sort({ createdAt: -1 }).lean();
     res.json(projects);
   } catch (error) {
     logger.error(`Get Projects Error: ${error.message}`);
@@ -476,17 +498,19 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
 
 app.post('/api/projects', authenticateToken, async (req, res) => {
   try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
+    let validCompanyId = null;
+    if (companyId) {
+      validCompanyId = safeObjectId(companyId);
+      if (!validCompanyId) return res.status(400).json({ message: 'Company ID invalide' });
+    }
     const newProject = new Project({
-        userId: req.user.id,
-        name: String(name),
-        companyId: companyId ? String(companyId) : null,
-        companyName: String(companyName || ''),
-        contactName: String(contactName || ''),
-        email: String(email || ''),
-        phone: String(phone || ''),
-        moa: String(moa || ''),
-        moe: String(moe || '')
+      userId: userObjectId, name: String(name), companyId: validCompanyId,
+      companyName: String(companyName || ''), contactName: String(contactName || ''),
+      email: String(email || ''), phone: String(phone || ''),
+      moa: String(moa || ''), moe: String(moe || '')
     });
     await newProject.save();
     res.status(201).json(newProject);
@@ -496,23 +520,30 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
   }
 });
 
-app.put('/api/projects/:id', authenticateToken, validateMongoId, async (req, res) => {
+app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
     const updates = {};
     if (name !== undefined) updates.name = String(name);
-    if (companyId !== undefined) updates.companyId = String(companyId);
     if (companyName !== undefined) updates.companyName = String(companyName);
     if (contactName !== undefined) updates.contactName = String(contactName);
     if (email !== undefined) updates.email = String(email);
     if (phone !== undefined) updates.phone = String(phone);
     if (moa !== undefined) updates.moa = String(moa);
     if (moe !== undefined) updates.moe = String(moe);
-
+    if (companyId !== undefined) {
+      const validCompanyId = safeObjectId(companyId);
+      if (companyId && !validCompanyId) {
+        return res.status(400).json({ message: 'Company ID invalide' });
+      }
+      updates.companyId = validCompanyId;
+    }
     const updated = await Project.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { $set: updates },
-        { new: true }
+      { _id: req.params.id, userId: userObjectId },
+      { $set: updates },
+      { new: true }
     );
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
     res.json(updated);
@@ -522,9 +553,11 @@ app.put('/api/projects/:id', authenticateToken, validateMongoId, async (req, res
   }
 });
 
-app.delete('/api/projects/:id', authenticateToken, validateMongoId, async (req, res) => {
+app.delete('/api/projects/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    const deleted = await Project.findOneAndDelete({ _id: req.params.id, userId: userObjectId });
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) {
@@ -533,63 +566,60 @@ app.delete('/api/projects/:id', authenticateToken, validateMongoId, async (req, 
   }
 });
 
-app.get('/api/projects/:id/export/csv', authenticateToken, validateMongoId, async (req, res) => {
-    try {
-        const project = await Project.findOne({ _id: req.params.id, userId: req.user.id });
-        if (!project) return res.status(404).json({ message: "Projet introuvable" });
-
-        const tests = await ConcreteTest.find({ projectId: req.params.id, userId: req.user.id }).sort({ samplingDate: -1 });
-
-        // Simple CSV generation
-        const headers = ["Reference", "Date", "Ouvrage", "Partie", "Classe", "Volume", "Eprouvettes"];
-        let csv = headers.join(';') + '\n';
-
-        tests.forEach(test => {
-            const date = test.samplingDate ? new Date(test.samplingDate).toLocaleDateString('fr-FR') : '';
-            const row = [
-                test.reference || '',
-                date,
-                (test.structureName || '').replace(/;/g, ','),
-                (test.elementName || '').replace(/;/g, ','),
-                test.concreteClass || '',
-                (test.volume || 0).toString().replace('.', ','),
-                (test.specimenCount || 0).toString()
-            ];
-            csv += row.join(';') + '\n';
-        });
-
-        res.header('Content-Type', 'text/csv');
-        res.attachment(`export_affaire_${project.name.replace(/\s/g, '_')}.csv`);
-        return res.send(csv);
-
-    } catch (error) {
-        logger.error(`CSV Export Error: ${error.message}`);
-        res.status(500).json({ message: "Erreur export CSV" });
-    }
+app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), async (req, res) => {
+  try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    const project = await Project.findOne({ _id: req.params.id, userId: userObjectId });
+    if (!project) return res.status(404).json({ message: "Projet introuvable" });
+    const tests = await ConcreteTest.find({ projectId: req.params.id, userId: userObjectId }).sort({ samplingDate: -1 });
+    const headers = ["Reference", "Date", "Ouvrage", "Partie", "Classe", "Volume", "Eprouvettes"];
+    let csv = headers.join(';') + '\n';
+    tests.forEach(test => {
+      const date = test.samplingDate ? new Date(test.samplingDate).toLocaleDateString('fr-FR') : '';
+      const row = [
+        sanitizeCSV(test.reference), sanitizeCSV(date), sanitizeCSV(test.structureName),
+        sanitizeCSV(test.elementName), sanitizeCSV(test.concreteClass),
+        sanitizeCSV((test.volume || 0).toString().replace('.', ',')),
+        sanitizeCSV((test.specimenCount || 0).toString())
+      ];
+      csv += row.join(';') + '\n';
+    });
+    res.header('Content-Type', 'text/csv; charset=utf-8');
+    res.attachment(`export_affaire_${project.name.replace(/\s/g, '_')}.csv`);
+    return res.send('\uFEFF' + csv);
+  } catch (error) {
+    logger.error(`CSV Export Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur export CSV" });
+  }
 });
 
-app.get('/api/projects/:id/full-report', authenticateToken, validateMongoId, async (req, res) => {
-    try {
-        const project = await Project.findOne({ _id: req.params.id, userId: req.user.id });
-        if (!project) return res.status(404).json({ message: "Projet introuvable" });
-
-        const tests = await ConcreteTest.find({ projectId: req.params.id, userId: req.user.id }).sort({ samplingDate: 1 });
-        
-        // Retourne le JSON attendu par le composant GlobalProjectReport
-        res.json({ project, tests });
-    } catch (error) {
-        logger.error(`Report Error: ${error.message}`);
-        res.status(500).json({ message: "Erreur génération rapport" });
-    }
+app.get('/api/projects/:id/full-report', authenticateToken, validateParamId(), async (req, res) => {
+  try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+    const project = await Project.findOne({ _id: req.params.id, userId: userObjectId });
+    if (!project) return res.status(404).json({ message: "Projet introuvable" });
+    const tests = await ConcreteTest.find({ projectId: req.params.id, userId: userObjectId }).sort({ samplingDate: 1 });
+    res.json({ project, tests });
+  } catch (error) {
+    logger.error(`Report Error: ${error.message}`);
+    res.status(500).json({ message: "Erreur génération rapport" });
+  }
 });
 
-// Concrete Tests (Le plus critique pour le Mass Assignment)
+// --- CONCRETE TESTS (CORRIGÉ - NoSQL Injection Fix) ---
+
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
-    const tests = await ConcreteTest.find({ userId: req.user.id })
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
+    const tests = await ConcreteTest.find({ userId: userObjectId })
       .sort({ sequenceNumber: -1 })
       .populate('projectId', 'name')
       .lean();
+    
     res.json(tests);
   } catch (error) {
     logger.error(`Get Concrete Tests Error: ${error.message}`);
@@ -602,28 +632,46 @@ app.post('/api/concrete-tests', authenticateToken, [
   body('specimens').isArray()
 ], checkValidation, async (req, res) => {
   try {
-    // Construction explicite pour éviter l'injection de sequenceNumber, reference, year
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
     const input = req.body;
     
+    // Valider projectId
+    const projectObjectId = safeObjectId(input.projectId);
+    if (!projectObjectId) {
+      return res.status(400).json({ message: 'Project ID invalide' });
+    }
+
+    // Vérifier que le projet appartient à l'utilisateur
+    const projectExists = await Project.exists({ 
+      _id: projectObjectId, 
+      userId: userObjectId 
+    });
+    
+    if (!projectExists) {
+      return res.status(404).json({ message: 'Projet introuvable' });
+    }
+
     // Nettoyage specimens
     const cleanSpecimens = Array.isArray(input.specimens) ? input.specimens.map(s => ({
-        number: Number(s.number),
-        age: Number(s.age),
-        castingDate: s.castingDate,
-        crushingDate: s.crushingDate,
-        specimenType: String(s.specimenType || ''),
-        diameter: Number(s.diameter),
-        height: Number(s.height),
-        surface: Number(s.surface),
-        weight: s.weight ? Number(s.weight) : null,
-        force: s.force ? Number(s.force) : null,
-        stress: s.stress ? Number(s.stress) : null,
-        density: s.density ? Number(s.density) : null
+      number: Number(s.number),
+      age: Number(s.age),
+      castingDate: s.castingDate,
+      crushingDate: s.crushingDate,
+      specimenType: String(s.specimenType || ''),
+      diameter: Number(s.diameter),
+      height: Number(s.height),
+      surface: Number(s.surface),
+      weight: s.weight ? Number(s.weight) : null,
+      force: s.force ? Number(s.force) : null,
+      stress: s.stress ? Number(s.stress) : null,
+      density: s.density ? Number(s.density) : null
     })) : [];
 
     const newTest = new ConcreteTest({
-      userId: req.user.id,
-      projectId: String(input.projectId),
+      userId: userObjectId,
+      projectId: projectObjectId,
       projectName: String(input.projectName || ''),
       companyName: String(input.companyName || ''),
       moe: String(input.moe || ''),
@@ -657,75 +705,76 @@ app.post('/api/concrete-tests', authenticateToken, [
     await newTest.save();
     res.status(201).json(newTest);
   } catch (error) {
-    if (error.code === 11000) return res.status(400).json({ message: "Doublon détecté." });
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Doublon détecté." });
+    }
     logger.error(`Create Test Error: ${error.message}`);
     res.status(500).json({ message: "Erreur création" });
   }
 });
 
-app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (req, res) => {
+app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
     const input = req.body;
     
-    const test = await ConcreteTest.findOne({ _id: req.params.id, userId: req.user.id });
+    const test = await ConcreteTest.findOne({ 
+      _id: req.params.id, 
+      userId: userObjectId 
+    });
+
     if (!test) {
-        return res.status(404).json({ message: "Non trouvé" });
+      return res.status(404).json({ message: "Non trouvé" });
     }
 
-    // Appliquer les mises à jour champ par champ pour la sécurité et la clarté
-    
-    // Champs de type String
+    // Appliquer les mises à jour champ par champ
     ['structureName', 'elementName', 'mixType', 'formulaInfo', 
      'manufacturer', 'manufacturingPlace', 'deliveryMethod', 
      'samplingPlace', 'tightening', 'curing', 'testType', 
      'standard', 'preparation', 'pressMachine', 'concreteClass'].forEach(field => {
-        if (input[field] !== undefined) test[field] = String(input[field]);
+      if (input[field] !== undefined) test[field] = String(input[field]);
     });
 
-    // Champs de type Number
     ['volume', 'slump', 'vibrationTime', 'layers', 'externalTemp', 'concreteTemp'].forEach(field => {
-        if (input[field] != null) {
-            test[field] = Number(input[field]);
-        } else if (input.hasOwnProperty(field)) {
-            test[field] = null;
-        }
+      if (input[field] != null) {
+        test[field] = Number(input[field]);
+      } else if (input.hasOwnProperty(field)) {
+        test[field] = null;
+      }
     });
 
-    // Champs de type Date
     ['receptionDate', 'samplingDate'].forEach(field => {
-        if (input[field]) {
-            test[field] = new Date(input[field]);
-        } else if (input.hasOwnProperty(field)) {
-            test[field] = null;
-        }
+      if (input[field]) {
+        test[field] = new Date(input[field]);
+      } else if (input.hasOwnProperty(field)) {
+        test[field] = null;
+      }
     });
 
-    // Gestion spécifique et sécurisée des specimens (Array)
     if (Array.isArray(input.specimens)) {
-        test.specimens = input.specimens.map(s => {
-            const newSpecimen = {
-                number: Number(s.number),
-                age: Number(s.age),
-                castingDate: s.castingDate ? new Date(s.castingDate) : null,
-                crushingDate: s.crushingDate ? new Date(s.crushingDate) : null,
-                specimenType: String(s.specimenType || ''),
-                diameter: Number(s.diameter),
-                height: Number(s.height),
-                surface: Number(s.surface),
-                weight: s.weight != null ? Number(s.weight) : null,
-                force: s.force != null ? Number(s.force) : null,
-                stress: s.stress != null ? Number(s.stress) : null,
-                density: s.density != null ? Number(s.density) : null
-            };
-            if (s._id) {
-                newSpecimen._id = String(s._id);
-            }
-            return newSpecimen;
-        });
+      test.specimens = input.specimens.map(s => {
+        const newSpecimen = {
+          number: Number(s.number),
+          age: Number(s.age),
+          castingDate: s.castingDate ? new Date(s.castingDate) : null,
+          crushingDate: s.crushingDate ? new Date(s.crushingDate) : null,
+          specimenType: String(s.specimenType || ''),
+          diameter: Number(s.diameter),
+          height: Number(s.height),
+          surface: Number(s.surface),
+          weight: s.weight != null ? Number(s.weight) : null,
+          force: s.force != null ? Number(s.force) : null,
+          stress: s.stress != null ? Number(s.stress) : null,
+          density: s.density != null ? Number(s.density) : null
+        };
+        if (s._id) newSpecimen._id = String(s._id);
+        return newSpecimen;
+      });
     }
 
     const updatedTest = await test.save();
-    
     res.json(updatedTest);
   } catch (error) { 
     logger.error(`Update Concrete Test Error: ${error.message}`);
@@ -733,9 +782,16 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (re
   }
 });
 
-app.delete('/api/concrete-tests/:id', authenticateToken, validateMongoId, async (req, res) => {
+app.delete('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const deleted = await ConcreteTest.findOneAndDelete({ _id: new mongoose.Types.ObjectId(req.params.id), userId: req.user.id });
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
+    const deleted = await ConcreteTest.findOneAndDelete({ 
+      _id: req.params.id, 
+      userId: userObjectId 
+    });
+
     if (!deleted) return res.status(404).json({ message: "Non trouvé" });
     res.json({ message: "Supprimé" });
   } catch (error) {
@@ -744,20 +800,25 @@ app.delete('/api/concrete-tests/:id', authenticateToken, validateMongoId, async 
   }
 });
 
-// Settings (Arrays)
+// --- SETTINGS (CORRIGÉ) ---
+
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
-    let settings = await Settings.findOne({ userId: req.user.id }).lean();
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
+    let settings = await Settings.findOne({ userId: userObjectId }).lean();
+    
     if (!settings) {
-        // Defaults
-        settings = {
-            specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15'],
-            deliveryMethods: ['Toupie', 'Benne', 'Mixer'],
-            manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier'],
-            mixTypes: [], concreteClasses: [], consistencyClasses: [], curingMethods: [],
-            testTypes: [], preparations: [], nfStandards: []
-        };
+      settings = {
+        specimenTypes: ['Cylindrique 16x32', 'Cylindrique 11x22', 'Cubique 15x15'],
+        deliveryMethods: ['Toupie', 'Benne', 'Mixer'],
+        manufacturingPlaces: ['Centrale BPE', 'Centrale Chantier'],
+        mixTypes: [], concreteClasses: [], consistencyClasses: [], curingMethods: [],
+        testTypes: [], preparations: [], nfStandards: []
+      };
     }
+    
     res.json(settings);
   } catch (error) {
     logger.error(`Get Settings Error: ${error.message}`);
@@ -767,23 +828,28 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 
 app.put('/api/settings', authenticateToken, async (req, res) => {
   try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
     const allowedArrays = [
-        'specimenTypes', 'deliveryMethods', 'manufacturingPlaces', 'mixTypes',
-        'concreteClasses', 'consistencyClasses', 'curingMethods', 'testTypes',
-        'preparations', 'nfStandards'
+      'specimenTypes', 'deliveryMethods', 'manufacturingPlaces', 'mixTypes',
+      'concreteClasses', 'consistencyClasses', 'curingMethods', 'testTypes',
+      'preparations', 'nfStandards'
     ];
+    
     const updates = {};
     allowedArrays.forEach(field => {
-        if (Array.isArray(req.body[field])) {
-            updates[field] = req.body[field].map(String); // Force String
-        }
+      if (Array.isArray(req.body[field])) {
+        updates[field] = req.body[field].map(String);
+      }
     });
 
     const settings = await Settings.findOneAndUpdate(
-        { userId: req.user.id },
-        { $set: updates },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
+      { userId: userObjectId },
+      { $set: updates },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+    
     res.json(settings);
   } catch (error) {
     logger.error(`Update Settings Error: ${error.message}`);
@@ -791,14 +857,15 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
   }
 });
 
-// Bugs
+// --- BUG REPORTS ---
+
 app.post('/api/bugs', authenticateToken, async (req, res) => {
   try {
     const { type, description } = req.body;
     await BugReport.create({ 
-        type: String(type), 
-        description: String(description), 
-        user: req.user.username 
+      type: String(type), 
+      description: String(description), 
+      user: req.user.username 
     });
     res.json({ message: "Signalement reçu" });
   } catch (error) {
@@ -817,12 +884,15 @@ app.get('/api/admin/bugs', authenticateToken, requireAdmin, async (req, res) => 
   }
 });
 
-app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
+app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateParamId(), async (req, res) => {
   try {
-    await BugReport.findByIdAndUpdate(req.params.id, { 
+    await BugReport.findByIdAndUpdate(
+      req.params.id, 
+      { 
         status: String(req.body.status), 
         resolvedAt: req.body.status === 'resolved' ? new Date() : null 
-    });
+      }
+    );
     res.json({ success: true });
   } catch (error) {
     logger.error(`Update Bug Report Error: ${error.message}`);
@@ -830,7 +900,7 @@ app.put('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateMongoId,
   }
 });
 
-app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateMongoId, async (req, res) => {
+app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateParamId(), async (req, res) => {
   try {
     await BugReport.findByIdAndDelete(req.params.id);
     res.json({ success: true });
@@ -840,41 +910,27 @@ app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateMongo
   }
 });
 
-
-
-
 // --- DÉTECTION DU DOSSIER FRONTEND ---
-// On regarde si "dist" est à côté du serveur (Docker) 
-// ou dans le dossier Client (Local)
-const distPath = fs.existsSync(path.join(__dirname, 'dist')) 
+const distPath = process.env.FRONTEND_BUILD_PATH || (
+  fs.existsSync(path.join(__dirname, 'dist')) 
     ? path.join(__dirname, 'dist') 
-    : path.join(__dirname, '../Client/dist');
+    : path.join(__dirname, '../Client/dist')
+);
 
-console.log("Dossier frontend détecté :", distPath);
-// --- MIDDLEWARES ---
+logger.info(`📁 Dossier frontend: ${distPath}`);
 
 app.use(express.static(distPath));
 
-
 // --- SERVIR LE FRONTEND (React Router) ---
 app.get('*', (req, res) => {
-    const indexPath = path.join(distPath, 'index.html');
-    
-    // Petite sécurité pour éviter le crash si le build a échoué
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.status(404).send("Erreur : Le build du frontend (index.html) est introuvable.");
-    }
+  const indexPath = path.join(distPath, 'index.html');
+  
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send("Erreur : Le build du frontend (index.html) est introuvable.");
+  }
 });
-
-
-
-// --- SERVING FRONTEND ---
-//app.use(express.static(path.join(__dirname, '../client/dist')));
-//app.get('*', (req, res) => {
- // res.sendFile(path.join(__dirname, '../client/dist', 'index.html'));
-//});
 
 // --- HELPER DE LOGS DE DÉMARRAGE ---
 const printStartupSummary = () => {
@@ -893,8 +949,6 @@ const printStartupSummary = () => {
 
   logger.info(separator);
   logger.info(`🚀 LABOBÉTON SERVER STARTUP - ${process.env.NODE_ENV?.toUpperCase() || 'DEV'}`);
-  logger.info(`   - CORS: ${process.env.NODE_ENV === 'production' ? '🔒 Strict' : '🔓 Dev Mode'}`);
-  logger.info(`   - Allowed Origins: ${allowedOrigins.join(', ') || 'None (requests without origin only)'}`);
   logger.info(separator);
   
   // SYSTEM
@@ -908,7 +962,8 @@ const printStartupSummary = () => {
 
   // SECURITY
   logger.info(`🛡️  Security:`);
-  logger.info(`   - CORS: ${allowedOrigins.length > 0 ? allowedOrigins.length + ' origins allowed' : 'Open (Dev)'}`);
+  logger.info(`   - CORS: ${process.env.NODE_ENV === 'production' ? '🔒 Strict' : '🔓 Dev Mode'}`);
+  logger.info(`   - Allowed Origins: ${allowedOrigins.join(', ') || 'None'}`);
   logger.info(`   - Helmet: Enabled`);
   logger.info(`   - RateLimit: Enabled`);
   logger.info(`   - Mongo Sanitize: Enabled`);
@@ -926,7 +981,6 @@ const printStartupSummary = () => {
 // --- START SERVER & GRACEFUL SHUTDOWN ---
 server = app.listen(PORT, () => {
   connectDB().then(() => {
-    // On affiche le résumé une fois la DB connectée (ou échouée)
     printStartupSummary();
   });
 });
@@ -936,19 +990,49 @@ const gracefulShutdown = () => {
   server.close(() => {
     logger.info('🛑 Serveur HTTP fermé.');
     mongoose.connection.close(false).then(() => {
-        logger.info('zzZ MongoDB déconnecté.');
-        process.exit(0);
+      logger.info('💤 MongoDB déconnecté.');
+      process.exit(0);
     });
   });
   
-  // Force close after 10s
   setTimeout(() => {
-      logger.error('Force shutdown after timeout');
-      process.exit(1);
+    logger.error('⏱️ Force shutdown after timeout');
+    process.exit(1);
   }, 10000);
 };
 
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
+// ============================================================================
+// RÉSUMÉ DES CORRECTIONS DE SÉCURITÉ APPLIQUÉES
+// ============================================================================
+/*
+✅ CORRIGÉ - Open Redirect (HTTPS)
+   - Utilise process.env.FRONTEND_URL au lieu de req.headers.host
+   - Sanitize le path avant redirection
 
+✅ CORRIGÉ - CORS Strict en Production
+   - Bloque les origines non autorisées en production
+   - Mode dev flexible pour le développement
+
+✅ CORRIGÉ - NoSQL Injection Prevention
+   - Fonction safeObjectId() pour valider tous les ObjectId
+   - Middleware validateParamId() pour req.params
+   - Validation de req.user.id dans chaque route
+   - Validation de projectId, companyId, etc.
+
+✅ CORRIGÉ - CSV Injection Prevention
+   - Fonction sanitizeCSV() pour échapper les formules
+   - BOM UTF-8 pour compatibilité Excel
+
+✅ CORRIGÉ - Logo Upload Size Limit
+   - Limite à 1MB (1,400,000 caractères base64)
+
+✅ CORRIGÉ - Timing Attack Prevention
+   - Délai aléatoire 100-300ms sur login échoué
+
+✅ AMÉLIORÉ - Frontend Path Detection
+   - Support de FRONTEND_BUILD_PATH env var
+   - Fallback automatique dist/ ou ../Client/dist
+*/
