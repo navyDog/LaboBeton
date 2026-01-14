@@ -80,15 +80,33 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1 && process.env.NODE_ENV === 'production') {
-      return callback(null, true); 
+    // 1. Autoriser les requêtes sans origin (mobile apps, Postman, curl)
+    if (!origin) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    
+    // 2. Vérifier si l'origin est dans la whitelist
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    // 3. COMPORTEMENT DIFFÉRENT selon l'environnement
+    if (process.env.NODE_ENV === 'production') {
+      // EN PRODUCTION : REJETER les origines non autorisées
+      logger.warn(`❌ CORS Blocked: ${origin}`);
+      const error = new Error('Not allowed by CORS');
+      error.status = 403;
+      return callback(error);
+    } else {
+      // EN DÉVELOPPEMENT : Autoriser (avec log)
+      logger.warn(`⚠️ CORS Dev Mode: Allowing ${origin}`);
+      return callback(null, true);
+    }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204 // Pour les anciens navigateurs
 }));
 
 // --- SÉCURITÉ : Helmet ---
@@ -875,6 +893,8 @@ const printStartupSummary = () => {
 
   logger.info(separator);
   logger.info(`🚀 LABOBÉTON SERVER STARTUP - ${process.env.NODE_ENV?.toUpperCase() || 'DEV'}`);
+  logger.info(`   - CORS: ${process.env.NODE_ENV === 'production' ? '🔒 Strict' : '🔓 Dev Mode'}`);
+  logger.info(`   - Allowed Origins: ${allowedOrigins.join(', ') || 'None (requests without origin only)'}`);
   logger.info(separator);
   
   // SYSTEM
