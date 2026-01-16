@@ -42,7 +42,6 @@ jobs:
         with:
           name: frontend-coverage-report
           path: coverage
-        continue-on-error: true
 
   backend:
     name: Backend - Build
@@ -81,6 +80,12 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+
+      - name: download coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: coverage
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
