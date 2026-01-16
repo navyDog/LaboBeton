@@ -12,15 +12,18 @@ export interface User {
   username: string;
   role: UserRole;
   token?: string;
+  // Champs de sécurité et état
+  isActive?: boolean;
+  tokenVersion?: number;
+  lastLogin?: string;
+  // Champs profil entreprise
   companyName?: string;
   address?: string;
   contact?: string;
-  // Nouveaux champs
   siret?: string;
   apeCode?: string;
   legalInfo?: string; // Pour RCS, Capital Social...
   logo?: string;      // Base64 string
-  isActive?: boolean;
 }
 
 export interface Company {
@@ -62,6 +65,8 @@ export interface Specimen {
 
 export interface ConcreteTest {
   _id: string;
+  __v?: number; // Versionning Optimiste MongoDB
+  userId?: string; // ID du propriétaire
   reference: string; // 2025-B-0001
   projectId: string;
   projectName?: string;
@@ -85,6 +90,10 @@ export interface ConcreteTest {
 
   slump: number;
   samplingPlace: string;
+  
+  // Températures
+  externalTemp?: number;
+  concreteTemp?: number;
   
   // Info Prélèvement
   tightening: string;
