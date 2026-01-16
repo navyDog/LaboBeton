@@ -44,7 +44,7 @@ jobs:
         if: always()
         with:
           name: frontend-coverage-report
-          path: coverage/lcov.info
+          path: client/coverage/lcov.info
 
   backend:
     name: Backend - Build
