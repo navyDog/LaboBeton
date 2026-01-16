@@ -162,54 +162,62 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
         <div className="bg-white p-6 rounded-xl border border-concrete-200 shadow-sm animate-in fade-in slide-in-from-top-4">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'affaire *
-                <input required
-                className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}/>
+              <label className="block text-xs font-medium text-concrete-500 mb-1">
+                Nom de l'affaire *<input
+                  required
+                  className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
+                  value={formData.name}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                />
               </label>
             </div>
             <div className="md:col-span-1">
-               <label className="block text-xs font-medium text-concrete-500 mb-1">Entreprise liée</label>
-               <select
+               <label className="block text-xs font-medium text-concrete-500 mb-1">
+                 Entreprise liée<select
                   className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange bg-white"
                   value={formData.companyId}
                   onChange={handleCompanyChange}
-               >
+                  >
                   <option value="">-- Aucune entreprise --</option>
                   {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-               </select>
+                  </select>
+               </label>
             </div>
-            <div className="md:col-span-2"><label className="block text-xs font-bold text-concrete-400 uppercase mt-2">Contact Affaire</label></div>
+            <div className="md:col-span-2"><h2 className="block text-xs font-bold text-concrete-400 uppercase mt-2">Contact Affaire</h2></div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Nom Contact</label>
-              <input className="w-full p-2 border border-concrete-300 rounded" value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} />
+              <label className="block text-xs font-medium text-concrete-500 mb-1">
+                Nom Contact<input className="w-full p-2 border border-concrete-300 rounded" value={formData.contactName} onChange={e => setFormData({...formData, contactName: e.target.value})} />
+              </label>
             </div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Email</label>
-              <input type="email" className="w-full p-2 border border-concrete-300 rounded" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-            </div>
+              <label className="block text-xs font-medium text-concrete-500 mb-1">
+                Email<input type="email" className="w-full p-2 border border-concrete-300 rounded" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+              </label>
+              </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Téléphone</label>
-              <input 
-                className="w-full p-2 border border-concrete-300 rounded" 
-                value={formData.phone} 
-                onChange={e => {
-                  const val = e.target.value;
-                  if (/^[\d\s+\-.]*$/.test(val)) setFormData({...formData, phone: val});
-                }}
-                placeholder="06 12 34 56 78"
-              />
+              <label className="block text-xs font-medium text-concrete-500 mb-1">
+                Téléphone<input
+                  className="w-full p-2 border border-concrete-300 rounded"
+                  value={formData.phone}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (/^[\d\s+\-.]*$/.test(val)) setFormData({...formData, phone: val});
+                  }}
+                  placeholder="06 12 34 56 78"
+                />
+              </label>
             </div>
-            <div className="md:col-span-2"><label className="block text-xs font-bold text-concrete-400 uppercase mt-2">Intervenants</label></div>
+            <div className="md:col-span-2"><h2 className="block text-xs font-bold text-concrete-400 uppercase mt-2">Intervenants</h2></div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Maître d'Ouvrage (MOA)</label>
-              <input className="w-full p-2 border border-concrete-300 rounded" value={formData.moa} onChange={e => setFormData({...formData, moa: e.target.value})} />
-            </div>
+              <label className="block text-xs font-medium text-concrete-500 mb-1">
+                Maître d'Ouvrage (MOA)<input className="w-full p-2 border border-concrete-300 rounded" value={formData.moa} onChange={e => setFormData({...formData, moa: e.target.value})} />
+              </label>
+              </div>
             <div>
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Maître d'Oeuvre (MOE)</label>
-              <input className="w-full p-2 border border-concrete-300 rounded" value={formData.moe} onChange={e => setFormData({...formData, moe: e.target.value})} />
-            </div>
+              <label className="block text-xs font-medium text-concrete-500 mb-1">
+                Maître d'Oeuvre (MOE)<input className="w-full p-2 border border-concrete-300 rounded" value={formData.moe} onChange={e => setFormData({...formData, moe: e.target.value})} />
+              </label>
+              </div>
             
             <div className="md:col-span-2 flex justify-end gap-2 mt-4">
               <button type="submit" className="px-6 py-2 bg-concrete-800 text-white rounded hover:bg-concrete-700 transition-colors">

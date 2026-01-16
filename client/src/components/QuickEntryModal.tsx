@@ -54,7 +54,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({
 
   // 2. Gérer la saisie locale
   const handleChange = (specimenNumber: number, field: 'weight' | 'force', value: string) => {
-    const numValue = value === '' ? undefined : parseFloat(value);
+    const numValue = value === '' ? undefined : Number.parseFloat(value);
     
     setSpecimensToEdit(prev => prev.map(s => {
       if (s.number !== specimenNumber) return s;

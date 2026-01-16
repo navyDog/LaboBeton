@@ -20,7 +20,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
     logo: currentUser.logo || '', // Base64 string
     password: '' // Optional password change
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -115,14 +115,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
           )}
 
           <div className="grid md:grid-cols-2 gap-8">
-            
+
             {/* Colonne Gauche : Identité & Logo */}
             <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-bold text-concrete-700 mb-2 flex items-center gap-2">
+                  <label htmlFor="logo-upload" className="block text-sm font-bold text-concrete-700 mb-2 flex items-center gap-2">
                     <ImageIcon className="w-4 h-4 text-concrete-400" /> Logo (Entête Rapports)
                   </label>
-                  
+
                   <div className="flex items-start gap-4">
                     <div className="w-32 h-32 bg-concrete-50 border-2 border-dashed border-concrete-300 rounded-lg flex items-center justify-center overflow-hidden relative">
                        {formData.logo ? (
@@ -131,19 +131,20 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
                          <span className="text-concrete-400 text-xs text-center px-2">Aucun logo</span>
                        )}
                     </div>
-                    
+
                     <div className="space-y-2">
-                       <input 
-                         type="file" 
+                       <input
+                         type="file"
+                         id="logo-upload"
                          ref={fileInputRef}
-                         accept="image/png, image/jpeg" 
+                         accept="image/png, image/jpeg"
                          onChange={handleImageChange}
                          className="block w-full text-xs text-concrete-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-concrete-100 file:text-concrete-700 hover:file:bg-concrete-200"
                        />
                        <p className="text-xs text-concrete-400">PNG ou JPG. Max 500KB.</p>
                        {formData.logo && (
-                         <button 
-                           type="button" 
+                         <button
+                           type="button"
                            onClick={removeLogo}
                            className="text-red-500 text-xs flex items-center gap-1 hover:underline"
                          >
@@ -168,10 +169,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-concrete-700 mb-2 flex items-center gap-2">
+                  <label htmlFor="address" className="block text-sm font-bold text-concrete-700 mb-2 flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-concrete-400" /> Adresse Complète
                   </label>
                   <textarea
+                    id="address"
                     rows={3}
                     className="w-full p-3 border border-concrete-300 rounded-lg focus:ring-2 focus:ring-safety-orange focus:border-safety-orange transition-all resize-none"
                     placeholder="Ex: 12 Avenue des Champs&#10;75000 Paris"
@@ -200,39 +202,42 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
                    <h4 className="font-bold text-concrete-800 flex items-center gap-2">
                      <FileText className="w-4 h-4" /> Informations Légales (Pied de page)
                    </h4>
-                   
+
                    <div className="grid grid-cols-2 gap-4">
                      <div>
-                        <label className="block text-xs font-bold text-concrete-500 mb-1">N° SIRET</label>
-                        <input
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">N° SIRET
+                          N° SIRET<input
                           type="text"
                           className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange text-sm"
                           placeholder="123 456 789 00012"
                           value={formData.siret}
                           onChange={e => setFormData({ ...formData, siret: e.target.value })}
-                        />
+                          />
+                        </label>
                      </div>
                      <div>
-                        <label className="block text-xs font-bold text-concrete-500 mb-1">Code APE / NAF</label>
-                        <input
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">
+                          Code APE / NAF<input
                           type="text"
                           className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange text-sm"
                           placeholder="7120B"
                           value={formData.apeCode}
                           onChange={e => setFormData({ ...formData, apeCode: e.target.value })}
-                        />
+                          />
+                        </label>
                      </div>
                    </div>
 
                    <div>
-                      <label className="block text-xs font-bold text-concrete-500 mb-1">Autre mention (RCS, Capital...)</label>
-                      <input
+                      <label className="block text-xs font-bold text-concrete-500 mb-1">
+                        Autre mention (RCS, Capital...)<input
                         type="text"
                         className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange text-sm"
                         placeholder="RCS Paris B 123 456 789 - Capital 10.000€"
                         value={formData.legalInfo}
                         onChange={e => setFormData({ ...formData, legalInfo: e.target.value })}
-                      />
+                        />
+                      </label>
                    </div>
                 </div>
 
@@ -241,15 +246,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
                     <Lock className="w-4 h-4 text-concrete-500" /> Sécurité
                   </h4>
                   <label className="block text-sm text-concrete-600 mb-2">
-                    Nouveau mot de passe (Laisser vide pour ne pas changer)
+                    Nouveau mot de passe (Laisser vide pour ne pas changer)<input
+                      type="password"
+                      className="w-full p-3 border border-concrete-300 rounded-lg focus:ring-2 focus:ring-safety-orange focus:border-safety-orange transition-all bg-concrete-50"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    />
                   </label>
-                  <input
-                    type="password"
-                    className="w-full p-3 border border-concrete-300 rounded-lg focus:ring-2 focus:ring-safety-orange focus:border-safety-orange transition-all bg-concrete-50"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                  />
                 </div>
             </div>
           </div>
