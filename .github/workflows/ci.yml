@@ -36,9 +36,6 @@ jobs:
       - name: Run tests with coverage
         run: npm test -- --coverage
 
-      - name: Vérifier les fichiers générés
-        run: ls -R
-
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
@@ -88,7 +85,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-coverage-report
-          path: coverage
+          path: client/coverage
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
