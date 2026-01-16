@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase, User as UserIcon } from 'lucide-react';
+import { Plus, Trash2, FileText, Factory, ArrowLeft, Search, Boxes, Pencil, X, Scale, Hammer, Save, Briefcase, User as UserIcon } from 'lucide-react';
 import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../../utils/api';
@@ -247,21 +247,19 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
   const handleQuickCreate = async () => {
     if (quickCreateType === 'company') {
-       if(!newCompanyData.name.trim()) return;
-       try {
-         const res = await authenticatedFetch('/api/companies', {
-           method: 'POST',
-           headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-           body: JSON.stringify(newCompanyData)
-         });
-         if(res.ok) {
-           const newCompany = await res.json();
-           setCompanies([...companies, newCompany]);
-           setNewProjectData({...newProjectData, companyId: newCompany._id});
-           setQuickCreateType('project'); // Basculer vers la création de projet avec l'entreprise pré-remplie
-           setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
-         }
-       } catch(e) { alert("Erreur Création Entreprise"); }
+      if(!newCompanyData.name.trim()) return;
+      const res = await authenticatedFetch('/api/companies', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify(newCompanyData)
+      });
+      if(res.ok) {
+        const newCompany = await res.json();
+        setCompanies([...companies, newCompany]);
+        setNewProjectData({...newProjectData, companyId: newCompany._id});
+        setQuickCreateType('project'); // Basculer vers la création de projet avec l'entreprise pré-remplie
+        setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
+      }
     } else {
        if(!newProjectData.name.trim()) return;
        try {

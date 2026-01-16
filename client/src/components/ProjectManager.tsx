@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil, FileSpreadsheet, FileText } from 'lucide-react';
 import { Project, Company, ConcreteTest } from '../types';
 import { authenticatedFetch } from '../../utils/api';
 import { GlobalProjectReport } from './GlobalProjectReport';
@@ -109,33 +109,29 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   };
 
   const handleExportCsv = async (projectId: string) => {
-     try {
-       const res = await authenticatedFetch(`/api/projects/${projectId}/export/csv`, {
-         headers: { 'Authorization': `Bearer ${token}` }
-       });
-       if (res.ok) {
-         const blob = await res.blob();
-         const url = window.URL.createObjectURL(blob);
-         const a = document.createElement('a');
-         a.href = url;
-         a.download = `export_affaire_${projectId}.csv`;
-         document.body.appendChild(a);
-         a.click();
-         a.remove();
-       }
-     } catch (e) { alert("Erreur lors de l'export"); }
+     const res = await authenticatedFetch(`/api/projects/${projectId}/export/csv`, {
+       headers: { 'Authorization': `Bearer ${token}` }
+     });
+     if (res.ok) {
+       const blob = await res.blob();
+       const url = globalThis.URL.createObjectURL(blob);
+       const a = document.createElement('a');
+       a.href = url;
+       a.download = `export_affaire_${projectId}.csv`;
+       document.body.appendChild(a);
+       a.click();
+       a.remove();
+     }
   };
 
   const handleGlobalReport = async (projectId: string) => {
-    try {
-      const res = await authenticatedFetch(`/api/projects/${projectId}/full-report`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if(res.ok) {
-        const data = await res.json();
-        setReportData(data);
-      }
-    } catch(e) { alert("Erreur chargement rapport global"); }
+    const res = await authenticatedFetch(`/api/projects/${projectId}/full-report`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if(res.ok) {
+      const data = await res.json();
+      setReportData(data);
+    }
   };
 
   return (
@@ -166,13 +162,12 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
         <div className="bg-white p-6 rounded-xl border border-concrete-200 shadow-sm animate-in fade-in slide-in-from-top-4">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'affaire *</label>
-              <input 
-                required 
+              <label className="block text-xs font-medium text-concrete-500 mb-1">Nom de l'affaire *
+                <input required
                 className="w-full p-2 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange"
                 value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-              />
+                onChange={e => setFormData({...formData, name: e.target.value})}/>
+              </label>
             </div>
             <div className="md:col-span-1">
                <label className="block text-xs font-medium text-concrete-500 mb-1">Entreprise liée</label>
