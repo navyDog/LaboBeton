@@ -32,7 +32,7 @@ export const GlobalProjectReport: React.FC<GlobalProjectReportProps> = ({ projec
     if (!printContent) return;
     
     const windowUrl = 'about:blank';
-    const uniqueName = new Date().getTime();
+    const uniqueName = Date.now();
     const windowName = 'Print' + uniqueName;
     const printWindow = window.open(windowUrl, windowName, 'left=50000,top=50000,width=0,height=0');
 
@@ -90,7 +90,11 @@ export const GlobalProjectReport: React.FC<GlobalProjectReportProps> = ({ projec
             >
               <Printer className="w-4 h-4" /> Imprimer
             </button>
-            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              aria-label="Fermer"
+            >
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -107,13 +111,13 @@ export const GlobalProjectReport: React.FC<GlobalProjectReportProps> = ({ projec
                  <div className="flex items-center gap-4">
                     {headerLogo && <img src={headerLogo} className="h-16 object-contain max-w-[150px]" alt="logo" />}
                     <div>
-                       <h1 className="text-xl font-black uppercase">{headerName}</h1>
+                       <h1 className="text-xl font-black uppercase" data-testid="header-name">{headerName}</h1>
                        <p className="text-xs">DOSSIER RÉCAPITULATIF DES ESSAIS BÉTON</p>
                     </div>
                  </div>
                  <div className="text-right">
                     <h2 className="text-lg font-bold uppercase text-safety-orange">PV GLOBAL</h2>
-                    <p className="font-bold text-base mt-1">{project.name}</p>
+                    <p className="font-bold text-base mt-1" data-testid="project-name">{project.name}</p>
                     <p className="text-xs">Client : <strong>{project.companyName}</strong></p>
                     <p className="text-[10px] mt-1">Date édition : {reportDate}</p>
                  </div>

@@ -50,7 +50,7 @@ export const MenuCard: React.FC<MenuCardProps> = ({ title, description, icon: Ic
       </div>
 
       <div className="flex items-center gap-3 mb-3">
-        <div className={`p-3 rounded-lg ${style.bg} ${style.text} transition-colors`}>
+        <div className={`p-3 rounded-lg ${style.bg} ${style.text} transition-colors`} data-testid="icon-circle">
            <Icon className="w-6 h-6" />
         </div>
       </div>

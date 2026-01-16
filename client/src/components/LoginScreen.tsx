@@ -89,36 +89,38 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-concrete-500 uppercase tracking-wide ml-1">Identifiant</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-concrete-300 group-focus-within:text-safety-orange transition-colors" />
                 </div>
-                <input
+                <label className="block text-xs font-bold text-concrete-500 uppercase tracking-wide ml-1">
+                  Identifiant<input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 border border-concrete-200 rounded-xl focus:ring-2 focus:ring-safety-orange/50 focus:border-safety-orange transition-all text-concrete-900 placeholder-concrete-300 text-sm font-medium bg-concrete-50/50 focus:bg-white outline-none"
                   placeholder="votre_identifiant"
-                />
+                  />
+                </label>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-concrete-500 uppercase tracking-wide ml-1">Mot de passe</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock className="h-5 w-5 text-concrete-300 group-focus-within:text-safety-orange transition-colors" />
                 </div>
-                <input
+                <label className="block text-xs font-bold text-concrete-500 uppercase tracking-wide ml-1">
+                  Mot de passe<input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-3 py-3 border border-concrete-200 rounded-xl focus:ring-2 focus:ring-safety-orange/50 focus:border-safety-orange transition-all text-concrete-900 placeholder-concrete-300 text-sm font-medium bg-concrete-50/50 focus:bg-white outline-none"
                   placeholder="••••••••"
-                />
+                  />
+                </label>
               </div>
             </div>
 

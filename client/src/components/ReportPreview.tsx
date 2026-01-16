@@ -4,8 +4,8 @@ import { ConcreteTest, Specimen, User } from '../types';
 
 interface ReportPreviewProps {
   test: ConcreteTest;
-  user?: User; 
-  type: 'PV' | 'RP'; 
+  user?: User;
+  type: 'PV' | 'RP';
   onClose: () => void;
 }
 
@@ -20,17 +20,17 @@ const groupSpecimensByAge = (specimens: Specimen[]) => {
 
 const getTargetStrength = (concreteClass: string, isCube: boolean): number | null => {
   if (!concreteClass) return null;
-  const match = concreteClass.match(/C(\d+)\/(\d+)/i);
+  const match = /C(\d+)\/(\d+)/i.exec(concreteClass);
   if (match) {
-    const cylinder = parseInt(match[1]);
-    const cube = parseInt(match[2]);
+    const cylinder = Number.parseInt(match[1]);
+    const cube = Number.parseInt(match[2]);
     return isCube ? cube : cylinder;
   }
   return null;
 };
 
 export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, onClose }) => {
-  
+
   // FILTRAGE LOGIQUE
   // PV : Provisoire -> Souvent les 7 jours ou tout ce qui est dispo
   // RP : Rapport Final -> UNIQUEMENT les éprouvettes avec résultat (écrasées)
@@ -42,14 +42,14 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
     // Pour le PV, on peut afficher les jeunes âges (<=7j) ou tout
     // Ici on garde la logique précédente : <= 7j pour PV "Provisoire" ou tout si on veut tout voir
     // La demande précédente était PV = 7j.
-    return s.age <= 7; 
+    return s.age <= 7;
   }).sort((a, b) => a.number - b.number);
 
   const groupedSpecimens = groupSpecimensByAge(filteredSpecimens);
   const ages = Object.keys(groupedSpecimens).map(Number).sort((a, b) => a - b);
 
-  const title = type === 'PV' 
-    ? "PROCÈS VERBAL D'ESSAIS (PROVISOIRE)" 
+  const title = type === 'PV'
+    ? "PROCÈS VERBAL D'ESSAIS (PROVISOIRE)"
     : "RAPPORT D'ESSAIS SUR BÉTON DURCI";
 
   const reportDate = new Date().toLocaleDateString('fr-FR');
@@ -71,7 +71,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
   const handlePrint = () => {
     const printContent = document.getElementById('report-content');
     const windowUrl = 'about:blank';
-    const uniqueName = new Date().getTime();
+    const uniqueName = Date.now();
     const windowName = 'Print' + uniqueName;
     const printWindow = window.open(windowUrl, windowName, 'left=50000,top=50000,width=0,height=0');
 
@@ -113,7 +113,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-concrete-100 w-full max-w-4xl h-[90vh] flex flex-col rounded-xl overflow-hidden shadow-2xl">
-        
+
         <div className="bg-concrete-900 p-4 flex justify-between items-center text-white shrink-0">
           <div className="flex items-center gap-3">
              <div className="p-2 bg-safety-orange rounded text-white">
@@ -121,11 +121,11 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
              </div>
              <div>
                <h3 className="font-bold text-lg">Aperçu {type === 'PV' ? 'PV 7 Jours' : 'Rapport Final'}</h3>
-               <p className="text-concrete-400 text-xs">{test.reference}</p>
+               <p className="text-concrete-400 text-xs" data-testid="test-reference">{test.reference}</p>
              </div>
           </div>
           <div className="flex gap-3">
-            <button 
+            <button
               onClick={handlePrint}
               className="flex items-center gap-2 px-4 py-2 bg-white text-concrete-900 rounded-lg hover:bg-concrete-200 transition-colors font-bold text-sm"
             >
@@ -138,9 +138,9 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
         </div>
 
         <div className="flex-grow overflow-y-auto p-8 bg-concrete-200 flex justify-center">
-           
-           <div 
-             id="report-content" 
+
+           <div
+             id="report-content"
              className="bg-white w-[210mm] min-h-[297mm] p-[10mm] shadow-xl text-black text-[11px] leading-tight relative flex flex-col"
              style={{ fontFamily: 'Arial, sans-serif' }}
            >
@@ -246,7 +246,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                             const specs = groupedSpecimens[age];
                             const avgStress = specs.reduce((acc, s) => acc + (s.stress || 0), 0) / specs.length;
                             const avgDensity = specs.reduce((acc, s) => acc + (s.density || 0), 0) / specs.length;
-                            
+
                             return (
                               <React.Fragment key={age}>
                                  {specs.map((s, idx) => (
@@ -317,7 +317,7 @@ export const ReportPreview: React.FC<ReportPreviewProps> = ({ test, user, type, 
                           return null;
                        })()
                     )}
-                    
+
                     {/* Conformité 28j */}
                     {type === 'RP' && filteredSpecimens.some(s => s.age === 28 && s.stress) && (
                        (() => {
