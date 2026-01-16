@@ -12,13 +12,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   const [view, setView] = useState<'users' | 'bugs'>('users');
   const [users, setUsers] = useState<any[]>([]);
   const [bugs, setBugs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = async () => {
     try {
-      setLoading(true);
       const [usersRes, bugsRes] = await Promise.all([
         authenticatedFetch('/api/users', { headers: { 'Authorization': `Bearer ${currentUser.token}` } }),
         authenticatedFetch('/api/admin/bugs', { headers: { 'Authorization': `Bearer ${currentUser.token}` } })
@@ -27,8 +25,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
       if (bugsRes.ok) setBugs(await bugsRes.json());
     } catch (error) {
       console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -42,7 +38,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
   };
 
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
-    try {
       const res = await authenticatedFetch(`/api/users/${userId}/toggle-access`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${currentUser.token}` }
@@ -50,24 +45,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
       if (res.ok) {
         setUsers(users.map(u => u._id === userId ? { ...u, isActive: !currentStatus } : u));
       }
-    } catch (e) { alert("Erreur modification accès"); }
   };
 
   const handleDeleteUser = async (userId: string, username: string) => {
     if (!confirm(`Voulez-vous vraiment supprimer l'utilisateur "${username}" ?\nCette action est irréversible.`)) {
       return;
     }
-    try {
       setUsers(users.filter(u => u._id !== userId));
       await authenticatedFetch(`/api/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${currentUser.token}` }
       });
-    } catch (error) { fetchData(); }
   };
 
   const handleResolveBug = async (bugId: string) => {
-    try {
       const res = await authenticatedFetch(`/api/admin/bugs/${bugId}`, {
         method: 'PUT',
         headers: { 
@@ -79,23 +70,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
       if(res.ok) {
         setBugs(bugs.map(b => b._id === bugId ? { ...b, status: 'resolved' } : b));
       }
-    } catch (e) { alert("Erreur"); }
   };
 
   const handleDeleteBug = async (bugId: string) => {
     if(!confirm("Supprimer définitivement ce signalement ?")) return;
-    try {
-        await authenticatedFetch(`/api/admin/bugs/${bugId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${currentUser.token}` }
-        });
-        setBugs(bugs.filter(b => b._id !== bugId));
-    } catch(e) { alert("Erreur lors de la suppression"); }
+    await authenticatedFetch(`/api/admin/bugs/${bugId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${currentUser.token}` }
+    });
+    setBugs(bugs.filter(b => b._id !== bugId));
   };
 
   const filteredUsers = users.filter(user => 
     user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
+    user.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -111,7 +99,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
            <button onClick={() => setView('users')} className={`px-4 py-2 rounded-lg font-bold transition-colors ${view === 'users' ? 'bg-concrete-900 text-white' : 'bg-white text-concrete-600 hover:bg-concrete-100'}`}>Utilisateurs</button>
            <button onClick={() => setView('bugs')} className={`px-4 py-2 rounded-lg font-bold transition-colors flex items-center gap-2 ${view === 'bugs' ? 'bg-concrete-900 text-white' : 'bg-white text-concrete-600 hover:bg-concrete-100'}`}>
              <Bug className="w-4 h-4" /> Support / Bugs
-             {bugs.filter(b => b.status === 'open').length > 0 && (
+             {bugs.some(b => b.status === 'open') && (
                 <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full">{bugs.filter(b => b.status === 'open').length}</span>
              )}
            </button>
