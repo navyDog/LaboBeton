@@ -4,15 +4,15 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
-import { body, param, validationResult } from 'express-validator';
+import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
 import winston from 'winston';
-import os from 'os';
-import fs from 'fs';
+import os from 'node:os';
+import fs from 'node:fs';
 
 import User from './models/User.js';
 import Company from './models/Company.js';
@@ -20,6 +20,10 @@ import Project from './models/Project.js';
 import Settings from './models/Settings.js';
 import ConcreteTest from './models/ConcreteTest.js';
 import BugReport from './models/BugReport.js';
+
+import {getSafeObjectId, validateParamId} from './services/SecureIdService.js';
+import {sanitizeCSV} from "./services/CsvService.js";
+import {handlePasswordUpdate, prepareUserUpdates, validateLogoSize} from "./services/UpdateProfileService.js";
 
 // --- CONFIGURATION LOGGING (Winston) ---
 const logger = winston.createLogger({
@@ -83,34 +87,6 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// ============================================================================
-// HELPERS DE SÉCURITÉ - NoSQL INJECTION PREVENTION
-// ============================================================================
-
-const safeObjectId = (id) => {
-  if (!id || typeof id !== 'string') return null;
-  if (!mongoose.Types.ObjectId.isValid(id)) return null;
-  try {
-    return new mongoose.Types.ObjectId(id);
-  } catch {
-    return null;
-  }
-};
-
-const validateParamId = (paramName = 'id') => (req, res, next) => {
-  const id = req.params[paramName];
-  const objectId = safeObjectId(id);
-  if (!objectId) return res.status(400).json({ message: 'ID invalide' });
-  req.params[paramName] = objectId;
-  next();
-};
-
-const sanitizeCSV = (value) => {
-  if (!value) return '';
-  const str = String(value);
-  if (/^[=+\-@]/.test(str)) return `'${str}`;
-  return str.replace(/;/g, ',').replace(/"/g, '""');
-};
 
 // --- SÉCURITÉ : Proxy & HTTPS (CORRIGÉ - Open Redirect Fix) ---
 app.set('trust proxy', 1);
@@ -123,7 +99,7 @@ app.use((req, res, next) => {
         logger.error('❌ FRONTEND_URL not configured for HTTPS redirect');
         return res.status(500).json({ message: 'Server misconfiguration' });
       }
-      const safePath = req.url.split('?')[0].replace(/[^\w\s\-\/\.]/gi, '');
+      const safePath = req.url.split('?')[0].replaceAll(/[^\w\s\-/.]/gi, '');
       return res.redirect(301, `https://${configuredDomain}${safePath}`);
     }
   }
@@ -140,7 +116,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     
     if (process.env.NODE_ENV === 'production') {
       logger.warn(`❌ CORS Blocked: ${origin}`);
@@ -243,7 +219,7 @@ const authenticateToken = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     
-    const userObjectId = safeObjectId(decoded.id);
+    const userObjectId = getSafeObjectId(decoded.id);
     if (!userObjectId) return res.status(403).json({ message: "Token invalide." });
 
     const user = await User.findById(userObjectId).select('-password');
@@ -257,6 +233,7 @@ const authenticateToken = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
+    logger.error(`Erreur serveur l 248: ${err.message}`);
     return res.status(401).json({ message: "Token invalide ou expiré." });
   }
 };
@@ -338,7 +315,7 @@ app.post('/api/auth/login', authLimiter, [
 // Logout All (Emergency Kill Switch)
 app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     const user = await User.findById(userObjectId);
@@ -358,47 +335,32 @@ app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
 // Profile Update (CORRIGÉ - Logo Size Limit)
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const { companyName, address, contact, password, siret, apeCode, legalInfo, logo } = req.body;
-    
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
-    
+
     const user = await User.findById(userObjectId);
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
 
-    if (companyName !== undefined) user.companyName = String(companyName).substring(0, 100);
-    if (address !== undefined) user.address = String(address).substring(0, 300);
-    if (contact !== undefined) user.contact = String(contact).substring(0, 100);
-    if (siret !== undefined) user.siret = String(siret).substring(0, 50);
-    if (apeCode !== undefined) user.apeCode = String(apeCode).substring(0, 20);
-    if (legalInfo !== undefined) user.legalInfo = String(legalInfo).substring(0, 200);
-    
-    if (logo !== undefined) {
-      const logoStr = String(logo);
-      if (logoStr.length > 1400000) {
-        return res.status(400).json({ message: "Logo trop volumineux (max 1MB)" });
-      }
-      user.logo = logoStr;
-    }
+    const updates = prepareUserUpdates(req.body);
+    const validationError = validateLogoSize(req.body.logo);
+    if (validationError) return res.status(400).json(validationError);
 
-    if (password && String(password).trim() !== "") {
-      const pwd = String(password);
-      if (pwd.length < 8) return res.status(400).json({ message: "Mot de passe trop court." });
-      const salt = await bcrypt.genSalt(10);
-      user.password = await bcrypt.hash(pwd, salt);
-      user.tokenVersion = (user.tokenVersion || 0) + 1;
-    }
+    const passwordUpdate = await handlePasswordUpdate(req.body.password, user);
+    if (passwordUpdate.error) return res.status(400).json(passwordUpdate.error);
 
+    Object.assign(user, updates, passwordUpdate.fields);
     await user.save();
+
     const userObj = user.toObject();
     delete userObj.password;
     delete userObj.tokenVersion;
     res.json(userObj);
-  } catch (error) { 
-    logger.error(`Profile update error: ${error.message}`); 
-    res.status(400).json({ message: "Erreur mise à jour" }); 
+  } catch (error) {
+    logger.error(`Profile update error: ${error.message}`);
+    res.status(400).json({ message: "Erreur mise à jour" });
   }
 });
+
 
 // Admin Users
 app.post('/api/users', authenticateToken, requireAdmin, [
@@ -429,7 +391,8 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const users = await User.find({}, '-password -tokenVersion').sort({ createdAt: -1 });
     res.json(users);
-  } catch (error) { 
+  } catch (error) {
+    logger.error(`Erreur serveur 422: ${error.message}`);
     res.status(500).json({ message: "Erreur récupération" }); 
   }
 });
@@ -448,7 +411,8 @@ app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, validat
     await user.save();
     logger.info(`Access toggled for user ${user.username} by admin ${req.user.username}`);
     res.json({ message: "Accès modifié" });
-  } catch (error) { 
+  } catch (error) {
+    logger.error(`Erreur serveur 442: ${error.message}`);
     res.status(500).json({ message: "Erreur serveur" }); 
   }
 });
@@ -463,7 +427,8 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, validateParamId(),
     await User.findByIdAndDelete(req.params.id);
     logger.info(`User deleted by admin ${req.user.username}`);
     res.json({ message: "Utilisateur supprimé." });
-  } catch (error) { 
+  } catch (error) {
+    logger.error(`Erreur serveur 458: ${error.message}`);
     res.status(500).json({ message: "Erreur suppression" }); 
   }
 });
@@ -472,7 +437,7 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, validateParamId(),
 
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const companies = await Company.find({ userId: userObjectId }).sort({ name: 1 }).lean();
     res.json(companies);
@@ -484,7 +449,7 @@ app.get('/api/companies', authenticateToken, async (req, res) => {
 
 app.post('/api/companies', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const { name, contactName, email, phone } = req.body;
     const newCompany = new Company({ 
@@ -496,7 +461,8 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
     });
     await newCompany.save();
     res.status(201).json(newCompany);
-  } catch (error) { 
+  } catch (error) {
+    logger.error(`Erreur serveur 492: ${error.message}`);
     res.status(400).json({ message: "Erreur création" }); 
   }
 });
@@ -505,9 +471,7 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
 app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     // 2. Validation et Casting de l'ID de l'entreprise (Correction SonarCloud)
@@ -543,9 +507,7 @@ app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, 
 app.delete('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     // 2. Validation et Casting de l'ID de l'entreprise (Protection NoSQL)
@@ -572,7 +534,7 @@ app.delete('/api/companies/:id', authenticateToken, validateParamId(), async (re
 
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const projects = await Project.find({ userId: userObjectId }).sort({ createdAt: -1 }).lean();
     res.json(projects);
@@ -584,12 +546,12 @@ app.get('/api/projects', authenticateToken, async (req, res) => {
 
 app.post('/api/projects', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
     const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
     let validCompanyId = null;
     if (companyId) {
-      validCompanyId = safeObjectId(companyId);
+      validCompanyId = getSafeObjectId(companyId);
       if (!validCompanyId) return res.status(400).json({ message: 'Company ID invalide' });
     }
     const newProject = new Project({
@@ -610,46 +572,22 @@ app.post('/api/projects', authenticateToken, async (req, res) => {
 
 app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    // 1. Sécurisation de l'ID utilisateur
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
+    // Validation des IDs
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
-    // 2. Validation et Casting de l'ID du projet (Correction SonarCloud)
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'ID projet invalide' });
-    }
-    const projectId = new mongoose.Types.ObjectId(req.params.id);
+    const projectId = getSafeObjectId(req.params.id);
+    if (!projectId) return res.status(400).json({ message: 'ID projet invalide' });
 
-    const { name, companyId, companyName, contactName, email, phone, moa, moe } = req.body;
-    const updates = {};
-    
-    // Ton mapping de champs (déjà bien sécurisé avec String())
-    if (name !== undefined) updates.name = String(name);
-    if (companyName !== undefined) updates.companyName = String(companyName);
-    if (contactName !== undefined) updates.contactName = String(contactName);
-    if (email !== undefined) updates.email = String(email);
-    if (phone !== undefined) updates.phone = String(phone);
-    if (moa !== undefined) updates.moa = String(moa);
-    if (moe !== undefined) updates.moe = String(moe);
+    // Préparation des mises à jour
+    const updates = prepareUpdates(req.body);
+    const validationError = validateCompanyId(req.body.companyId);
+    if (validationError) return res.status(400).json(validationError);
 
-    if (companyId !== undefined) {
-      const validCompanyId = safeObjectId(companyId);
-      if (companyId && !validCompanyId) {
-        return res.status(400).json({ message: 'Company ID invalide' });
-      }
-      updates.companyId = validCompanyId;
-    }
-
-    // 3. Exécution de la requête avec l'ID sécurisé
-    const updated = await Project.findOneAndUpdate(
-      { _id: projectId, userId: userObjectId }, // On utilise projectId (casté)
-      { $set: updates },
-      { new: true }
-    );
-
+    // Mise à jour du projet
+    const updated = await updateProject(projectId, userObjectId, updates);
     if (!updated) return res.status(404).json({ message: "Non trouvé" });
+
     res.json(updated);
   } catch (error) {
     logger.error(`Update Project Error: ${error.message}`);
@@ -657,12 +595,40 @@ app.put('/api/projects/:id', authenticateToken, validateParamId(), async (req, r
   }
 });
 
+function prepareUpdates(body) {
+  const fields = ['name', 'companyName', 'contactName', 'email', 'phone', 'moa', 'moe'];
+  const updates = {};
+
+  fields.forEach(field => {
+    if (body[field] !== undefined) updates[field] = String(body[field]);
+  });
+
+  return updates;
+}
+
+function validateCompanyId(companyId) {
+  if (companyId === undefined) return null;
+
+  const validCompanyId = getSafeObjectId(companyId);
+  if (!validCompanyId) {
+    return { message: 'Company ID invalide' };
+  }
+
+  return null;
+}
+
+async function updateProject(projectId, userObjectId, updates) {
+  return await Project.findOneAndUpdate(
+      { _id: projectId, userId: userObjectId },
+      { $set: updates },
+      { new: true }
+  );
+}
+
 app.delete('/api/projects/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. On sécurise l'ID de l'utilisateur
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     // 2. On valide et on cast l'ID du projet (Protection NoSQL Injection)
@@ -689,9 +655,7 @@ app.delete('/api/projects/:id', authenticateToken, validateParamId(), async (req
 app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     // 2. Validation et Casting de l'ID du projet (Protection NoSQL Injection)
@@ -725,7 +689,7 @@ app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), as
     });
 
     // Nettoyage du nom de fichier pour les headers HTTP
-    const safeProjectName = project.name.replace(/[^a-z0-9]/gi, '_');
+    const safeProjectName = project.name.replaceAll(/[^a-z0-9]/gi, '_');
 
     res.header('Content-Type', 'text/csv; charset=utf-8');
     res.attachment(`export_affaire_${safeProjectName}.csv`);
@@ -741,7 +705,7 @@ app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), as
 // Full Report
 app.get('/api/projects/:id/full-report', authenticateToken, validateParamId(), async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     // 1. On valide et on cast l'ID du projet
@@ -775,7 +739,7 @@ app.get('/api/projects/:id/full-report', authenticateToken, validateParamId(), a
 
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     const tests = await ConcreteTest.find({ userId: userObjectId })
@@ -795,13 +759,13 @@ app.post('/api/concrete-tests', authenticateToken, [
   body('specimens').isArray()
 ], checkValidation, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     const input = req.body;
     
     // Valider projectId
-    const projectObjectId = safeObjectId(input.projectId);
+    const projectObjectId = getSafeObjectId(input.projectId);
     if (!projectObjectId) {
       return res.status(400).json({ message: 'Project ID invalide' });
     }
@@ -879,10 +843,7 @@ app.post('/api/concrete-tests', authenticateToken, [
 app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation des IDs (Casting explicite)
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
-    
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     // Vérification et conversion de l'ID du test
@@ -956,10 +917,10 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
           diameter: Number(s.diameter),
           height: Number(s.height),
           surface: Number(s.surface),
-          weight: s.weight != null ? Number(s.weight) : null,
-          force: s.force != null ? Number(s.force) : null,
-          stress: s.stress != null ? Number(s.stress) : null,
-          density: s.density != null ? Number(s.density) : null
+          weight: s.weight == null ? null : Number(s.weight),
+          force: s.force == null ? null : Number(s.force),
+          stress: s.stress == null ? null : Number(s.stress),
+          density: s.density == null ? null : Number(s.density)
         };
         if (s._id) newSpecimen._id = String(s._id);
         return newSpecimen;
@@ -978,9 +939,7 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
 app.delete('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
-    const userObjectId = mongoose.Types.ObjectId.isValid(req.user.id) 
-                         ? new mongoose.Types.ObjectId(req.user.id) 
-                         : null;
+    const userObjectId = getSafeObjectId(req.user.id);
 
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
@@ -1012,7 +971,7 @@ app.delete('/api/concrete-tests/:id', authenticateToken, validateParamId(), asyn
 
 app.get('/api/settings', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     let settings = await Settings.findOne({ userId: userObjectId }).lean();
@@ -1036,7 +995,7 @@ app.get('/api/settings', authenticateToken, async (req, res) => {
 
 app.put('/api/settings', authenticateToken, async (req, res) => {
   try {
-    const userObjectId = safeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
 
     const allowedArrays = [
@@ -1212,40 +1171,3 @@ const gracefulShutdown = () => {
 
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
-
-// ============================================================================
-// 🎉 VERSION FUSION COMPLÈTE - RÉSUMÉ DES FONCTIONNALITÉS
-// ============================================================================
-/*
-✅ SÉCURITÉ (de mon fichier original)
-   - NoSQL Injection Prevention (safeObjectId + validateParamId)
-   - Open Redirect Fix (HTTPS redirect sécurisé)
-   - CORS Strict en Production
-   - CSV Injection Prevention (sanitizeCSV)
-   - Logo Size Limit (1MB max)
-   - Timing Attack Protection (délai aléatoire)
-
-✅ FONCTIONNALITÉS AVANCÉES (de votre fichier)
-   - Logging HTTP coloré par status code
-   - Route Auth Check (heartbeat)
-   - Logout All (emergency kill switch)
-   - Contrôle de Concurrence Optimiste (__v)
-   - Sessions Simultanées (multi-device)
-   - Logging Winston amélioré
-
-✅ ROUTES COMPLÈTES
-   - Auth: login, logout-all, check, profile
-   - Users: CRUD + toggle access (admin)
-   - Companies: CRUD
-   - Projects: CRUD + export CSV + full report
-   - Concrete Tests: CRUD avec concurrence optimiste
-   - Settings: Get/Update
-   - Bugs: CRUD (admin)
-
-✅ INFRASTRUCTURE
-   - Graceful Shutdown (10s timeout)
-   - Health Check robuste
-   - Rate Limiting différencié
-   - Frontend serving flexible (dist auto-detection)
-   - Logs de démarrage détaillés
-*/
