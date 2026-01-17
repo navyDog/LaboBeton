@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { CompanyManager } from '../CompanyManager';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
-jest.mock('../../../utils/api');
+jest.mock('../../utils/api');
 
 describe('CompanyManager', () => {
   const token = 'test-token';

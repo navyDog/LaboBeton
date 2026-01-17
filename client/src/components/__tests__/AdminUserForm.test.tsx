@@ -2,11 +2,11 @@ import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AdminUserForm } from '../AdminUserForm';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 import { User } from "../../types";
 
 // Mock the authenticatedFetch function
-jest.mock('../../../utils/api', () => ({
+jest.mock('../../utils/api', () => ({
   authenticatedFetch: jest.fn(),
 }));
 
@@ -60,7 +60,7 @@ describe('AdminUserForm', () => {
 
     fireEvent.change(screen.getByLabelText('Nom d\'utilisateur *'), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText('Mot de passe *'), { target: { value: 'password123' } });
-    fireEvent.submit(screen.getByRole('form'));
+    fireEvent.submit(screen.getByTestId('admin-user-form'));
 
     await waitFor(() => {
       expect(screen.getByText('Utilisateur créé avec succès !')).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe('AdminUserForm', () => {
 
     fireEvent.change(screen.getByLabelText('Nom d\'utilisateur *'), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText('Mot de passe *'), { target: { value: 'password123' } });
-    fireEvent.submit(screen.getByRole('form'));
+    fireEvent.submit(screen.getByTestId('admin-user-form'));
 
     await waitFor(() => {
       expect(screen.getByText('Error creating user')).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe('AdminUserForm', () => {
 
     fireEvent.change(screen.getByLabelText('Nom d\'utilisateur *'), { target: { value: 'testuser' } });
     fireEvent.change(screen.getByLabelText('Mot de passe *'), { target: { value: 'password123' } });
-    fireEvent.submit(screen.getByRole('form'));
+    fireEvent.submit(screen.getByTestId('admin-user-form'));
 
     expect(screen.getByRole('button', { name: /créer l'utilisateur/i })).toBeDisabled();
     expect(screen.getByTestId('loader')).toBeInTheDocument();

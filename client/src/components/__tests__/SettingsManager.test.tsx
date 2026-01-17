@@ -1,11 +1,11 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { SettingsManager } from '../SettingsManager';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 import { Settings } from '../../types';
 
 // Mock the authenticatedFetch function
-jest.mock('../../../utils/api', () => ({
+jest.mock('../../utils/api', () => ({
   authenticatedFetch: jest.fn(),
 }));
 

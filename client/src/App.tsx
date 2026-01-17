@@ -13,7 +13,7 @@ import { UserProfile } from './components/UserProfile';
 import { LegalPage } from './components/LegalPage';
 import { BugReporter } from './components/BugReporter';
 import { Building2, FlaskConical, LogOut, ShieldCheck, Building, Settings, Calendar, Briefcase, User as UserIcon, Menu, X, Rocket, AlertOctagon, Lock } from 'lucide-react';
-import { authenticatedFetch } from '../utils/api';
+import { authenticatedFetch } from './utils/api';
 
 const App: React.FC = () => {
   const [dbStatus, setDbStatus] = useState<ConnectionStatus>(ConnectionStatus.CHECKING);
@@ -53,12 +53,12 @@ const App: React.FC = () => {
       setKickedOut(true);
     };
 
-    window.addEventListener('auth:unauthorized', handleUnauthorized);
-    window.addEventListener('auth:session_replaced', handleSessionReplaced);
+    globalThis.addEventListener('auth:unauthorized', handleUnauthorized);
+    globalThis.addEventListener('auth:session_replaced', handleSessionReplaced);
     
     return () => {
-      window.removeEventListener('auth:unauthorized', handleUnauthorized);
-      window.removeEventListener('auth:session_replaced', handleSessionReplaced);
+      globalThis.removeEventListener('auth:unauthorized', handleUnauthorized);
+      globalThis.removeEventListener('auth:session_replaced', handleSessionReplaced);
     };
   }, [kickedOut]);
 
@@ -83,12 +83,10 @@ const App: React.FC = () => {
     const checkAuthStatus = async () => {
        // Si déjà kické, on arrête de vérifier pour éviter les appels inutiles
        if (!currentUser?.token || kickedOut) return;
-       try {
-         // Cet appel déclenchera 'auth:session_replaced' via l'intercepteur si le token est périmé par une nouvelle connexion
-         await authenticatedFetch('/api/auth/check', { 
-            headers: { 'Authorization': `Bearer ${currentUser.token}` } 
-         });
-       } catch (e) { /* Géré par l'event listener */ }
+       // Cet appel déclenchera 'auth:session_replaced' via l'intercepteur si le token est périmé par une nouvelle connexion
+       await authenticatedFetch('/api/auth/check', {
+          headers: { 'Authorization': `Bearer ${currentUser.token}` }
+       });
     };
 
     checkConnection();
