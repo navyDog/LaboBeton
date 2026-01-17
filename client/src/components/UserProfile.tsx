@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Building, MapPin, Phone, Save, Loader2, Lock, FileText, Image as ImageIcon, Trash2, ShieldAlert } from 'lucide-react';
 import { User as UserType } from '../types';
-import { authenticatedFetch } from '../../utils/api';
+import { authenticatedFetch } from '../utils/api';
 
 interface UserProfileProps {
   token: string;

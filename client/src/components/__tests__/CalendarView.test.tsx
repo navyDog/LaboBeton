@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CalendarView } from '../CalendarView';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
-jest.mock('../../../utils/api');
+jest.mock('../../utils/api');
 
 describe('CalendarView', () => {
   const token = 'test-token';

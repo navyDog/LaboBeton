@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import { AdminDashboard } from '../AdminDashboard';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 import { User } from '../../types';
 
-jest.mock('../../../utils/api');
+jest.mock('../../utils/api');
 
 const mockCurrentUser: User = {
   id: 'user1',

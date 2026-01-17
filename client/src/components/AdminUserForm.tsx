@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { UserPlus, Save, X, Loader2 } from 'lucide-react';
 import { User as UserType } from '../types';
-import { authenticatedFetch } from '../../utils/api';
+import { authenticatedFetch } from '../utils/api';
 
 interface AdminUserFormProps {
   currentUser: UserType;
@@ -69,7 +69,7 @@ export const AdminUserForm: React.FC<AdminUserFormProps> = ({ currentUser, onClo
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} role="form" className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         {message && (
           <div className={`md:col-span-2 p-3 rounded-lg text-sm font-medium ${
             message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'

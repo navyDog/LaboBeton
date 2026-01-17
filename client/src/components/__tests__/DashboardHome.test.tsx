@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { DashboardHome } from '../DashboardHome';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
 // Helper function to classify task types based on date difference
 const getTaskTypeFromDateDiff = (diffTime: number): 'overdue' | 'today' | 'upcoming' | 'week' | null => {
@@ -17,7 +17,7 @@ const getTaskTypeFromDateDiff = (diffTime: number): 'overdue' | 'today' | 'upcom
 };
 
 // Mock the authenticatedFetch function
-jest.mock('../../../utils/api', () => ({
+jest.mock('../../utils/api', () => ({
   authenticatedFetch: jest.fn(),
 }));
 

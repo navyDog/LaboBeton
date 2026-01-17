@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Hammer, Factory, X, FileText, Download, ArrowRight } from 'lucide-react';
 import { ConcreteTest } from '../types';
-import { authenticatedFetch } from '../../utils/api';
+import { authenticatedFetch } from '../utils/api';
 
 interface CalendarViewProps {
   token: string;
@@ -188,7 +188,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
   const handleExportICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//LaboBeton//NONSGML v1.0//EN\n";
     events.forEach(ev => {
-      const start = ev.dateStr.replace(/-/g, '');
+      const start = ev.dateStr.replaceAll('-', '');
       icsContent += "BEGIN:VEVENT\n";
       icsContent += `DTSTART;VALUE=DATE:${start}\n`;
       icsContent += `SUMMARY:${ev.title}\n`;
@@ -198,13 +198,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
     icsContent += "END:VCALENDAR";
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = window.URL.createObjectURL(blob);
+    const url = globalThis.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'planning_labo.ics');
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
   };
 
   const handleNavigateToTest = (testId: string) => {

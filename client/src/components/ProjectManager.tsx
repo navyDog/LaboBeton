@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Plus, Trash2, Phone, Mail, User as UserIcon, HardHat, Crown, Building, Pencil, FileSpreadsheet, FileText } from 'lucide-react';
 import { Project, Company, ConcreteTest } from '../types';
-import { authenticatedFetch } from '../../utils/api';
+import { authenticatedFetch } from '../utils/api';
 import { GlobalProjectReport } from './GlobalProjectReport';
 
 interface ProjectManagerProps {
@@ -14,7 +14,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  
+
   // State for Global Report
   const [reportData, setReportData] = useState<{project: Project, tests: ConcreteTest[]} | null>(null);
   const [userProfile, setUserProfile] = useState<any>(null); // To pass logo etc to report
@@ -87,7 +87,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(payload)
       });
-      
+
       if (res.ok) {
         setFormData({ name: '', companyId: '', contactName: '', email: '', phone: '', moa: '', moe: '' });
         setEditingId(null);
@@ -134,14 +134,95 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
     }
   };
 
+  function renderContent() {
+    if (loading) {
+      return renderLoading();
+    } else if (projects.length === 0) {
+      return renderNoProjects();
+    } else {
+      return renderProjects();
+    }
+  }
+
+  const renderLoading = () => (
+    <div className="text-center py-12 text-concrete-400">Chargement...</div>
+  );
+
+  const renderNoProjects = () => (
+    <div className="text-center py-12 bg-white rounded-xl border border-concrete-200 border-dashed">
+      <Briefcase className="w-12 h-12 text-concrete-300 mx-auto mb-3" />
+      <h3 className="text-concrete-500 font-medium">Aucune affaire en cours</h3>
+    </div>
+  );
+
+  const renderProjects = () => (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {projects.map(project => (
+        <div key={project._id} className="bg-white rounded-xl border border-concrete-200 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-3">
+               <div className="w-10 h-10 rounded-lg bg-concrete-100 flex items-center justify-center text-concrete-600">
+                  <Briefcase className="w-5 h-5" />
+               </div>
+               <div>
+                 <h4 className="font-bold text-concrete-900 leading-tight">{project.name}</h4>
+                 {project.companyName && (
+                   <div className="flex items-center gap-1 mt-1">
+                      <Building className="w-3 h-3 text-concrete-400" />
+                      <span className="text-xs text-concrete-500 font-medium">{project.companyName}</span>
+                   </div>
+                 )}
+               </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => handleGlobalReport(project._id)} className="text-concrete-300 hover:text-blue-600 p-1" title="PV Global Affaire">
+                <FileText className="w-4 h-4" />
+              </button>
+              <button onClick={() => handleExportCsv(project._id)} className="text-concrete-300 hover:text-green-600 p-1" title="Exporter CSV">
+                <FileSpreadsheet className="w-4 h-4" />
+              </button>
+              <button onClick={() => handleEdit(project)} className="text-concrete-300 hover:text-safety-orange p-1" title="Modifier">
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button onClick={() => handleDelete(project._id)} className="text-concrete-300 hover:text-red-500 p-1" title="Supprimer">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 mb-4 flex-grow">
+             {(project.contactName || project.email || project.phone) && (
+               <div className="bg-concrete-50 p-3 rounded-lg space-y-1">
+                  <p className="text-xs font-bold text-concrete-400 uppercase mb-1">Contact Affaire</p>
+                  {project.contactName && <div className="flex items-center gap-2 text-sm text-concrete-700"><UserIcon className="w-3 h-3" /> {project.contactName}</div>}
+                  {project.email && <div className="flex items-center gap-2 text-sm text-concrete-600"><Mail className="w-3 h-3" /> {project.email}</div>}
+                  {project.phone && <div className="flex items-center gap-2 text-sm text-concrete-600"><Phone className="w-3 h-3" /> {project.phone}</div>}
+               </div>
+             )}
+             <div className="grid grid-cols-2 gap-2">
+                <div className="bg-concrete-50 p-2 rounded border border-concrete-100">
+                   <div className="flex items-center gap-1.5 mb-1"><Crown className="w-3 h-3 text-safety-orange" /><span className="text-[10px] font-bold text-concrete-500 uppercase">MOA</span></div>
+                   <p className="text-xs text-concrete-800 font-medium truncate" title={project.moa}>{project.moa || '-'}</p>
+                </div>
+                <div className="bg-concrete-50 p-2 rounded border border-concrete-100">
+                   <div className="flex items-center gap-1.5 mb-1"><HardHat className="w-3 h-3 text-concrete-600" /><span className="text-[10px] font-bold text-concrete-500 uppercase">MOE</span></div>
+                   <p className="text-xs text-concrete-800 font-medium truncate" title={project.moe}>{project.moe || '-'}</p>
+                </div>
+             </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {reportData && (
-        <GlobalProjectReport 
-          project={reportData.project} 
-          tests={reportData.tests} 
+        <GlobalProjectReport
+          project={reportData.project}
+          tests={reportData.tests}
           user={userProfile}
-          onClose={() => setReportData(null)} 
+          onClose={() => setReportData(null)}
         />
       )}
 
@@ -150,7 +231,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
           <h2 className="text-2xl font-bold text-concrete-900">Mes Affaires</h2>
           <p className="text-concrete-500">Gérez vos chantiers et projets.</p>
         </div>
-        <button 
+        <button
           onClick={() => { setShowForm(!showForm); if(!showForm) setEditingId(null); }}
           className="flex items-center gap-2 px-4 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 transition-colors shadow-sm font-medium"
         >
@@ -218,7 +299,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
                 Maître d'Oeuvre (MOE)<input className="w-full p-2 border border-concrete-300 rounded" value={formData.moe} onChange={e => setFormData({...formData, moe: e.target.value})} />
               </label>
               </div>
-            
+
             <div className="md:col-span-2 flex justify-end gap-2 mt-4">
               <button type="submit" className="px-6 py-2 bg-concrete-800 text-white rounded hover:bg-concrete-700 transition-colors">
                 {editingId ? 'Mettre à jour' : 'Enregistrer'}
@@ -228,72 +309,7 @@ export const ProjectManager: React.FC<ProjectManagerProps> = ({ token }) => {
         </div>
       )}
 
-      {loading ? (
-        <div className="text-center py-12 text-concrete-400">Chargement...</div>
-      ) : projects.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-concrete-200 border-dashed">
-          <Briefcase className="w-12 h-12 text-concrete-300 mx-auto mb-3" />
-          <h3 className="text-concrete-500 font-medium">Aucune affaire en cours</h3>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map(project => (
-            <div key={project._id} className="bg-white rounded-xl border border-concrete-200 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-lg bg-concrete-100 flex items-center justify-center text-concrete-600">
-                      <Briefcase className="w-5 h-5" />
-                   </div>
-                   <div>
-                     <h4 className="font-bold text-concrete-900 leading-tight">{project.name}</h4>
-                     {project.companyName && (
-                       <div className="flex items-center gap-1 mt-1">
-                          <Building className="w-3 h-3 text-concrete-400" />
-                          <span className="text-xs text-concrete-500 font-medium">{project.companyName}</span>
-                       </div>
-                     )}
-                   </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => handleGlobalReport(project._id)} className="text-concrete-300 hover:text-blue-600 p-1" title="PV Global Affaire">
-                    <FileText className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleExportCsv(project._id)} className="text-concrete-300 hover:text-green-600 p-1" title="Exporter CSV">
-                    <FileSpreadsheet className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleEdit(project)} className="text-concrete-300 hover:text-safety-orange p-1" title="Modifier">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDelete(project._id)} className="text-concrete-300 hover:text-red-500 p-1" title="Supprimer">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-3 mb-4 flex-grow">
-                 {(project.contactName || project.email || project.phone) && (
-                   <div className="bg-concrete-50 p-3 rounded-lg space-y-1">
-                      <p className="text-xs font-bold text-concrete-400 uppercase mb-1">Contact Affaire</p>
-                      {project.contactName && <div className="flex items-center gap-2 text-sm text-concrete-700"><UserIcon className="w-3 h-3" /> {project.contactName}</div>}
-                      {project.email && <div className="flex items-center gap-2 text-sm text-concrete-600"><Mail className="w-3 h-3" /> {project.email}</div>}
-                      {project.phone && <div className="flex items-center gap-2 text-sm text-concrete-600"><Phone className="w-3 h-3" /> {project.phone}</div>}
-                   </div>
-                 )}
-                 <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-concrete-50 p-2 rounded border border-concrete-100">
-                       <div className="flex items-center gap-1.5 mb-1"><Crown className="w-3 h-3 text-safety-orange" /><span className="text-[10px] font-bold text-concrete-500 uppercase">MOA</span></div>
-                       <p className="text-xs text-concrete-800 font-medium truncate" title={project.moa}>{project.moa || '-'}</p>
-                    </div>
-                    <div className="bg-concrete-50 p-2 rounded border border-concrete-100">
-                       <div className="flex items-center gap-1.5 mb-1"><HardHat className="w-3 h-3 text-concrete-600" /><span className="text-[10px] font-bold text-concrete-500 uppercase">MOE</span></div>
-                       <p className="text-xs text-concrete-800 font-medium truncate" title={project.moe}>{project.moe || '-'}</p>
-                    </div>
-                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {renderContent()}
     </div>
   );
 };

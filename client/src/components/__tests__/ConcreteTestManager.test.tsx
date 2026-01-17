@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { ConcreteTestManager } from '../ConcreteTestManager';
-import { authenticatedFetch } from '../../../utils/api';
+import { authenticatedFetch } from '../../utils/api';
 
-jest.mock('../../../utils/api');
+jest.mock('../../utils/api');
 
 describe('ConcreteTestManager', () => {
   const token = 'test-token';
