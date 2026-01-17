@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, FileText, Factory, ArrowLeft, Search, Boxes, Pencil, X, Scale, Hammer, Save, Briefcase, User as UserIcon, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, FileText, Factory, ArrowLeft, Search, Boxes, Pencil } from 'lucide-react';
 import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../utils/api';
+import ConflictModal from "./ConflictModal";
+import SpecimenModal from "./SpecimenModal";
+import QuickCreateModal from "./QuickCreateModal";
 
 interface ConcreteTestManagerProps {
   token: string;
@@ -10,81 +13,6 @@ interface ConcreteTestManagerProps {
   initialTestId?: string | null;
   onBack: () => void;
 }
-
-// --- MODALE SAISIE RESULTATS ---
-interface SpecimenModalProps {
-  specimen: Specimen;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (updated: Specimen) => void;
-}
-
-const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose, onSave }) => {
-  const [data, setData] = useState<Specimen>(specimen);
-  useEffect(() => { setData(specimen); }, [specimen]);
-
-  if (!isOpen) return null;
-
-  const surface = data.specimenType.toLowerCase().includes('cube') ? data.diameter * data.diameter : Math.PI * Math.pow(data.diameter / 2, 2);
-  const stress = (data.force && data.force > 0) ? (data.force * 1000) / surface : 0;
-  const volume = surface * data.height;
-  const density = (data.weight && data.weight > 0) ? (data.weight / volume) * 1000000 : 0;
-
-  const handleChange = (field: keyof Specimen, value: string) => {
-    const numValue = Number.parseFloat(value);
-    setData({ ...data, [field]: Number.isNaN(numValue) ? undefined : numValue });
-  };
-
-  const handleSaveClick = () => {
-    const finalSurface = data.specimenType.toLowerCase().includes('cube') ? data.diameter * data.diameter : Math.PI * Math.pow(data.diameter / 2, 2);
-    const finalStress = (data.force && data.force > 0) ? (data.force * 1000) / finalSurface : null;
-    const finalVolume = finalSurface * data.height;
-    const finalDensity = (data.weight && data.weight > 0) ? (data.weight / finalVolume) * 1000000 : null;
-    onSave({ ...data, surface: finalSurface, stress: finalStress || undefined, density: finalDensity || undefined });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-concrete-200">
-        <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center"><h3 className="text-white font-bold text-lg flex items-center gap-2"><Hammer className="w-5 h-5 text-safety-orange" /> Saisie Résultats Éprouvette</h3><button onClick={onClose} className="text-concrete-400 hover:text-white"><X className="w-6 h-6" /></button></div>
-        <div className="p-6 space-y-6">
-          <div className="flex justify-between items-center bg-concrete-50 p-3 rounded-lg border border-concrete-100">
-             <div className="text-sm"><span className="block text-concrete-500 text-xs uppercase font-bold">Numéro</span><span className="font-mono font-bold text-lg">#{data.number}</span></div>
-             <div className="text-sm text-right"><span className="block text-concrete-500 text-xs uppercase font-bold">Âge</span><span className="font-bold">{data.age} Jours</span></div>
-             <div className="text-sm text-right"><span className="block text-concrete-500 text-xs uppercase font-bold">Type</span><span>{data.specimenType}</span></div>
-          </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-4">
-               <h4 className="text-xs font-bold text-concrete-500 uppercase border-b border-concrete-100 pb-1">Géométrie</h4>
-               <div>
-                 <label className="block text-sm font-medium mb-1">
-                   Diamètre / Côté (mm)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
-                          value={data.diameter || ''} onChange={e => handleChange('diameter', e.target.value)} />
-                 </label>
-               </div>
-               <div>
-                 <label className="block text-sm font-medium mb-1">
-                   Hauteur (mm)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
-                          value={data.height || ''} onChange={e => handleChange('height', e.target.value)} />
-                 </label>
-               </div>
-            </div>
-            <div className="space-y-4">
-               <h4 className="text-xs font-bold text-safety-orange uppercase border-b border-orange-100 pb-1">Mesures Labo</h4>
-               <div><label className="block text-sm font-medium mb-1 flex items-center gap-2"><Scale className="w-4 h-4 text-concrete-400" /> Masse (g)</label><input type="number" step="1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900" value={data.weight || ''} onChange={e => handleChange('weight', e.target.value)} /></div>
-               <div><label className="block text-sm font-medium mb-1 flex items-center gap-2"><Hammer className="w-4 h-4 text-concrete-400" /> Force (kN)</label><input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900" value={data.force || ''} onChange={e => handleChange('force', e.target.value)} /></div>
-            </div>
-          </div>
-          <div className="bg-concrete-900 text-white rounded-lg p-4 grid grid-cols-2 gap-4">
-             <div><span className="block text-concrete-400 text-xs uppercase">Résistance (MPa)</span><span className="text-2xl font-bold text-safety-orange font-mono">{stress > 0 ? stress.toFixed(1) : '-.--'}</span></div>
-             <div className="text-right"><span className="block text-concrete-400 text-xs uppercase">Masse Volumique</span><span className="text-lg font-bold font-mono">{density > 0 ? density.toFixed(0) : '---'} <span className="text-sm text-concrete-500">kg/m³</span></span></div>
-          </div>
-        </div>
-        <div className="p-4 bg-concrete-50 border-t border-concrete-200 flex justify-end gap-3"><button onClick={onClose} className="px-4 py-2 text-concrete-600 hover:bg-concrete-200 rounded-lg">Annuler</button><button onClick={handleSaveClick} className="px-6 py-2 bg-safety-orange text-white rounded-lg hover:bg-orange-600 font-bold flex items-center gap-2 shadow-sm"><Save className="w-4 h-4" /> Enregistrer</button></div>
-      </div>
-    </div>
-  );
-};
 
 // --- HELPERS ---
 const calculateConsistency = (slump: number): string => {
@@ -247,7 +175,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     
     const selectedProject = projects.find(p => p._id === formData.projectId);
     // Si on force, on utilise la version reçue du serveur (forceVersion), sinon la version locale
-    const currentVersion = forceVersion !== undefined ? forceVersion : formData.__v;
+    const currentVersion = forceVersion ?? formData.__v;
 
     const payload = { 
         ...formData, 
@@ -345,150 +273,26 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     return (
       <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
         {isModalOpen && selectedSpecimenIdx !== null && <SpecimenModal specimen={formData.specimens[selectedSpecimenIdx]} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSpecimen} />}
-        
-        {/* MODALE CONFLIT DE VERSION */}
-        {conflictData && (
-            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4 animate-in zoom-in-95">
-               <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-red-500">
-                  <div className="bg-red-50 p-6 flex items-start gap-4">
-                     <div className="p-3 bg-red-100 rounded-full text-red-600 shrink-0">
-                        <AlertTriangle className="w-8 h-8" />
-                     </div>
-                     <div>
-                        <h3 className="text-xl font-bold text-red-700">Conflit de modification</h3>
-                        <p className="text-red-600 mt-2 text-sm leading-relaxed">
-                           Un autre utilisateur a modifié cette fiche pendant que vous travailliez dessus.
-                           Vos versions ne sont plus synchronisées.
-                        </p>
-                        <div className="mt-4 bg-white p-3 rounded border border-red-200 text-xs text-gray-600">
-                           <p><strong>Serveur:</strong> {conflictData.specimens?.length} éprouvettes, Modifié par {conflictData.userId === user?.id ? 'Vous (autre session)' : 'Autrui'}.</p>
-                        </div>
-                     </div>
-                  </div>
-                  <div className="p-4 bg-white flex justify-end gap-3 border-t border-gray-100">
-                     <button 
-                       onClick={handleReloadConflict}
-                       className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-                     >
-                       <RefreshCw className="w-4 h-4" />
-                       Recharger (Perdre mes saisies)
-                     </button>
-                     <button 
-                       onClick={handleForceOverwrite}
-                       className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md"
-                     >
-                       <Save className="w-4 h-4" />
-                       Écraser la version serveur
-                     </button>
-                  </div>
-               </div>
-            </div>
-        )}
 
-        {/* ... (Quick Create Modal Code - Inchangé) ... */}
-        {quickCreateOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-                <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
-                    {/* ... (Contenu QuickCreate existant) ... */}
-                    <div className="flex justify-between items-center mb-4">
-                       <h4 className="font-bold text-lg flex items-center gap-2">
-                         {quickCreateType === 'project' ? <Briefcase className="w-5 h-5 text-safety-orange"/> : <UserIcon className="w-5 h-5 text-blue-600"/>}
-                         {quickCreateType === 'project' ? 'Nouvelle Affaire' : 'Nouveau Client'}
-                       </h4>
-                       <button onClick={()=>setQuickCreateOpen(false)}><X className="w-5 h-5 text-gray-400"/></button>
-                    </div>
-                    {/* Tabs */}
-                    <div className="flex mb-4 bg-concrete-100 p-1 rounded-lg">
-                       <button onClick={() => setQuickCreateType('project')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'project' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}>Affaire</button>
-                       <button onClick={() => setQuickCreateType('company')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'company' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}>Entreprise</button>
-                    </div>
-                    {/* Form Fields */}
-                    {quickCreateType === 'project' ? (
-                      <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Nom de l'affaire *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École"
-                                    value={newProjectData.name}
-                                    onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} />
-                           </label>
-                         </div>
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Entreprise / Client<select className="w-full border p-2 rounded text-sm mt-1 bg-white"
-                                     value={newProjectData.companyId}
-                                     onChange={e => setNewProjectData({...newProjectData, companyId: e.target.value})}>
-                               <option value="">-- Sélectionner ou créer --</option>{companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                             </select>
-                           </label>
-                           <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2">
-                           <div>
-                             <label className="text-xs font-bold text-gray-500">
-                               MOA<input className="w-full border p-2 rounded text-sm mt-1"
-                                      value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} />
-                             </label>
-                           </div>
-                           <div>
-                             <label className="text-xs font-bold text-gray-500">
-                               MOE<input className="w-full border p-2 rounded text-sm mt-1"
-                                      value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} />
-                             </label>
-                           </div>
-                         </div>
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Contact<input className="w-full border p-2 rounded text-sm mt-1"
-                                    value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} />
-                           </label>
-                           </div>
-                         <div className="grid grid-cols-2 gap-2">
-                           <div>
-                             <label className="text-xs font-bold text-gray-500">
-                               Email<input className="w-full border p-2 rounded text-sm mt-1"
-                                      value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} />
-                             </label>
-                           </div>
-                           <div>
-                             <label className="text-xs font-bold text-gray-500">
-                               Tél<input className="w-full border p-2 rounded text-sm mt-1"
-                                      value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} />
-                             </label>
-                           </div>
-                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3 animate-in fade-in slide-in-from-right-2">
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Nom de l'entreprise *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS"
-                                    value={newCompanyData.name} onChange={e=>setNewCompanyData({...newCompanyData, name: e.target.value})} />
-                           </label>
-                         </div>
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Contact Principal<input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.contactName}
-                                    onChange={e=>setNewCompanyData({...newCompanyData, contactName: e.target.value})} />
-                           </label>
-                         </div>
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Email<input className="w-full border p-2 rounded text-sm mt-1"
-                                    value={newCompanyData.email} onChange={e=>setNewCompanyData({...newCompanyData, email: e.target.value})} />
-                           </label>
-                         </div>
-                         <div>
-                           <label className="text-xs font-bold text-gray-500">
-                             Téléphone<input className="w-full border p-2 rounded text-sm mt-1"
-                                    value={newCompanyData.phone} onChange={e=>setNewCompanyData({...newCompanyData, phone: e.target.value})} />
-                           </label>
-                         </div>
-                      </div>
-                    )}
-                    <div className="flex justify-end gap-2 mt-6"><button onClick={()=>setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button><button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">{quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}</button></div>
-                </div>
-            </div>
-        )}
+        <ConflictModal
+          conflictData={conflictData}
+          user={user}
+          onReload={handleReloadConflict}
+          onForceOverwrite={handleForceOverwrite}
+        />
+
+        <QuickCreateModal
+          quickCreateType={quickCreateType}
+          setQuickCreateType={setQuickCreateType}
+          newProjectData={newProjectData}
+          setNewProjectData={setNewProjectData}
+          newCompanyData={newCompanyData}
+          setNewCompanyData={setNewCompanyData}
+          companies={companies}
+          handleQuickCreate={handleQuickCreate}
+          setQuickCreateOpen={setQuickCreateOpen}
+          isQuickCreate={quickCreateOpen}
+        />
 
         <div className="bg-concrete-900 px-6 py-4 flex justify-between items-center sticky top-16 z-20">
           <div className="flex items-center gap-3">
