@@ -1,10 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { ProjectManager } from './ProjectManager';
-import { authenticatedFetch } from '../utils/api';
+import { ProjectManager } from '../ProjectManager';
+import { authenticatedFetch } from '../../utils/api';
 
 // Mock de l'API
-jest.mock('../utils/api', () => ({
+jest.mock('../../utils/api', () => ({
   authenticatedFetch: jest.fn()
 }));
 
