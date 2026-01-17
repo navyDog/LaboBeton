@@ -76,7 +76,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
         // Pas besoin de changer d'état ici, la session courante reste valide car le token actuel a la bonne version (en théorie, sauf si on raffine coté serveur pour inclure la session courante, mais ici le but est de kicker LES AUTRES).
         // Note: Dans mon implémentation serveur simple, tokenVersion++ invalide TOUT le monde, y compris moi au prochain appel API.
         // C'est normal : on force une reconnexion propre pour tout le monde par sécurité.
-        window.location.reload(); // On force le rechargement pour que l'app détecte qu'on doit se reconnecter (propre)
+        globalThis.location.reload(); // On force le rechargement pour que l'app détecte qu'on doit se reconnecter (propre)
       } else {
         alert("Erreur lors de la déconnexion globale.");
       }
@@ -274,16 +274,14 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
                     <Lock className="w-4 h-4 text-concrete-500" /> Sécurité
                   </h4>
                   <label className="block text-sm text-concrete-600 mb-2">
-                    Nouveau mot de passe (Laisser vide pour ne pas changer)
+                    Nouveau mot de passe (Laisser vide pour ne pas changer)<input
+                      type="password"
+                      className="w-full p-3 border border-concrete-300 rounded-lg focus:ring-2 focus:ring-safety-orange focus:border-safety-orange transition-all bg-concrete-50"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    />
                   </label>
-                  <input
-                    type="password"
-                    className="w-full p-3 border border-concrete-300 rounded-lg focus:ring-2 focus:ring-safety-orange focus:border-safety-orange transition-all bg-concrete-50"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                  />
-                  
                   {/* BOUTON DÉCONNEXION GLOBALE */}
                   <div className="mt-6 p-4 border border-red-200 bg-red-50 rounded-lg">
                      <h5 className="text-red-800 font-bold text-sm mb-2 flex items-center gap-2">

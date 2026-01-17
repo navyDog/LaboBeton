@@ -13,6 +13,7 @@ import rateLimit from 'express-rate-limit';
 import winston from 'winston';
 import os from 'node:os';
 import fs from 'node:fs';
+import { randomInt } from 'node:crypto';
 
 import User from './models/User.js';
 import Company from './models/Company.js';
@@ -283,7 +284,7 @@ app.post('/api/auth/login', authLimiter, [
     const user = await User.findOne({ username: safeUsername });
     
     if (!user) {
-      const delay = Math.floor(Math.random() * 200) + 100;
+      const delay = randomInt(100, 300);
       await new Promise(resolve => setTimeout(resolve, delay));
       return res.status(401).json({ message: "Identifiants incorrects" });
     }
