@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase, User as UserIcon, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, FileText, Factory, ArrowLeft, Search, Boxes, Pencil, X, Scale, Hammer, Save, Briefcase, User as UserIcon, AlertTriangle, RefreshCw } from 'lucide-react';
 import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
-import { authenticatedFetch } from '../../utils/api';
+import { authenticatedFetch } from '../utils/api';
 
 interface ConcreteTestManagerProps {
   token: string;
@@ -31,8 +31,8 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
   const density = (data.weight && data.weight > 0) ? (data.weight / volume) * 1000000 : 0;
 
   const handleChange = (field: keyof Specimen, value: string) => {
-    const numValue = parseFloat(value);
-    setData({ ...data, [field]: isNaN(numValue) ? undefined : numValue });
+    const numValue = Number.parseFloat(value);
+    setData({ ...data, [field]: Number.isNaN(numValue) ? undefined : numValue });
   };
 
   const handleSaveClick = () => {
@@ -56,8 +56,18 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-4">
                <h4 className="text-xs font-bold text-concrete-500 uppercase border-b border-concrete-100 pb-1">Géométrie</h4>
-               <div><label className="block text-sm font-medium mb-1">Diamètre / Côté (mm)</label><input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange" value={data.diameter || ''} onChange={e => handleChange('diameter', e.target.value)} /></div>
-               <div><label className="block text-sm font-medium mb-1">Hauteur (mm)</label><input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange" value={data.height || ''} onChange={e => handleChange('height', e.target.value)} /></div>
+               <div>
+                 <label className="block text-sm font-medium mb-1">
+                   Diamètre / Côté (mm)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
+                          value={data.diameter || ''} onChange={e => handleChange('diameter', e.target.value)} />
+                 </label>
+               </div>
+               <div>
+                 <label className="block text-sm font-medium mb-1">
+                   Hauteur (mm)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange"
+                          value={data.height || ''} onChange={e => handleChange('height', e.target.value)} />
+                 </label>
+               </div>
             </div>
             <div className="space-y-4">
                <h4 className="text-xs font-bold text-safety-orange uppercase border-b border-orange-100 pb-1">Mesures Labo</h4>
@@ -195,7 +205,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   };
   const handleSpecimenClick = (index: number) => { setSelectedSpecimenIdx(index); setIsModalOpen(true); };
   const handleInlineChange = (index: number, field: keyof Specimen, value: string) => {
-    const numValue = value === '' ? undefined : parseFloat(value);
+    const numValue = value === '' ? undefined : Number.parseFloat(value);
     const updatedSpecimens = [...formData.specimens];
     const specimen = { ...updatedSpecimens[index], [field]: numValue };
     if (specimen.force && specimen.surface) specimen.stress = (specimen.force * 1000) / specimen.surface;
@@ -249,29 +259,27 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
         __v: currentVersion
     };
 
-    try {
-      const url = editingId ? `/api/concrete-tests/${editingId}` : '/api/concrete-tests';
-      const method = editingId ? 'PUT' : 'POST';
-      
-      const res = await authenticatedFetch(url, { 
-          method: method, 
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
-          body: JSON.stringify(payload) 
-      });
-      
-      if (res.ok) {
-        const updatedTest = await res.json();
-        if (editingId) setTests(tests.map(t => t._id === editingId ? updatedTest : t));
-        else setTests([updatedTest, ...tests]);
-        resetForm();
-      } else if (res.status === 409) {
-        // CONFLIT DETECTE
-        const data = await res.json();
-        setConflictData(data.latestData); // On stocke la donnée serveur pour le dialogue
-      } else { 
-          alert("Erreur d'enregistrement."); 
-      }
-    } catch (error) { alert("Erreur serveur."); }
+    const url = editingId ? `/api/concrete-tests/${editingId}` : '/api/concrete-tests';
+    const method = editingId ? 'PUT' : 'POST';
+
+    const res = await authenticatedFetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      const updatedTest = await res.json();
+      if (editingId) setTests(tests.map(t => t._id === editingId ? updatedTest : t));
+      else setTests([updatedTest, ...tests]);
+      resetForm();
+    } else if (res.status === 409) {
+      // CONFLIT DETECTE
+      const data = await res.json();
+      setConflictData(data.latestData); // On stocke la donnée serveur pour le dialogue
+    } else {
+        alert("Erreur d'enregistrement.");
+    }
   };
 
   const handleForceOverwrite = () => {
@@ -292,38 +300,34 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const handleQuickCreate = async () => {
     if (quickCreateType === 'company') {
        if(!newCompanyData.name.trim()) return;
-       try {
-         const res = await authenticatedFetch('/api/companies', {
-           method: 'POST',
-           headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-           body: JSON.stringify(newCompanyData)
-         });
-         if(res.ok) {
-           const newCompany = await res.json();
-           setCompanies([...companies, newCompany]);
-           setNewProjectData({...newProjectData, companyId: newCompany._id});
-           setQuickCreateType('project'); 
-           setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
-         }
-       } catch(e) { alert("Erreur Création Entreprise"); }
+       const res = await authenticatedFetch('/api/companies', {
+         method: 'POST',
+         headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+         body: JSON.stringify(newCompanyData)
+       });
+       if(res.ok) {
+         const newCompany = await res.json();
+         setCompanies([...companies, newCompany]);
+         setNewProjectData({...newProjectData, companyId: newCompany._id});
+         setQuickCreateType('project');
+         setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
+       }
     } else {
        if(!newProjectData.name.trim()) return;
-       try {
-         const selectedCompany = companies.find(c => c._id === newProjectData.companyId);
-         const payload = { ...newProjectData, companyName: selectedCompany ? selectedCompany.name : '' };
-         const res = await authenticatedFetch('/api/projects', {
-             method: 'POST',
-             headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-             body: JSON.stringify(payload)
-         });
-         if(res.ok) {
-             const newP = await res.json();
-             setProjects([newP, ...projects]);
-             setFormData({...formData, projectId: newP._id});
-             setQuickCreateOpen(false); 
-             setNewProjectData({ name: '', companyId: '', moa: '', moe: '', contactName: '', email: '', phone: '' });
-         }
-       } catch(e) { alert("Erreur Création Affaire"); }
+       const selectedCompany = companies.find(c => c._id === newProjectData.companyId);
+       const payload = { ...newProjectData, companyName: selectedCompany ? selectedCompany.name : '' };
+       const res = await authenticatedFetch('/api/projects', {
+           method: 'POST',
+           headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+           body: JSON.stringify(payload)
+       });
+       if(res.ok) {
+           const newP = await res.json();
+           setProjects([newP, ...projects]);
+           setFormData({...formData, projectId: newP._id});
+           setQuickCreateOpen(false);
+           setNewProjectData({ name: '', companyId: '', moa: '', moe: '', contactName: '', email: '', phone: '' });
+       }
     }
   };
 
@@ -401,18 +405,84 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                     {/* Form Fields */}
                     {quickCreateType === 'project' ? (
                       <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
-                         <div><label className="text-xs font-bold text-gray-500">Nom de l'affaire *</label><input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} /></div>
-                         <div><label className="text-xs font-bold text-gray-500">Entreprise / Client</label><select className="w-full border p-2 rounded text-sm mt-1 bg-white" value={newProjectData.companyId} onChange={e => setNewProjectData({...newProjectData, companyId: e.target.value})}><option value="">-- Sélectionner ou créer --</option>{companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select><button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button></div>
-                         <div className="grid grid-cols-2 gap-2"><div><label className="text-xs font-bold text-gray-500">MOA</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} /></div><div><label className="text-xs font-bold text-gray-500">MOE</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} /></div></div>
-                         <div><label className="text-xs font-bold text-gray-500">Contact</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} /></div>
-                         <div className="grid grid-cols-2 gap-2"><div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} /></div><div><label className="text-xs font-bold text-gray-500">Tél</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} /></div></div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Nom de l'affaire *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École"
+                                    value={newProjectData.name}
+                                    onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} />
+                           </label>
+                         </div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Entreprise / Client<select className="w-full border p-2 rounded text-sm mt-1 bg-white"
+                                     value={newProjectData.companyId}
+                                     onChange={e => setNewProjectData({...newProjectData, companyId: e.target.value})}>
+                               <option value="">-- Sélectionner ou créer --</option>{companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+                             </select>
+                           </label>
+                           <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button>
+                         </div>
+                         <div className="grid grid-cols-2 gap-2">
+                           <div>
+                             <label className="text-xs font-bold text-gray-500">
+                               MOA<input className="w-full border p-2 rounded text-sm mt-1"
+                                      value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} />
+                             </label>
+                           </div>
+                           <div>
+                             <label className="text-xs font-bold text-gray-500">
+                               MOE<input className="w-full border p-2 rounded text-sm mt-1"
+                                      value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} />
+                             </label>
+                           </div>
+                         </div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Contact<input className="w-full border p-2 rounded text-sm mt-1"
+                                    value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} />
+                           </label>
+                           </div>
+                         <div className="grid grid-cols-2 gap-2">
+                           <div>
+                             <label className="text-xs font-bold text-gray-500">
+                               Email<input className="w-full border p-2 rounded text-sm mt-1"
+                                      value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} />
+                             </label>
+                           </div>
+                           <div>
+                             <label className="text-xs font-bold text-gray-500">
+                               Tél<input className="w-full border p-2 rounded text-sm mt-1"
+                                      value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} />
+                             </label>
+                           </div>
+                         </div>
                       </div>
                     ) : (
                       <div className="space-y-3 animate-in fade-in slide-in-from-right-2">
-                         <div><label className="text-xs font-bold text-gray-500">Nom de l'entreprise *</label><input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS" value={newCompanyData.name} onChange={e=>setNewCompanyData({...newCompanyData, name: e.target.value})} /></div>
-                         <div><label className="text-xs font-bold text-gray-500">Contact Principal</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.contactName} onChange={e=>setNewCompanyData({...newCompanyData, contactName: e.target.value})} /></div>
-                         <div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.email} onChange={e=>setNewCompanyData({...newCompanyData, email: e.target.value})} /></div>
-                         <div><label className="text-xs font-bold text-gray-500">Téléphone</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.phone} onChange={e=>setNewCompanyData({...newCompanyData, phone: e.target.value})} /></div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Nom de l'entreprise *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS"
+                                    value={newCompanyData.name} onChange={e=>setNewCompanyData({...newCompanyData, name: e.target.value})} />
+                           </label>
+                         </div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Contact Principal<input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.contactName}
+                                    onChange={e=>setNewCompanyData({...newCompanyData, contactName: e.target.value})} />
+                           </label>
+                         </div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Email<input className="w-full border p-2 rounded text-sm mt-1"
+                                    value={newCompanyData.email} onChange={e=>setNewCompanyData({...newCompanyData, email: e.target.value})} />
+                           </label>
+                         </div>
+                         <div>
+                           <label className="text-xs font-bold text-gray-500">
+                             Téléphone<input className="w-full border p-2 rounded text-sm mt-1"
+                                    value={newCompanyData.phone} onChange={e=>setNewCompanyData({...newCompanyData, phone: e.target.value})} />
+                           </label>
+                         </div>
                       </div>
                     )}
                     <div className="flex justify-end gap-2 mt-6"><button onClick={()=>setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button><button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">{quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}</button></div>
@@ -434,35 +504,121 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                  <div className="lg:col-span-1">
                     <label className="block text-xs font-bold text-concrete-500 mb-1 flex justify-between">
-                        Affaire (Client) * 
-                        <button type="button" onClick={() => { setQuickCreateType('project'); setQuickCreateOpen(true); }} className="text-safety-orange hover:underline text-[10px] flex items-center gap-1"><Plus className="w-3 h-3"/> Créer</button>
+                      Affaire (Client) * <button type="button" onClick={() => { setQuickCreateType('project'); setQuickCreateOpen(true); }} className="text-safety-orange hover:underline text-[10px] flex items-center gap-1"><Plus className="w-3 h-3"/> Créer</button>
                     </label>
                     <select required className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange" value={formData.projectId} onChange={e => setFormData({...formData, projectId: e.target.value})}>
                       <option value="">-- Sélectionner --</option>
                       {projects.map(p => <option key={p._id} value={p._id}>{p.name} ({p.companyName})</option>)}
                     </select>
                  </div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Nom Ouvrage</label><input className="w-full p-2 border border-concrete-300 rounded" placeholder="ex: Bâtiment A" value={formData.structureName} onChange={e => setFormData({...formData, structureName: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Partie d'Ouvrage</label><input className="w-full p-2 border border-concrete-300 rounded" placeholder="ex: Dalle R+1" value={formData.elementName} onChange={e => setFormData({...formData, elementName: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Date Prélèvement</label><input type="date" className="w-full p-2 border border-concrete-300 rounded" value={formData.samplingDate} onChange={e => { setFormData({...formData, samplingDate: e.target.value}); const updated = formData.specimens.map(s => ({ ...s, castingDate: e.target.value, crushingDate: addDays(e.target.value, s.age) })); setFormData(prev => ({ ...prev, specimens: updated, samplingDate: e.target.value })); }} /></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Date Réception</label><input type="date" className="w-full p-2 border border-concrete-300 rounded" value={formData.receptionDate} onChange={e => setFormData({...formData, receptionDate: e.target.value})} /></div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Nom Ouvrage<input className="w-full p-2 border border-concrete-300 rounded" placeholder="ex: Bâtiment A"
+                            value={formData.structureName} onChange={e => setFormData({...formData, structureName: e.target.value})} />
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Partie d'Ouvrage<input className="w-full p-2 border border-concrete-300 rounded" placeholder="ex: Dalle R+1"
+                            value={formData.elementName} onChange={e => setFormData({...formData, elementName: e.target.value})} />
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Date Prélèvement<input type="date" className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.samplingDate} onChange={e => { setFormData({...formData, samplingDate: e.target.value}); const updated = formData.specimens.map(s => ({ ...s, castingDate: e.target.value, crushingDate: addDays(e.target.value, s.age) })); setFormData(prev => ({ ...prev, specimens: updated, samplingDate: e.target.value })); }} />
+                   </label>
+                   </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Date Réception<input type="date" className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.receptionDate} onChange={e => setFormData({...formData, receptionDate: e.target.value})} />
+                   </label>
+                 </div>
               </div>
            </div>
 
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2"><Factory className="w-5 h-5 text-safety-orange" /> Béton & Contexte</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Classe Résistance</label><select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.concreteClass} onChange={e => setFormData({...formData, concreteClass: e.target.value})}><option value="">-- Choisir --</option>{settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Slump (mm)</label><div className="relative"><input type="number" className="w-full p-2 pr-16 border border-concrete-300 rounded font-mono font-bold" value={formData.slump} onChange={e => setFormData({...formData, slump: parseInt(e.target.value) || 0})} /><div className="absolute right-2 top-1.5 px-2 py-0.5 bg-concrete-100 text-xs font-bold rounded">{calculateConsistency(formData.slump) || '-'}</div></div></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Type Mélange</label><select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.mixType} onChange={e => setFormData({...formData, mixType: e.target.value})}><option value="">-- Choisir --</option>{settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Volume (m³)</label><input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded" value={formData.volume} onChange={e => setFormData({...formData, volume: parseFloat(e.target.value)})} /></div>
-                 <div className="lg:col-span-2"><label className="block text-xs font-bold text-concrete-500 mb-1">Fabricant</label><input className="w-full p-2 border border-concrete-300 rounded" value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Fab.</label><select className="w-full p-2 border border-concrete-300 rounded" value={formData.manufacturingPlace} onChange={e => setFormData({...formData, manufacturingPlace: e.target.value})}><option value="">-- Choisir --</option>{settings?.manufacturingPlaces.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">Livraison</label><select className="w-full p-2 border border-concrete-300 rounded" value={formData.deliveryMethod} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}><option value="">-- Choisir --</option>{settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                 <div className="lg:col-span-2"><label className="block text-xs font-bold text-concrete-500 mb-1">Info Formule</label><input className="w-full p-2 border border-concrete-300 rounded" value={formData.formulaInfo} onChange={e => setFormData({...formData, formulaInfo: e.target.value})} /></div>
-                 <div className="lg:col-span-2"><label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Prélèvement</label><input className="w-full p-2 border border-concrete-300 rounded" value={formData.samplingPlace} onChange={e => setFormData({...formData, samplingPlace: e.target.value})} /></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1">T° Ext (°C)</label><input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded" value={formData.externalTemp} onChange={e => setFormData({...formData, externalTemp: parseFloat(e.target.value)})} /></div>
-                 <div><label className="block text-xs font-bold text-concrete-500 mb-1 text-red-500">T° Béton (°C)</label><input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded" value={formData.concreteTemp} onChange={e => setFormData({...formData, concreteTemp: parseFloat(e.target.value)})} /></div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Classe Résistance<select className="w-full p-2 border border-concrete-300 rounded bg-white"
+                             value={formData.concreteClass} onChange={e => setFormData({...formData, concreteClass: e.target.value})}>
+                       <option value="">-- Choisir --</option>{settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                     </select>
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Slump (mm)<div className="relative">
+                       <input type="number" className="w-full p-2 pr-16 border border-concrete-300 rounded font-mono font-bold"
+                              value={formData.slump} onChange={e => setFormData({...formData, slump: Number.parseInt(e.target.value) || 0})} />
+                       <div className="absolute right-2 top-1.5 px-2 py-0.5 bg-concrete-100 text-xs font-bold rounded">{calculateConsistency(formData.slump) || '-'}
+                       </div>
+                     </div>
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Type Mélange<select className="w-full p-2 border border-concrete-300 rounded bg-white"
+                             value={formData.mixType} onChange={e => setFormData({...formData, mixType: e.target.value})}>
+                       <option value="">-- Choisir --</option>{settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                     </select>
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Volume (m³)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.volume} onChange={e => setFormData({...formData, volume: Number.parseFloat(e.target.value)})} />
+                   </label>
+                 </div>
+                 <div className="lg:col-span-2">
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Fabricant<input className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})} />
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Lieu Fab.<select className="w-full p-2 border border-concrete-300 rounded"
+                             value={formData.manufacturingPlace} onChange={e => setFormData({...formData, manufacturingPlace: e.target.value})}>
+                       <option value="">-- Choisir --</option>{settings?.manufacturingPlaces.map(c => <option key={c} value={c}>{c}</option>)}
+                     </select>
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Livraison<select className="w-full p-2 border border-concrete-300 rounded"
+                             value={formData.deliveryMethod} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}>
+                       <option value="">-- Choisir --</option>{settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
+                     </select>
+                   </label>
+                 </div>
+                 <div className="lg:col-span-2">
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Info Formule<input className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.formulaInfo} onChange={e => setFormData({...formData, formulaInfo: e.target.value})} />
+                   </label>
+                 </div>
+                 <div className="lg:col-span-2">
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     Lieu Prélèvement<input className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.samplingPlace} onChange={e => setFormData({...formData, samplingPlace: e.target.value})} />
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1">
+                     T° Ext (°C)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.externalTemp} onChange={e => setFormData({...formData, externalTemp: Number.parseFloat(e.target.value)})} />
+                   </label>
+                 </div>
+                 <div>
+                   <label className="block text-xs font-bold text-concrete-500 mb-1 text-red-500">
+                     T° Béton (°C)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded"
+                            value={formData.concreteTemp} onChange={e => setFormData({...formData, concreteTemp: Number.parseFloat(e.target.value)})} />
+                   </label>
+                 </div>
               </div>
            </div>
 
@@ -471,9 +627,9 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               <div className="bg-concrete-100 p-3 rounded-lg border border-concrete-200 flex flex-wrap items-center justify-between gap-4">
                 <span className="text-sm font-bold text-concrete-700">Ajouter des éprouvettes :</span>
                 <div className="flex items-center gap-2">
-                   <div className="flex bg-white rounded border border-concrete-300 overflow-hidden shadow-sm">{[7, 28].map(d => <button key={d} type="button" onClick={() => setPackAge(d)} className={`px-3 py-1.5 text-xs font-medium border-r border-concrete-100 last:border-0 transition-colors ${packAge === d ? 'bg-concrete-800 text-white' : 'hover:bg-concrete-100'}`}>{d}j</button>)}<input type="number" className="w-12 px-1 py-1 text-xs text-center font-bold" value={packAge} onChange={e => setPackAge(parseInt(e.target.value))} title="Âge personnalisé" /></div>
+                   <div className="flex bg-white rounded border border-concrete-300 overflow-hidden shadow-sm">{[7, 28].map(d => <button key={d} type="button" onClick={() => setPackAge(d)} className={`px-3 py-1.5 text-xs font-medium border-r border-concrete-100 last:border-0 transition-colors ${packAge === d ? 'bg-concrete-800 text-white' : 'hover:bg-concrete-100'}`}>{d}j</button>)}<input type="number" className="w-12 px-1 py-1 text-xs text-center font-bold" value={packAge} onChange={e => setPackAge(Number.parseInt(e.target.value))} title="Âge personnalisé" /></div>
                    <span className="text-xs text-concrete-400">x</span>
-                   <input type="number" min="1" className="w-12 py-1.5 px-2 border border-concrete-300 rounded text-center text-xs font-bold shadow-sm" value={packCount} onChange={e => setPackCount(parseInt(e.target.value))} />
+                   <input type="number" min="1" className="w-12 py-1.5 px-2 border border-concrete-300 rounded text-center text-xs font-bold shadow-sm" value={packCount} onChange={e => setPackCount(Number.parseInt(e.target.value))} />
                    <select className="py-1.5 px-2 border border-concrete-300 rounded bg-white text-xs font-medium shadow-sm" value={packDim} onChange={e => setPackDim(e.target.value)}><option value="160x320">Cyl. 160x320</option><option value="110x220">Cyl. 110x220</option><option value="150x150">Cube 150x150</option></select>
                    <button type="button" onClick={handleAddPack} className="ml-2 px-3 py-1.5 bg-concrete-800 text-white text-xs font-bold rounded hover:bg-concrete-700 flex items-center gap-1 shadow-sm"><Plus className="w-3 h-3" /> Ajouter</button>
                 </div>
