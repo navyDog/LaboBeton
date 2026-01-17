@@ -25,12 +25,22 @@ import BugReport from './models/BugReport.js';
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
-    winston.format.timestamp({ format: 'HH:mm:ss' }),
-    winston.format.printf(({ level, message, timestamp }) => {
-      return `[${timestamp}] ${level.toUpperCase()}: ${message}`;
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.printf((info) => {
+      return `[${info.timestamp}] ${info.level.toUpperCase()}: ${info.message} ${info.stack ? '\n' + info.stack : ''}`;
     })
   ),
-  transports: [new winston.transports.Console()]
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf((info) => {
+          return `[${info.timestamp}] ${info.level}: ${info.message}`;
+        })
+      )
+    })
+  ]
 });
 
 // --- Hack pour masquer l'avertissement de dépréciation util._extend ---
@@ -47,6 +57,24 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8080;
 let server;
+
+// --- MIDDLEWARE DE LOGGING HTTP ---
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const message = `${req.method} ${req.originalUrl} ${res.statusCode} - ${duration}ms`;
+    
+    if (res.statusCode >= 500) {
+      logger.error(message);
+    } else if (res.statusCode >= 400) {
+      logger.warn(message);
+    } else {
+      logger.info(message);
+    }
+  });
+  next();
+});
 
 // --- SÉCURITÉ CRITIQUE : GESTION DES SECRETS ---
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
@@ -84,7 +112,7 @@ const sanitizeCSV = (value) => {
   return str.replace(/;/g, ',').replace(/"/g, '""');
 };
 
-// --- SÉCURITÉ : Proxy & HTTPS (CORRIGÉ) ---
+// --- SÉCURITÉ : Proxy & HTTPS (CORRIGÉ - Open Redirect Fix) ---
 app.set('trust proxy', 1);
 app.use((req, res, next) => {
   if (process.env.NODE_ENV === 'production') {
@@ -92,7 +120,7 @@ app.use((req, res, next) => {
     if (!isLocal && req.headers['x-forwarded-proto'] !== 'https') {
       const configuredDomain = process.env.FRONTEND_URL?.replace(/^https?:\/\//, '');
       if (!configuredDomain) {
-        logger.error('❌ FRONTEND_URL not configured');
+        logger.error('❌ FRONTEND_URL not configured for HTTPS redirect');
         return res.status(500).json({ message: 'Server misconfiguration' });
       }
       const safePath = req.url.split('?')[0].replace(/[^\w\s\-\/\.]/gi, '');
@@ -102,7 +130,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- SÉCURITÉ : CORS (CORRIGÉ) ---
+// --- SÉCURITÉ : CORS (CORRIGÉ - Strict en Production) ---
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:8080',
@@ -113,12 +141,14 @@ app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+    
     if (process.env.NODE_ENV === 'production') {
       logger.warn(`❌ CORS Blocked: ${origin}`);
       const error = new Error('Not allowed by CORS');
       error.status = 403;
       return callback(error);
     }
+    
     logger.warn(`⚠️ CORS Dev Mode: Allowing ${origin}`);
     return callback(null, true);
   },
@@ -149,7 +179,7 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 app.use(mongoSanitize({ replaceWith: '_' }));
 
-// --- Rate Limiting ---
+// --- SÉCURITÉ : Rate Limiting ---
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, max: 200,
   message: { message: "Trop de requêtes, veuillez patienter." },
@@ -162,8 +192,8 @@ const globalLimiter = rateLimit({
 app.use('/api/', globalLimiter);
 
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 10,
-  message: { message: "Trop de tentatives de connexion. Réessayez dans 1 heure." },
+  windowMs: 60 * 60 * 1000, max: 20,
+  message: { message: "Trop de tentatives de connexion." },
   standardHeaders: true, legacyHeaders: false,
 });
 
@@ -181,7 +211,7 @@ const connectDB = async () => {
     await seedAdminUser();
   } catch (error) {
     logger.error(`❌ Erreur MongoDB: ${error.message}`);
-    process.exit(1);
+    if (process.env.NODE_ENV === 'production') process.exit(1);
   }
 };
 
@@ -198,13 +228,13 @@ const seedAdminUser = async () => {
           username: initUser, password: hashed, role: 'admin', 
           companyName: 'ADMIN SYSTEM', tokenVersion: 0
         });
-        logger.info(`👤 Compte Admin initial créé.`);
+        logger.info(`👤 Compte Admin initial créé`);
       }
     }
-  } catch (error) { logger.error("Erreur seedAdminUser", error); }
+  } catch (error) { logger.error(`Erreur seedAdminUser: ${error.message}`); }
 };
 
-// --- MIDDLEWARES AUTH (CORRIGÉ) ---
+// --- MIDDLEWARES AUTH (CORRIGÉ - NoSQL Injection Fix) ---
 const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -212,14 +242,16 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    
     const userObjectId = safeObjectId(decoded.id);
     if (!userObjectId) return res.status(403).json({ message: "Token invalide." });
 
     const user = await User.findById(userObjectId).select('-password');
     if (!user) return res.status(401).json({ message: "Utilisateur introuvable." });
     if (user.isActive === false) return res.status(403).json({ message: "Compte désactivé." });
+    
     if (decoded.tokenVersion !== user.tokenVersion) {
-      return res.status(401).json({ message: "Session expirée." });
+      return res.status(401).json({ message: "Session révoquée.", code: "SESSION_REPLACED" });
     }
 
     req.user = user;
@@ -247,6 +279,7 @@ const checkValidation = (req, res, next) => {
 
 // --- ROUTES ---
 
+// Health Check
 app.get('/api/health', (req, res) => {
   const dbState = mongoose.connection.readyState;
   const status = dbState === 1 ? 'CONNECTED' : 'ERROR';
@@ -257,7 +290,12 @@ app.get('/api/health', (req, res) => {
   }
 });
 
-// Login
+// Auth Check (Heartbeat)
+app.get('/api/auth/check', authenticateToken, (req, res) => {
+  res.json({ status: 'ok', user: req.user.username });
+});
+
+// Login (CORRIGÉ - Timing Attack Fix)
 app.post('/api/auth/login', authLimiter, [
   body('username').trim().notEmpty().escape(),
   body('password').notEmpty()
@@ -278,7 +316,6 @@ app.post('/api/auth/login', authLimiter, [
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Identifiants incorrects" });
 
-    user.tokenVersion = (user.tokenVersion || 0) + 1;
     user.lastLogin = new Date();
     await user.save();
 
@@ -298,7 +335,27 @@ app.post('/api/auth/login', authLimiter, [
   }
 });
 
-// Profile Update
+// Logout All (Emergency Kill Switch)
+app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
+  try {
+    const userObjectId = safeObjectId(req.user.id);
+    if (!userObjectId) return res.status(403).json({ message: 'Session invalide' });
+
+    const user = await User.findById(userObjectId);
+    if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
+
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+
+    logger.info(`Global logout triggered for user: ${user.username}`);
+    res.json({ message: "Tous les appareils ont été déconnectés." });
+  } catch (error) {
+    logger.error(`Logout all error: ${error.message}`);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+});
+
+// Profile Update (CORRIGÉ - Logo Size Limit)
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
     const { companyName, address, contact, password, siret, apeCode, legalInfo, logo } = req.body;
@@ -338,7 +395,7 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     delete userObj.tokenVersion;
     res.json(userObj);
   } catch (error) { 
-    logger.error(error); 
+    logger.error(`Profile update error: ${error.message}`); 
     res.status(400).json({ message: "Erreur mise à jour" }); 
   }
 });
@@ -363,7 +420,7 @@ app.post('/api/users', authenticateToken, requireAdmin, [
     logger.info(`Admin created user: ${username}`);
     res.status(201).json({ message: "Utilisateur créé", user: { username: newUser.username } });
   } catch (error) { 
-    logger.error(error); 
+    logger.error(`Create user error: ${error.message}`); 
     res.status(500).json({ message: "Erreur création" }); 
   }
 });
@@ -373,7 +430,6 @@ app.get('/api/users', authenticateToken, requireAdmin, async (req, res) => {
     const users = await User.find({}, '-password -tokenVersion').sort({ createdAt: -1 });
     res.json(users);
   } catch (error) { 
-    logger.error(`Get Users Error: ${error.message}`);
     res.status(500).json({ message: "Erreur récupération" }); 
   }
 });
@@ -390,9 +446,9 @@ app.put('/api/users/:id/toggle-access', authenticateToken, requireAdmin, validat
     user.isActive = !user.isActive;
     if (!user.isActive) user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
+    logger.info(`Access toggled for user ${user.username} by admin ${req.user.username}`);
     res.json({ message: "Accès modifié" });
   } catch (error) { 
-    logger.error(`Toggle User Access Error: ${error.message}`);
     res.status(500).json({ message: "Erreur serveur" }); 
   }
 });
@@ -405,14 +461,14 @@ app.delete('/api/users/:id', authenticateToken, requireAdmin, validateParamId(),
       return res.status(400).json({ message: "Action interdite." });
     }
     await User.findByIdAndDelete(req.params.id);
+    logger.info(`User deleted by admin ${req.user.username}`);
     res.json({ message: "Utilisateur supprimé." });
   } catch (error) { 
-    logger.error(`Delete User Error: ${error.message}`);
     res.status(500).json({ message: "Erreur suppression" }); 
   }
 });
 
-// --- COMPANIES (CORRIGÉ) ---
+// --- COMPANIES (CORRIGÉ - NoSQL Injection Fix) ---
 
 app.get('/api/companies', authenticateToken, async (req, res) => {
   try {
@@ -441,11 +497,9 @@ app.post('/api/companies', authenticateToken, async (req, res) => {
     await newCompany.save();
     res.status(201).json(newCompany);
   } catch (error) { 
-    logger.error(`Create Company Error: ${error.message}`);
     res.status(400).json({ message: "Erreur création" }); 
   }
 });
-
 
 
 app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
@@ -486,8 +540,6 @@ app.put('/api/companies/:id', authenticateToken, validateParamId(), async (req, 
   }
 });
 
-
-
 app.delete('/api/companies/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
@@ -516,7 +568,7 @@ app.delete('/api/companies/:id', authenticateToken, validateParamId(), async (re
   }
 });
 
-// --- PROJECTS (CORRIGÉ) ---
+// --- PROJECTS (CORRIGÉ - NoSQL Injection Fix) ---
 
 app.get('/api/projects', authenticateToken, async (req, res) => {
   try {
@@ -633,6 +685,7 @@ app.delete('/api/projects/:id', authenticateToken, validateParamId(), async (req
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
+// Export CSV (AJOUTÉ - CSV Injection Fix)
 app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
@@ -685,6 +738,7 @@ app.get('/api/projects/:id/export/csv', authenticateToken, validateParamId(), as
 });
 
 
+// Full Report
 app.get('/api/projects/:id/full-report', authenticateToken, validateParamId(), async (req, res) => {
   try {
     const userObjectId = safeObjectId(req.user.id);
@@ -717,7 +771,7 @@ app.get('/api/projects/:id/full-report', authenticateToken, validateParamId(), a
   }
 });
 
-// --- CONCRETE TESTS (CORRIGÉ - NoSQL Injection Fix) ---
+// --- CONCRETE TESTS (CORRIGÉ + Contrôle de Concurrence) ---
 
 app.get('/api/concrete-tests', authenticateToken, async (req, res) => {
   try {
@@ -822,7 +876,6 @@ app.post('/api/concrete-tests', authenticateToken, [
   }
 });
 
-
 app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation des IDs (Casting explicite)
@@ -848,6 +901,15 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
       return res.status(404).json({ message: "Non trouvé" });
     }
 
+       const existingTest = await ConcreteTest.findOne({ 
+      _id: req.params.id, 
+      userId: userObjectId 
+    });
+    
+    if (!existingTest) {
+      return res.status(404).json({ message: "Non trouvé" });
+    }
+
     const input = req.body;
     
     // Appliquer les mises à jour champ par champ
@@ -858,6 +920,15 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
       if (input[field] !== undefined) test[field] = String(input[field]);
     });
 
+    // CONTRÔLE DE CONCURRENCE OPTIMISTE
+    if (input.__v !== undefined && existingTest.__v !== input.__v) {
+      return res.status(409).json({ 
+        message: "Conflit de version : Données modifiées par un tiers.",
+        latestData: existingTest
+      });
+    }
+
+    
     ['volume', 'slump', 'vibrationTime', 'layers', 'externalTemp', 'concreteTemp'].forEach(field => {
       if (input[field] != null) {
         test[field] = Number(input[field]);
@@ -904,8 +975,6 @@ app.put('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (
 });
 
 
-
-
 app.delete('/api/concrete-tests/:id', authenticateToken, validateParamId(), async (req, res) => {
   try {
     // 1. Sécurisation de l'ID utilisateur
@@ -938,8 +1007,6 @@ app.delete('/api/concrete-tests/:id', authenticateToken, validateParamId(), asyn
     res.status(500).json({ message: "Erreur serveur" });
   }
 });
-
-
 
 // --- SETTINGS (CORRIGÉ) ---
 
@@ -998,6 +1065,7 @@ app.put('/api/settings', authenticateToken, async (req, res) => {
   }
 });
 
+
 // --- BUG REPORTS ---
 
 app.post('/api/bugs', authenticateToken, async (req, res) => {
@@ -1051,7 +1119,8 @@ app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateParam
   }
 });
 
-// --- DÉTECTION DU DOSSIER FRONTEND ---
+
+// --- SERVING FRONTEND ---
 const distPath = process.env.FRONTEND_BUILD_PATH || (
   fs.existsSync(path.join(__dirname, 'dist')) 
     ? path.join(__dirname, 'dist') 
@@ -1062,7 +1131,6 @@ logger.info(`📁 Dossier frontend: ${distPath}`);
 
 app.use(express.static(distPath));
 
-// --- SERVIR LE FRONTEND (React Router) ---
 app.get('*', (req, res) => {
   const indexPath = path.join(distPath, 'index.html');
   
@@ -1146,34 +1214,38 @@ process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
 // ============================================================================
-// RÉSUMÉ DES CORRECTIONS DE SÉCURITÉ APPLIQUÉES
+// 🎉 VERSION FUSION COMPLÈTE - RÉSUMÉ DES FONCTIONNALITÉS
 // ============================================================================
 /*
-✅ CORRIGÉ - Open Redirect (HTTPS)
-   - Utilise process.env.FRONTEND_URL au lieu de req.headers.host
-   - Sanitize le path avant redirection
+✅ SÉCURITÉ (de mon fichier original)
+   - NoSQL Injection Prevention (safeObjectId + validateParamId)
+   - Open Redirect Fix (HTTPS redirect sécurisé)
+   - CORS Strict en Production
+   - CSV Injection Prevention (sanitizeCSV)
+   - Logo Size Limit (1MB max)
+   - Timing Attack Protection (délai aléatoire)
 
-✅ CORRIGÉ - CORS Strict en Production
-   - Bloque les origines non autorisées en production
-   - Mode dev flexible pour le développement
+✅ FONCTIONNALITÉS AVANCÉES (de votre fichier)
+   - Logging HTTP coloré par status code
+   - Route Auth Check (heartbeat)
+   - Logout All (emergency kill switch)
+   - Contrôle de Concurrence Optimiste (__v)
+   - Sessions Simultanées (multi-device)
+   - Logging Winston amélioré
 
-✅ CORRIGÉ - NoSQL Injection Prevention
-   - Fonction safeObjectId() pour valider tous les ObjectId
-   - Middleware validateParamId() pour req.params
-   - Validation de req.user.id dans chaque route
-   - Validation de projectId, companyId, etc.
+✅ ROUTES COMPLÈTES
+   - Auth: login, logout-all, check, profile
+   - Users: CRUD + toggle access (admin)
+   - Companies: CRUD
+   - Projects: CRUD + export CSV + full report
+   - Concrete Tests: CRUD avec concurrence optimiste
+   - Settings: Get/Update
+   - Bugs: CRUD (admin)
 
-✅ CORRIGÉ - CSV Injection Prevention
-   - Fonction sanitizeCSV() pour échapper les formules
-   - BOM UTF-8 pour compatibilité Excel
-
-✅ CORRIGÉ - Logo Upload Size Limit
-   - Limite à 1MB (1,400,000 caractères base64)
-
-✅ CORRIGÉ - Timing Attack Prevention
-   - Délai aléatoire 100-300ms sur login échoué
-
-✅ AMÉLIORÉ - Frontend Path Detection
-   - Support de FRONTEND_BUILD_PATH env var
-   - Fallback automatique dist/ ou ../Client/dist
+✅ INFRASTRUCTURE
+   - Graceful Shutdown (10s timeout)
+   - Health Check robuste
+   - Rate Limiting différencié
+   - Frontend serving flexible (dist auto-detection)
+   - Logs de démarrage détaillés
 */

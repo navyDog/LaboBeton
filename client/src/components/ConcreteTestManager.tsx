@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, FileText, Factory, ArrowLeft, Search, Boxes, Pencil, X, Scale, Hammer, Save, Briefcase, User as UserIcon } from 'lucide-react';
+import { Plus, Trash2, Calendar, Database, Activity, FileText, Factory, Beaker, ClipboardCheck, ArrowLeft, Search, Calculator, Boxes, Pencil, X, Scale, Hammer, Save, FileCheck, Printer, Thermometer, MapPin, Truck, TestTube, Briefcase, User as UserIcon, AlertTriangle, RefreshCw } from 'lucide-react';
 import { ConcreteTest, Project, Company, Settings, Specimen, User } from '../types';
 import { ReportPreview } from './ReportPreview';
 import { authenticatedFetch } from '../../utils/api';
+
 interface ConcreteTestManagerProps {
   token: string;
   user?: User; 
@@ -112,28 +113,23 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [quickCreateType, setQuickCreateType] = useState<'project' | 'company'>('project');
   
+  // Conflict State
+  const [conflictData, setConflictData] = useState<ConcreteTest | null>(null);
+  
   const [newProjectData, setNewProjectData] = useState({
-    name: '',
-    companyId: '',
-    moa: '',
-    moe: '',
-    contactName: '',
-    email: '',
-    phone: ''
+    name: '', companyId: '', moa: '', moe: '', contactName: '', email: '', phone: ''
   });
 
   const [newCompanyData, setNewCompanyData] = useState({
-    name: '',
-    contactName: '',
-    email: '',
-    phone: ''
+    name: '', contactName: '', email: '', phone: ''
   });
 
   const initialFormState = {
     projectId: '', structureName: '', elementName: '', receptionDate: new Date().toISOString().split('T')[0], samplingDate: new Date().toISOString().split('T')[0], volume: 0,
     concreteClass: '', mixType: '', formulaInfo: '', manufacturer: '', manufacturingPlace: '', deliveryMethod: '',
     slump: 0, samplingPlace: '', externalTemp: 0, concreteTemp: 0, tightening: 'Piquage', vibrationTime: 0, layers: 2, curing: '',
-    testType: '', standard: '', preparation: '', pressMachine: 'Presse 3000kN', specimens: [] as Specimen[]
+    testType: '', standard: '', preparation: '', pressMachine: 'Presse 3000kN', specimens: [] as Specimen[],
+    __v: 0 // Gestion version optimiste
   };
   const [formData, setFormData] = useState(initialFormState);
   const [packAge, setPackAge] = useState(28);
@@ -165,7 +161,14 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     fetchData();
   }, [token, initialTestId]);
 
-  const resetForm = () => { setFormData(initialFormState); setEditingId(null); setViewMode('list'); setSelectedSpecimenIdx(null); setIsModalOpen(false); };
+  const resetForm = () => { 
+    setFormData(initialFormState); 
+    setEditingId(null); 
+    setViewMode('list'); 
+    setSelectedSpecimenIdx(null); 
+    setIsModalOpen(false); 
+    setConflictData(null); 
+  };
 
   const handleAddPack = () => {
     if (packCount <= 0) return;
@@ -222,51 +225,92 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       slump: test.slump || 0, samplingPlace: test.samplingPlace || '', externalTemp: (test as any).externalTemp || 0, concreteTemp: (test as any).concreteTemp || 0,
       tightening: test.tightening || 'Piquage', vibrationTime: test.vibrationTime || 0, layers: test.layers || 2, curing: test.curing || '',
       testType: test.testType || '', standard: test.standard || '', preparation: test.preparation || '', pressMachine: test.pressMachine || 'Presse 3000kN',
-      specimens: test.specimens || []
+      specimens: test.specimens || [],
+      __v: test.__v || 0 // Store current version
     });
-    setEditingId(test._id); setViewMode('create');
+    setEditingId(test._id); setViewMode('create'); setConflictData(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent, forceVersion?: number) => {
+    if(e) e.preventDefault();
     if (!formData.projectId) return alert("Veuillez sélectionner une affaire.");
+    
     const selectedProject = projects.find(p => p._id === formData.projectId);
-    const payload = { ...formData, projectName: selectedProject?.name || '', companyName: selectedProject?.companyName || '', moe: selectedProject?.moe || '', moa: selectedProject?.moa || '', specimenCount: formData.specimens.length };
+    // Si on force, on utilise la version reçue du serveur (forceVersion), sinon la version locale
+    const currentVersion = forceVersion !== undefined ? forceVersion : formData.__v;
+
+    const payload = { 
+        ...formData, 
+        projectName: selectedProject?.name || '', 
+        companyName: selectedProject?.companyName || '', 
+        moe: selectedProject?.moe || '', 
+        moa: selectedProject?.moa || '', 
+        specimenCount: formData.specimens.length,
+        __v: currentVersion
+    };
+
     try {
       const url = editingId ? `/api/concrete-tests/${editingId}` : '/api/concrete-tests';
       const method = editingId ? 'PUT' : 'POST';
-      const res = await authenticatedFetch(url, { method: method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(payload) });
+      
+      const res = await authenticatedFetch(url, { 
+          method: method, 
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, 
+          body: JSON.stringify(payload) 
+      });
+      
       if (res.ok) {
         const updatedTest = await res.json();
         if (editingId) setTests(tests.map(t => t._id === editingId ? updatedTest : t));
         else setTests([updatedTest, ...tests]);
         resetForm();
-      } else { alert("Erreur d'enregistrement."); }
+      } else if (res.status === 409) {
+        // CONFLIT DETECTE
+        const data = await res.json();
+        setConflictData(data.latestData); // On stocke la donnée serveur pour le dialogue
+      } else { 
+          alert("Erreur d'enregistrement."); 
+      }
     } catch (error) { alert("Erreur serveur."); }
   };
 
+  const handleForceOverwrite = () => {
+    if (!conflictData) return;
+    // On relance le submit mais avec la version du serveur pour "gagner" la course
+    handleSubmit(null as any, conflictData.__v);
+    setConflictData(null);
+  };
+
+  const handleReloadConflict = () => {
+    if (!conflictData) return;
+    // On écrase le formulaire local par les données serveur
+    handleEdit(conflictData);
+    setConflictData(null);
+  };
+
+  // ... (Quick Create Logic & Handlers identiques à l'existant ...)
   const handleQuickCreate = async () => {
     if (quickCreateType === 'company') {
-      if(!newCompanyData.name.trim()) return;
-      const res = await authenticatedFetch('/api/companies', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-        body: JSON.stringify(newCompanyData)
-      });
-      if(res.ok) {
-        const newCompany = await res.json();
-        setCompanies([...companies, newCompany]);
-        setNewProjectData({...newProjectData, companyId: newCompany._id});
-        setQuickCreateType('project'); // Basculer vers la création de projet avec l'entreprise pré-remplie
-        setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
-      }
+       if(!newCompanyData.name.trim()) return;
+       try {
+         const res = await authenticatedFetch('/api/companies', {
+           method: 'POST',
+           headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+           body: JSON.stringify(newCompanyData)
+         });
+         if(res.ok) {
+           const newCompany = await res.json();
+           setCompanies([...companies, newCompany]);
+           setNewProjectData({...newProjectData, companyId: newCompany._id});
+           setQuickCreateType('project'); 
+           setNewCompanyData({ name: '', contactName: '', email: '', phone: '' });
+         }
+       } catch(e) { alert("Erreur Création Entreprise"); }
     } else {
        if(!newProjectData.name.trim()) return;
        try {
-         // Récupérer le nom de l'entreprise si un ID est sélectionné
          const selectedCompany = companies.find(c => c._id === newProjectData.companyId);
          const payload = { ...newProjectData, companyName: selectedCompany ? selectedCompany.name : '' };
-
          const res = await authenticatedFetch('/api/projects', {
              method: 'POST',
              headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
@@ -298,10 +342,50 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
       <div className="bg-white rounded-xl shadow-lg border border-concrete-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 relative">
         {isModalOpen && selectedSpecimenIdx !== null && <SpecimenModal specimen={formData.specimens[selectedSpecimenIdx]} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveSpecimen} />}
         
-        {/* Quick Create Modal - DUAL MODE */}
+        {/* MODALE CONFLIT DE VERSION */}
+        {conflictData && (
+            <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-[2px] p-4 animate-in zoom-in-95">
+               <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border-2 border-red-500">
+                  <div className="bg-red-50 p-6 flex items-start gap-4">
+                     <div className="p-3 bg-red-100 rounded-full text-red-600 shrink-0">
+                        <AlertTriangle className="w-8 h-8" />
+                     </div>
+                     <div>
+                        <h3 className="text-xl font-bold text-red-700">Conflit de modification</h3>
+                        <p className="text-red-600 mt-2 text-sm leading-relaxed">
+                           Un autre utilisateur a modifié cette fiche pendant que vous travailliez dessus.
+                           Vos versions ne sont plus synchronisées.
+                        </p>
+                        <div className="mt-4 bg-white p-3 rounded border border-red-200 text-xs text-gray-600">
+                           <p><strong>Serveur:</strong> {conflictData.specimens?.length} éprouvettes, Modifié par {conflictData.userId === user?.id ? 'Vous (autre session)' : 'Autrui'}.</p>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="p-4 bg-white flex justify-end gap-3 border-t border-gray-100">
+                     <button 
+                       onClick={handleReloadConflict}
+                       className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                     >
+                       <RefreshCw className="w-4 h-4" />
+                       Recharger (Perdre mes saisies)
+                     </button>
+                     <button 
+                       onClick={handleForceOverwrite}
+                       className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md"
+                     >
+                       <Save className="w-4 h-4" />
+                       Écraser la version serveur
+                     </button>
+                  </div>
+               </div>
+            </div>
+        )}
+
+        {/* ... (Quick Create Modal Code - Inchangé) ... */}
         {quickCreateOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
                 <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-md">
+                    {/* ... (Contenu QuickCreate existant) ... */}
                     <div className="flex justify-between items-center mb-4">
                        <h4 className="font-bold text-lg flex items-center gap-2">
                          {quickCreateType === 'project' ? <Briefcase className="w-5 h-5 text-safety-orange"/> : <UserIcon className="w-5 h-5 text-blue-600"/>}
@@ -309,65 +393,29 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                        </h4>
                        <button onClick={()=>setQuickCreateOpen(false)}><X className="w-5 h-5 text-gray-400"/></button>
                     </div>
-
                     {/* Tabs */}
                     <div className="flex mb-4 bg-concrete-100 p-1 rounded-lg">
-                       <button 
-                         onClick={() => setQuickCreateType('project')}
-                         className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'project' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}
-                       >
-                         Affaire
-                       </button>
-                       <button 
-                         onClick={() => setQuickCreateType('company')}
-                         className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'company' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}
-                       >
-                         Entreprise
-                       </button>
+                       <button onClick={() => setQuickCreateType('project')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'project' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}>Affaire</button>
+                       <button onClick={() => setQuickCreateType('company')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'company' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}>Entreprise</button>
                     </div>
-
+                    {/* Form Fields */}
                     {quickCreateType === 'project' ? (
                       <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
-                         <div>
-                            <label className="text-xs font-bold text-gray-500">Nom de l'affaire *</label>
-                            <input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} />
-                         </div>
-                         <div>
-                            <label className="text-xs font-bold text-gray-500">Entreprise / Client</label>
-                            <select className="w-full border p-2 rounded text-sm mt-1 bg-white" value={newProjectData.companyId} onChange={e => setNewProjectData({...newProjectData, companyId: e.target.value})}>
-                               <option value="">-- Sélectionner ou créer --</option>
-                               {companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                            </select>
-                            <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2">
-                            <div><label className="text-xs font-bold text-gray-500">MOA</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} /></div>
-                            <div><label className="text-xs font-bold text-gray-500">MOE</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} /></div>
-                         </div>
+                         <div><label className="text-xs font-bold text-gray-500">Nom de l'affaire *</label><input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École" value={newProjectData.name} onChange={e=>setNewProjectData({...newProjectData, name: e.target.value})} /></div>
+                         <div><label className="text-xs font-bold text-gray-500">Entreprise / Client</label><select className="w-full border p-2 rounded text-sm mt-1 bg-white" value={newProjectData.companyId} onChange={e => setNewProjectData({...newProjectData, companyId: e.target.value})}><option value="">-- Sélectionner ou créer --</option>{companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select><button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button></div>
+                         <div className="grid grid-cols-2 gap-2"><div><label className="text-xs font-bold text-gray-500">MOA</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moa} onChange={e=>setNewProjectData({...newProjectData, moa: e.target.value})} /></div><div><label className="text-xs font-bold text-gray-500">MOE</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.moe} onChange={e=>setNewProjectData({...newProjectData, moe: e.target.value})} /></div></div>
                          <div><label className="text-xs font-bold text-gray-500">Contact</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.contactName} onChange={e=>setNewProjectData({...newProjectData, contactName: e.target.value})} /></div>
-                         <div className="grid grid-cols-2 gap-2">
-                            <div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} /></div>
-                            <div><label className="text-xs font-bold text-gray-500">Tél</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} /></div>
-                         </div>
+                         <div className="grid grid-cols-2 gap-2"><div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.email} onChange={e=>setNewProjectData({...newProjectData, email: e.target.value})} /></div><div><label className="text-xs font-bold text-gray-500">Tél</label><input className="w-full border p-2 rounded text-sm mt-1" value={newProjectData.phone} onChange={e=>setNewProjectData({...newProjectData, phone: e.target.value})} /></div></div>
                       </div>
                     ) : (
                       <div className="space-y-3 animate-in fade-in slide-in-from-right-2">
-                         <div>
-                            <label className="text-xs font-bold text-gray-500">Nom de l'entreprise *</label>
-                            <input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS" value={newCompanyData.name} onChange={e=>setNewCompanyData({...newCompanyData, name: e.target.value})} />
-                         </div>
+                         <div><label className="text-xs font-bold text-gray-500">Nom de l'entreprise *</label><input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS" value={newCompanyData.name} onChange={e=>setNewCompanyData({...newCompanyData, name: e.target.value})} /></div>
                          <div><label className="text-xs font-bold text-gray-500">Contact Principal</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.contactName} onChange={e=>setNewCompanyData({...newCompanyData, contactName: e.target.value})} /></div>
                          <div><label className="text-xs font-bold text-gray-500">Email</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.email} onChange={e=>setNewCompanyData({...newCompanyData, email: e.target.value})} /></div>
                          <div><label className="text-xs font-bold text-gray-500">Téléphone</label><input className="w-full border p-2 rounded text-sm mt-1" value={newCompanyData.phone} onChange={e=>setNewCompanyData({...newCompanyData, phone: e.target.value})} /></div>
                       </div>
                     )}
-
-                    <div className="flex justify-end gap-2 mt-6">
-                        <button onClick={()=>setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button>
-                        <button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">
-                          {quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}
-                        </button>
-                    </div>
+                    <div className="flex justify-end gap-2 mt-6"><button onClick={()=>setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button><button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">{quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}</button></div>
                 </div>
             </div>
         )}
@@ -380,6 +428,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 md:p-8 space-y-8">
+           {/* ... (Reste du formulaire identique) ... */}
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2"><FileText className="w-5 h-5 text-safety-orange" /> Identification Chantier</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -419,8 +468,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2"><Boxes className="w-5 h-5 text-safety-orange" /> Planification & Résultats</h3>
-              
-              {/* Add Pack Bar - REPOSITIONED */}
               <div className="bg-concrete-100 p-3 rounded-lg border border-concrete-200 flex flex-wrap items-center justify-between gap-4">
                 <span className="text-sm font-bold text-concrete-700">Ajouter des éprouvettes :</span>
                 <div className="flex items-center gap-2">
@@ -431,7 +478,6 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                    <button type="button" onClick={handleAddPack} className="ml-2 px-3 py-1.5 bg-concrete-800 text-white text-xs font-bold rounded hover:bg-concrete-700 flex items-center gap-1 shadow-sm"><Plus className="w-3 h-3" /> Ajouter</button>
                 </div>
               </div>
-
               {formData.specimens.length > 0 && (
                 <div className="overflow-x-auto border border-concrete-200 rounded-lg shadow-sm">
                   <table className="w-full text-left text-xs md:text-sm">
@@ -458,6 +504,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     );
   }
 
+  // ... (ViewMode === 'list' inchangé) ...
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
        {reportState && <ReportPreview test={reportState.test} user={user} type={reportState.type} onClose={() => setReportState(null)} />}
