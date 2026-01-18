@@ -3,13 +3,12 @@
   "version": "0.2.1-alpha.1",
   "private": true,
   "scripts": {
-    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
+    "postinstall": "npm install --prefix client && npm install --prefix server && npm run build --prefix client",
+    "start": "node server/index.js",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client",
-    "start": "npm start --prefix server",
-    "start-dev": "npm run build --prefix client && npm start --prefix server"
+    "build": "npm run build --prefix client"
   },
-  "devDependencies": {
+  "dependencies": {
     "concurrently": "^8.2.2"
   }
 }
