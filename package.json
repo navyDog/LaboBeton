@@ -1,14 +1,17 @@
+
 {
   "name": "labobeton-monorepo",
   "version": "0.2.1-alpha.1",
   "private": true,
   "scripts": {
-    "postinstall": "npm install --prefix client && npm install --prefix server && npm run build --prefix client",
-    "start": "node server/index.js",
+    "install:all": "npm install && npm install --prefix client && npm install --prefix server",
     "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client"
+    "build": "npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "start-dev": "npm run build --prefix client && npm start --prefix server"
   },
-  "dependencies": {
+  "devDependencies": {
     "concurrently": "^8.2.2"
   }
 }
+
