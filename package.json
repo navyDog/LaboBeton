@@ -1,4 +1,3 @@
-
 {
   "name": "labobeton-monorepo",
   "version": "0.2.1-alpha.1",
@@ -14,6 +13,5 @@
     "concurrently": "^8.2.2"
   }
 }
-
 
 
