@@ -4,8 +4,8 @@ import {
   getAllBugReports, 
   updateBugReport, 
   deleteBugReport 
-} from '../controllers/bugReportController.js';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
+} from '../controllers/BugReportController.js';
+import { authenticateToken, requireAdmin } from '../middleware/Auth.js';
 import { validateParamId } from '../services/SecureIdService.js';
 
 const router = express.Router();

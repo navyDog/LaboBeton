@@ -1,5 +1,5 @@
 import BugReport from '../models/BugReport.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 
 export const createBugReport = async (req, res) => {
   try {

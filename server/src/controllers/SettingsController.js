@@ -1,5 +1,5 @@
 import Settings from '../models/Settings.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 import { getSafeObjectId } from '../services/SecureIdService.js';
 
 export const getSettings = async (req, res) => {

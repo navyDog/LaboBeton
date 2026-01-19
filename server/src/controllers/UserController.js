@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 
 export const createUser = async (req, res) => {
   try {

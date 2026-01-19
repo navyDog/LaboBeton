@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Project from '../models/Project.js';
 import ConcreteTest from '../models/ConcreteTest.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 import { getSafeObjectId } from '../services/SecureIdService.js';
 import { sanitizeCSV } from '../services/CsvService.js';
 
