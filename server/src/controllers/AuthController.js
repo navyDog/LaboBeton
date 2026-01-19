@@ -67,7 +67,7 @@ export const checkAuth = (req, res) => {
 
 export const logoutAll = async (req, res) => {
   try {
-    const userObjectId = getSafeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user?.id);
     if (!userObjectId) {
       return res.status(403).json({ message: 'Session invalide' });
     }
@@ -90,7 +90,7 @@ export const logoutAll = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    const userObjectId = getSafeObjectId(req.user.id);
+    const userObjectId = getSafeObjectId(req.user?.id);
     if (!userObjectId) {
       return res.status(403).json({ message: 'Session invalide' });
     }

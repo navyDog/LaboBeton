@@ -7,7 +7,7 @@ export const createBugReport = async (req, res) => {
     await BugReport.create({ 
       type: String(type), 
       description: String(description), 
-      user: req.user.username 
+      user: req.user?.username
     });
     res.json({ message: "Signalement reçu" });
   } catch (error) {

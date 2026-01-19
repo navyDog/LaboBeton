@@ -1,6 +1,6 @@
 export default {
   preset: 'ts-jest',
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
   setupFiles: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     // Mock des fichiers statiques (images, styles)
