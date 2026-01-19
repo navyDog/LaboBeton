@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import logger from './logger.js';
+import logger from './Logger.js';
 import User from '../models/User.js';
 
 export const connectDB = async () => {

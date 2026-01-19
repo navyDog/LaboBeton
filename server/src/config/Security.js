@@ -2,7 +2,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
-import logger from './logger.js';
+import logger from './Logger.js';
 
 // CORS Configuration
 const allowedOrigins = [

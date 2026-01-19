@@ -3,10 +3,10 @@ import express from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { configureSecurity, globalLimiter } from './config/security.js';
-import routes from './routes/index.js';
-import { errorHandler } from './middleware/errorhandler.js';
-import logger from './config/logger.js';
+import { configureSecurity, globalLimiter } from './config/Security.js';
+import routes from './routes/Index.js';
+import { errorHandler } from './middleware/ErrorHandler.js';
+import logger from './config/Logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

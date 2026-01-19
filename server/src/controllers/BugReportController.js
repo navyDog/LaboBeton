@@ -1,5 +1,5 @@
 import BugReport from '../models/BugReport.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 
 export const createBugReport = async (req, res) => {
   try {
@@ -7,7 +7,7 @@ export const createBugReport = async (req, res) => {
     await BugReport.create({ 
       type: String(type), 
       description: String(description), 
-      user: req.user.username 
+      user: req.user?.username
     });
     res.json({ message: "Signalement reçu" });
   } catch (error) {

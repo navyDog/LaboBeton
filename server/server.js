@@ -1,8 +1,8 @@
 import os from 'node:os';
 import mongoose from 'mongoose';
 import app from './src/app.js';
-import { connectDB } from './src/config/database.js';
-import logger from './src/config/logger.js';
+import { connectDB } from './src/config/Database.js';
+import logger from './src/config/Logger.js';
 
 const PORT = process.env.PORT || 8080;
 let server;

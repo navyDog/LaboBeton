@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Company from '../models/Company.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 import { getSafeObjectId } from '../services/SecureIdService.js';
 
 export const getAllCompanies = async (req, res) => {

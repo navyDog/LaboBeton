@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import ConcreteTest from '../models/ConcreteTest.js';
 import Project from '../models/Project.js';
-import logger from '../config/logger.js';
+import logger from '../config/Logger.js';
 import { getSafeObjectId } from '../services/SecureIdService.js';
 
 export const getAllTests = async (req, res) => {
