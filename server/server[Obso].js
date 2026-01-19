@@ -1082,9 +1082,9 @@ app.delete('/api/admin/bugs/:id', authenticateToken, requireAdmin, validateParam
 
 // --- SERVING FRONTEND ---
 const distPath = process.env.FRONTEND_BUILD_PATH || (
-  fs.existsSync(path.join(__dirname, 'dist')) 
-    ? path.join(__dirname, 'dist') 
-    : path.join(__dirname, '../Client/dist')
+  fs.existsSync(path.join(__dirname, '../dist')) 
+    ? path.join(__dirname, '../dist') 
+    : path.join(__dirname, '../../Client/dist')
 );
 
 logger.info(`📁 Dossier frontend: ${distPath}`);

@@ -187,3 +187,23 @@
 ### **Priorités Faibles**
 1. **Documenter les schémas Mongoose** avec des commentaires JSDoc
 2. **Optimiser les performances** avec `React.memo` et l'indexation MongoDB
+
+
+
+
+server
+labobeton-server/
+├── src/
+│   ├── config/           ✅ Configuration (logger, DB, sécurité)
+│   ├── middleware/       ✅ Auth, validation, erreurs
+│   ├── controllers/      ✅ Logique métier (7 fichiers)
+│   ├── routes/           ✅ Organisation des endpoints (8 fichiers)
+│   ├── models/           ✅ Schémas MongoDB (6 modèles)
+│   ├── services/         ✅ Utilitaires (3 services)
+│   ├── utils/            ✅ Helpers
+│   └── app.js            ✅ Configuration Express
+├── logs/                 📝 Logs Winston
+├── .env                  🔐 Variables d'environnement
+├── .env.example          📄 Template
+├── package.json          📦 Dépendances
+└── server.js             🚀 Point d'entrée
