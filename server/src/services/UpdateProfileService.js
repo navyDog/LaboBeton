@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 
 export function prepareUserUpdates(body) {
-    const fields = ['companyName', 'address', 'contact', 'siret', 'apeCode', 'legalInfo'];
+    const fields = ['companyName', 'address', 'contact', 'siret', 'apeCode', 'legalInfo', 'logo'];
     const updates = {};
 
     fields.forEach(field => {
@@ -49,7 +49,8 @@ function getMaxLength(field) {
         contact: 100,
         siret: 50,
         apeCode: 20,
-        legalInfo: 200
+        legalInfo: 200,
+        logo: 1400000
     };
     return maxLengths[field] || 255;
 }
