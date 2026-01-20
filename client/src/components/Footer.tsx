@@ -10,7 +10,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
     <footer className="bg-white border-t border-concrete-200 py-4 mt-auto">
       <div className="max-w-7xl mx-auto px-4 text-center">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-concrete-400">&copy; {new Date().getFullYear()} LaboBéton v0.2.0-alpha.1 - Normes NF EN</p>
+          <p className="text-xs text-concrete-400">&copy; {new Date().getFullYear()} LaboBéton v0.2.1-beta.1 - Normes NF EN</p>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-concrete-400 font-medium">Developed by</span>
             <div className="flex items-center gap-1 bg-concrete-100 px-2 py-0.5 rounded text-concrete-600 font-bold text-[10px]">
