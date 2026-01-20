@@ -39,6 +39,7 @@ const printStartupSummary = () => {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:8080',
+    'https://www.labobeton.fr',
     process.env.FRONTEND_URL, 
     process.env.FRONTEND_URL2 
   ].filter(Boolean);
