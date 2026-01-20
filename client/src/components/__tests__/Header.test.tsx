@@ -36,7 +36,7 @@ describe('Header', () => {
     );
 
     expect(screen.getByText(/LaboBéton/i)).toBeInTheDocument();
-    expect(screen.getByText(/v0.2.1-beta.1/i)).toBeInTheDocument();
+    expect(screen.getByText(/v0.2.0-beta.1/i)).toBeInTheDocument();
     expect(screen.getByText(/Test Company/i)).toBeInTheDocument();
     expect(screen.getByTitle(/Mon Profil/i)).toBeInTheDocument();
     expect(screen.getByTitle(/Déconnexion/i)).toBeInTheDocument();
