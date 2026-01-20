@@ -39,7 +39,7 @@ RUN npm install --omit=dev
 # 3. Copier le code du serveur
 # Note: On suppose que server.js est dans le dossier server/
 COPY server/server.js ./
-COPY server/models ./models
+COPY server/src ./src
 
 # 4. Copier le build frontend (dist) généré à l'étape précédente
 # On le place dans un dossier 'dist' à la racine de l'image, car server.js sert 'dist'
