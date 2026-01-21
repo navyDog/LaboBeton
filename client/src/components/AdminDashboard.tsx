@@ -159,7 +159,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) =
                         }
                       </td>
                       <td className="px-6 py-4 text-sm text-concrete-600">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('fr-FR') : <span className="text-concrete-300 italic">Jamais</span>}
+                        {user.lastLogin ? new Date(user.lastLogin).toLocaleString('fr-FR') : <span className="text-concrete-300 italic">Jamais</span>}
                       </td>
                       <td className="px-6 py-4 text-right">
                         {user._id !== currentUser.id && (
