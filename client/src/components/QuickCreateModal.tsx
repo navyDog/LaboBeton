@@ -68,7 +68,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
           <button onClick={() => setQuickCreateType('company')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'company' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}>Entreprise</button>
         </div>
         {quickCreateType === 'project' ? (
-          <div className="space-y-3 animate-in fade-in slide-in-from-left-2">
+          <div className="space-y-3 animate-in fade-in slide-in-from-left-2 min-h-[340px]">
             <div>
               <label className="text-xs font-bold text-gray-500">
                 Nom de l'affaire *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École"
@@ -84,7 +84,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                   <option value="">-- Sélectionner ou créer --</option>{companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </label>
-              <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer une entreprise</button>
+              <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer</button>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -122,7 +122,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-3 animate-in fade-in slide-in-from-right-2">
+          <div className="space-y-3 animate-in fade-in slide-in-from-right-2 min-h-[340px]">
             <div>
               <label className="text-xs font-bold text-gray-500">
                 Nom de l'entreprise *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS"
