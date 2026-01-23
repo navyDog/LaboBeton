@@ -84,7 +84,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                   <option value="">-- Sélectionner ou créer --</option>{companies.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
                 </select>
               </label>
-              <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-blue-600 font-bold mt-1 hover:underline">+ Créer</button>
+              <button onClick={() => setQuickCreateType('company')} className="text-[10px] text-safety-orange font-bold mt-1 hover:underline">+ Créer</button>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
