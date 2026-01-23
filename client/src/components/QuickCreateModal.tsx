@@ -59,7 +59,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h4 className="font-bold text-lg flex items-center gap-2">
             {quickCreateType === 'project' ? <Briefcase className="w-5 h-5 text-safety-orange" /> : <UserIcon className="w-5 h-5 text-blue-600" />}
-            {quickCreateType === 'project' ? 'Nouvelle Affaire' : 'Nouveau Client'}
+            {quickCreateType === 'project' ? 'Nouvelle Affaire' : 'Nouvelle Entreprise'}
           </h4>
           <button onClick={() => setQuickCreateOpen(false)}><X className="w-5 h-5 text-gray-400" /></button>
         </div>
@@ -68,7 +68,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
           <button onClick={() => setQuickCreateType('company')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${quickCreateType === 'company' ? 'bg-white shadow text-concrete-900' : 'text-concrete-500'}`}>Entreprise</button>
         </div>
         {quickCreateType === 'project' ? (
-          <div className="space-y-3 animate-in fade-in slide-in-from-left-2 min-h-[340px]">
+          <div className="space-y-3 animate-in fade-in slide-in-from-left-2 min-h-[380px]">
             <div>
               <label className="text-xs font-bold text-gray-500">
                 Nom de l'affaire *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Chantier École"
@@ -122,7 +122,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             </div>
           </div>
         ) : (
-          <div className="space-y-3 animate-in fade-in slide-in-from-right-2 min-h-[340px]">
+          <div className="space-y-3 animate-in fade-in slide-in-from-right-2 min-h-[380px]">
             <div>
               <label className="text-xs font-bold text-gray-500">
                 Nom de l'entreprise *<input autoFocus className="w-full border p-2 rounded text-sm mt-1" placeholder="ex: Bâtiment SAS"
@@ -149,7 +149,7 @@ const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             </div>
           </div>
         )}
-        <div className="flex justify-end gap-2 mt-6"><button onClick={() => setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button><button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange text-white rounded text-sm font-bold shadow-sm">{quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}</button></div>
+        <div className="flex justify-end gap-2 mt-6"><button onClick={() => setQuickCreateOpen(false)} className="px-4 py-2 bg-gray-100 rounded text-sm font-medium">Annuler</button><button onClick={handleQuickCreate} className="px-4 py-2 bg-safety-orange hover:bg-orange-600 text-white rounded text-sm font-bold shadow-sm">{quickCreateType === 'project' ? 'Créer Affaire' : 'Créer & Sélectionner'}</button></div>
       </div>
     </div>
   );
