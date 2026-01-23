@@ -68,6 +68,9 @@ const Header: React.FC<HeaderProps> = ({
               <button onClick={() => onNavigate('settings')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'settings' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
                 <Settings className="w-4 h-4" /> Paramètres
               </button>
+              <button onClick={() => onNavigate('profile')} className={`px-3 py-1.5 text-xs font-semibold rounded flex items-center gap-2 transition-colors ${view === 'profile' ? 'bg-white text-concrete-900 shadow-sm' : 'text-concrete-500 hover:text-concrete-900'}`}>
+                <UserIcon className="w-4 h-4" /> Mon Profil
+              </button>
             </div>
           )}
           <div className="flex items-center gap-4 border-l border-concrete-200 pl-4">
