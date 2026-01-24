@@ -78,54 +78,6 @@ const EventModal: React.FC<EventModalProps> = ({ test, isOpen, onClose, onNaviga
   );
 };
 
-// --- Refactored helpers for event generation ---
-
-const createCrushingEvents = (test: ConcreteTest): CalendarEvent[] => {
-    if (!test.specimens) return [];
-
-    const crushingGroups = test.specimens.reduce((groups, specimen) => {
-        if (specimen.crushingDate) {
-            const dateStr = new Date(specimen.crushingDate).toISOString().split('T')[0];
-            groups[dateStr] = (groups[dateStr] || 0) + 1;
-        }
-        return groups;
-    }, {} as Record<string, number>);
-
-    return Object.entries(crushingGroups).map(([dateStr, count]) => ({
-        id: `${test._id}-crush-${dateStr}`,
-        testId: test._id,
-        dateStr: dateStr,
-        type: 'crushing',
-        title: `Écrasement ${test.reference}`,
-        details: `${count} ép.`,
-    }));
-};
-
-const createTestEvents = (test: ConcreteTest): CalendarEvent[] => {
-    const events: CalendarEvent[] = [];
-    if (test.receptionDate) {
-        events.push({
-            id: `${test._id}-rec`,
-            testId: test._id,
-            dateStr: new Date(test.receptionDate).toISOString().split('T')[0],
-            type: 'reception',
-            title: `Réception ${test.reference}`,
-            details: test.projectName || '',
-        });
-    }
-    if (test.samplingDate) {
-        events.push({
-            id: `${test._id}-samp`,
-            testId: test._id,
-            dateStr: new Date(test.samplingDate).toISOString().split('T')[0],
-            type: 'sampling',
-            title: `Prélèvement ${test.reference}`,
-            details: `${test.structureName} (${test.concreteClass})`,
-        });
-    }
-    return [...events, ...createCrushingEvents(test)];
-};
-
 // --- Calendar Day Component ---
 
 interface CalendarDayProps {
@@ -172,7 +124,60 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTest, setSelectedTest] = useState<ConcreteTest | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [eventVisibility, setEventVisibility] = useState({
+    reception: true,
+    sampling: true,
+    crushing: true,
+  });
 
+  // --- Refactored helpers for event generation ---
+
+  const createCrushingEvents = (test: ConcreteTest): CalendarEvent[] => {
+      if (!test.specimens) return [];
+
+      const crushingGroups = test.specimens.reduce((groups, specimen) => {
+          if (specimen.crushingDate) {
+              const dateStr = new Date(specimen.crushingDate).toISOString().split('T')[0];
+              groups[dateStr] = (groups[dateStr] || 0) + 1;
+          }
+          return groups;
+      }, {} as Record<string, number>);
+
+      return Object.entries(crushingGroups).map(([dateStr, count]) => ({
+          id: `${test._id}-crush-${dateStr}`,
+          testId: test._id,
+          dateStr: dateStr,
+          type: 'crushing',
+          title: `Écrasement ${test.reference}`,
+          details: `${count} ép.`,
+      }));
+  };
+
+  const createTestEvents = (test: ConcreteTest): CalendarEvent[] => {
+      const events: CalendarEvent[] = [];
+      if (test.receptionDate) {
+          events.push({
+              id: `${test._id}-rec`,
+              testId: test._id,
+              dateStr: new Date(test.receptionDate).toISOString().split('T')[0],
+              type: 'reception',
+              title: `Réception ${test.reference}`,
+              details: test.projectName || '',
+          });
+      }
+      if (test.samplingDate) {
+          events.push({
+              id: `${test._id}-samp`,
+              testId: test._id,
+              dateStr: new Date(test.samplingDate).toISOString().split('T')[0],
+              type: 'sampling',
+              title: `Prélèvement ${test.reference}`,
+              details: `${test.structureName} (${test.concreteClass})`,
+          });
+      }
+      return [...events, ...createCrushingEvents(test)];
+  };
+  
   useEffect(() => {
     const fetchTests = async () => {
       try {
@@ -183,7 +188,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
     fetchTests();
   }, [token]);
 
-  const events = useMemo(() => tests.flatMap(createTestEvents), [tests]);
+  const events = useMemo(() => {
+    return tests.flatMap(createTestEvents)
+      .filter(event => eventVisibility[event.type]);
+  }, [tests, eventVisibility]);
 
   const handleExportICS = () => {
     let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//LaboBeton//NONSGML v1.0//EN\n";
@@ -273,10 +281,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
         </div>
       </div>
 
-      <div className="flex gap-4 text-xs font-bold px-2">
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-gray-200 border border-gray-400 rounded"></div><span>Réception</span></div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-200 border border-blue-400 rounded"></div><span>Prélèvement</span></div>
-        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-orange-200 border border-orange-400 rounded"></div><span>Écrasement</span></div>
+      <div className="flex gap-4 text-xs font-bold px-2 items-center">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={eventVisibility.reception} onChange={e => setEventVisibility({...eventVisibility, reception: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-gray-600 focus:ring-gray-500" />
+          <div className="w-3 h-3 bg-gray-200 border border-gray-400 rounded"></div>
+          <span>Réception</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={eventVisibility.sampling} onChange={e => setEventVisibility({...eventVisibility, sampling: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+          <div className="w-3 h-3 bg-blue-200 border border-blue-400 rounded"></div>
+          <span>Prélèvement</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={eventVisibility.crushing} onChange={e => setEventVisibility({...eventVisibility, crushing: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
+          <div className="w-3 h-3 bg-orange-200 border border-orange-400 rounded"></div>
+          <span>Écrasement</span>
+        </label>
       </div>
 
       <div className="bg-white rounded-xl border border-concrete-200 shadow-sm overflow-hidden">
@@ -286,3 +306,4 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ token, onNavigate })
     </div>
   );
 };
+
