@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAllCompanies, createCompany, updateCompany, deleteCompany } from '../controllers/CompanyController.js';
-import { authenticateToken } from '../middleware/Auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { validateParamId } from '../services/SecureIdService.js';
 
 const router = express.Router();

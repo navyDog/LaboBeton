@@ -1,12 +1,12 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import authRoutes from './AuthRoutes.js';
+import authRoutes from './authRoutes.js';
 import userRoutes from './UserRoutes.js';
-import companyRoutes from './CompanyRoutes.js';
+import companyRoutes from './companyRoutes.js';
 import projectRoutes from './ProjectRoutes.js';
-import concreteTestRoutes from './ConcreteTestRoutes.js';
+import concreteTestRoutes from './concreteTestRoutes.js';
 import settingsRoutes from './SettingsRoutes.js';
-import bugReportRoutes from './BugReportRoutes.js';
+import bugReportRoutes from './bugReportRoutes.js';
 
 const router = express.Router();
 
