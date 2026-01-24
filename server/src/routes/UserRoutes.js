@@ -1,8 +1,8 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { createUser, getAllUsers, toggleUserAccess, deleteUser } from '../controllers/UserController.js';
-import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { checkValidation } from '../middleware/validation.js';
+import { authenticateToken, requireAdmin } from '../middleware/Auth.js';
+import { checkValidation } from '../middleware/Validation.js';
 import { validateParamId } from '../services/SecureIdService.js';
 
 const router = express.Router();
