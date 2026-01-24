@@ -61,13 +61,17 @@ export const createProject = async (req, res) => {
 
 export const updateProject = async (req, res) => {
   try {
+    
     const userObjectId = getSafeObjectId(req.user.id);
     if (!userObjectId) {
+      
       return res.status(403).json({ message: 'Session invalide' });
     }
 
     const projectId = getSafeObjectId(req.params.id);
+ 
     if (!projectId) {
+      
       return res.status(400).json({ message: 'ID projet invalide' });
     }
 
@@ -83,7 +87,9 @@ export const updateProject = async (req, res) => {
     if (req.body.companyId !== undefined) {
       const validCompanyId = getSafeObjectId(req.body.companyId);
       if (!validCompanyId) {
+        
         return res.status(400).json({ message: 'Company ID invalide' });
+        
       }
       updates.companyId = validCompanyId;
     }
@@ -95,12 +101,14 @@ export const updateProject = async (req, res) => {
     );
 
     if (!updated) {
+      
       return res.status(404).json({ message: "Non trouvé" });
     }
 
     res.json(updated);
   } catch (error) {
     logger.error(`Update Project Error: ${error.message}`);
+   
     res.status(500).json({ message: "Erreur serveur" });
   }
 };

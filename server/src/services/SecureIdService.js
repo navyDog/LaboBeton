@@ -14,6 +14,7 @@ export const validateParamId = (paramName = 'id') => (req, res, next) => {
   const id = req.params[paramName];
   const objectId = getSafeObjectId(id);
   if (!objectId) return res.status(400).json({ message: 'ID invalide' });
-  req.params[paramName] = objectId;
+  // NE PAS remplacer req.params[paramName]
+  // Juste valider et passer au suivant
   next();
-}
+};
