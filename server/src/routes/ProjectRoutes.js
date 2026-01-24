@@ -6,7 +6,7 @@ import {
   deleteProject,
   exportProjectCSV,
   getFullReport
-} from '../controllers/projectController.js';
+} from '../controllers/ProjectController.js';
 import { authenticateToken } from '../middleware/Auth.js';
 import { validateParamId } from '../services/SecureIdService.js';
 
