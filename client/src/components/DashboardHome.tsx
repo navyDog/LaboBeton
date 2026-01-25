@@ -225,13 +225,22 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
            <h3 className="font-bold text-concrete-500 uppercase text-sm tracking-wider h-6 flex items-center">
              Accès Rapides & Modules
            </h3>
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <MenuCard title="Prélèvements" description="Saisie béton frais, fabrication et résultats." icon={FlaskConical} variant="orange" onClick={() => onNavigate('fresh_tests')} />
-             <MenuCard title="Planning" description="Calendrier des écrasements." icon={Calendar} variant="blue" onClick={() => onNavigate('calendar')} />
-             <MenuCard title="Entreprises" description="Annuaire des clients." icon={Building} variant="concrete" onClick={() => onNavigate('companies')} />
-             <MenuCard title="Affaires" description="Gestion des chantiers." icon={Briefcase} variant="concrete" onClick={() => onNavigate('projects')} />
-             <MenuCard title="Paramètres" description="Configuration des normes." icon={Settings} variant="concrete" onClick={() => onNavigate('settings')} />
-             <MenuCard title="Mon Profil" description="Logo et entête rapports." icon={User} variant="concrete" onClick={() => onNavigate('profile')} />
+
+           <div className="flex flex-col gap-y-8 mt-2">
+              <div>
+                  <h4 className="font-bold text-concrete-800 mb-3 text-base">Laboratoire</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <MenuCard title="Prélèvements" description="Saisie béton frais, fabrication et résultats." icon={FlaskConical} variant="orange" onClick={() => onNavigate('fresh_tests')} />
+                      <MenuCard title="Planning" description="Calendrier des écrasements." icon={Calendar} variant="blue" onClick={() => onNavigate('calendar')} />
+                  </div>
+              </div>
+              <div>
+                  <h4 className="font-bold text-concrete-800 mb-3 text-base">Gestion</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <MenuCard title="Entreprises" description="Annuaire des clients." icon={Building} variant="concrete" onClick={() => onNavigate('companies')} />
+                      <MenuCard title="Affaires" description="Gestion des chantiers." icon={Briefcase} variant="purple" onClick={() => onNavigate('projects')} />
+                  </div>
+              </div>
            </div>
         </div>
       </div>

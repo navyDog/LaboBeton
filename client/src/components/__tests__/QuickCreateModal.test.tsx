@@ -54,7 +54,7 @@ describe('QuickCreateModal', () => {
         isQuickCreate={true}
       />
     );
-    expect(screen.getByText('Nouveau Client')).toBeInTheDocument();
+    expect(screen.getByText('Nouvelle Entreprise')).toBeInTheDocument();
     expect(screen.getByText('Nom de l\'entreprise *')).toBeInTheDocument();
     expect(screen.getByText('Contact Principal')).toBeInTheDocument();
   });
