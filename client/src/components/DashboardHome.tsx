@@ -131,6 +131,12 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
           Bonjour, <span className="text-safety-orange">{userDisplayName}</span>
         </h2>
         <p className="text-concrete-500 text-lg">Tableau de bord de pilotage du laboratoire.</p>
+        <p className="text-sm text-concrete-500 mt-2">
+          Besoin d'aide ?{' '}
+          <a href="/user-guide.pdf" download className="text-safety-orange hover:underline">
+            Télécharger le guide utilisateur
+          </a>
+        </p>
       </div>
 
       <div className="grid lg:grid-cols-12 gap-8 items-start">
