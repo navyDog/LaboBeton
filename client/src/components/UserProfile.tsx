@@ -26,19 +26,31 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Mettre à jour le formulaire si l'utilisateur change (props)
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      companyName: currentUser.companyName || '',
-      address: currentUser.address || '',
-      contact: currentUser.contact || '',
-      siret: currentUser.siret || '',
-      apeCode: currentUser.apeCode || '',
-      legalInfo: currentUser.legalInfo || '',
-      logo: currentUser.logo || ''
-    }));
-  }, [currentUser]);
+// Juste après la déclaration du state formData
+useEffect(() => {
+  console.log('🔄 currentUser a changé:', currentUser);
+  console.log('📝 Valeurs reçues:', {
+    companyName: currentUser.companyName,
+    address: currentUser.address,
+    contact: currentUser.contact
+  });
+  
+  setFormData({
+    companyName: currentUser.companyName || '',
+    address: currentUser.address || '',
+    contact: currentUser.contact || '',
+    siret: currentUser.siret || '',
+    apeCode: currentUser.apeCode || '',
+    legalInfo: currentUser.legalInfo || '',
+    logo: currentUser.logo || '',
+    password: ''
+  });
+}, [currentUser]);
+
+// Ajoute aussi celui-ci pour voir l'état du formulaire
+useEffect(() => {
+  console.log('📋 formData actuel:', formData);
+}, [formData]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

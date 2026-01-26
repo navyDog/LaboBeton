@@ -48,11 +48,17 @@ export const login = async (req, res) => {
     res.json({ 
       token, 
       user: { 
-        id: user._id, 
-        username: user.username, 
-        role: user.role, 
-        companyName: user.companyName, 
-        logo: user.logo 
+    id: user._id, 
+    username: user.username, 
+    role: user.role,
+    isActive: user.isActive,
+    companyName: user.companyName,
+    address: user.address,          // ✅ Ajouté
+    contact: user.contact,          // ✅ Ajouté
+    siret: user.siret,              // ✅ Ajouté
+    apeCode: user.apeCode,          // ✅ Ajouté
+    legalInfo: user.legalInfo,      // ✅ Ajouté
+    logo: user.logo 
       } 
     });
   } catch (error) {

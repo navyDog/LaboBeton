@@ -33,6 +33,7 @@ export const getAllUsers = async (req, res) => {
     const users = await User.find({}, '-password -tokenVersion')
       .sort({ createdAt: -1 });
     res.json(users);
+
   } catch (error) {
     logger.error(`Get users error: ${error.message}`);
     res.status(500).json({ message: "Erreur récupération" }); 
