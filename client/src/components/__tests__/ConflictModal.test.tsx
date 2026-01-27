@@ -47,7 +47,7 @@ describe('ConflictModal', () => {
         diameter: 150,
         height: 300,
         surface: 22500,
-        weight: 2400,
+        dryWeight: 2400,
         force: 25,
         stress: 1.11,
         density: 356,

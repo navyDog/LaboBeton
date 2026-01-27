@@ -57,10 +57,12 @@ export interface Specimen {
   diameter: number;
   height: number;
   surface: number;
-  weight?: number; // null si pas encore pesé
+  dryWeight?: number; // (masse sèche) null si pas encore pesé
   force?: number;  // null si pas encore écrasé
   stress?: number;
   density?: number;
+  freshWeightWithMold?: number; // (masse fraîche + moule)
+  slumpTime?: string; // (heure d'affaissement)
 }
 
 export interface ConcreteTest {

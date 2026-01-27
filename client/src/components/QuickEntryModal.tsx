@@ -53,7 +53,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({
   }, [testId, targetDate, token]);
 
   // 2. Gérer la saisie locale
-  const handleChange = (specimenNumber: number, field: 'weight' | 'force', value: string) => {
+  const handleChange = (specimenNumber: number, field: 'dryWeight' | 'force', value: string) => {
     const numValue = value === '' ? undefined : Number.parseFloat(value);
     
     setSpecimensToEdit(prev => prev.map(s => {
@@ -84,7 +84,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({
           const surface = modified.surface || 1; // Sécurité div/0
           const stress = (modified.force && modified.force > 0) ? (modified.force * 1000) / surface : null;
           const volume = surface * modified.height;
-          const density = (modified.weight && modified.weight > 0) ? (modified.weight / volume) * 1000000 : null;
+          const density = (modified.dryWeight && modified.dryWeight > 0) ? (modified.dryWeight / volume) * 1000000 : null;
 
           return { 
             ...modified, 
@@ -145,7 +145,7 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({
               <div className="grid grid-cols-12 gap-2 text-xs font-bold text-concrete-500 uppercase border-b border-concrete-100 pb-2">
                 <div className="col-span-1">N°</div>
                 <div className="col-span-2 text-center">Âge</div>
-                <div className="col-span-4">Masse (g)</div>
+                <div className="col-span-4">Masse S. (g)</div>
                 <div className="col-span-4">Force (kN)</div>
                 <div className="col-span-1 text-right">MPa</div>
               </div>
@@ -164,8 +164,8 @@ export const QuickEntryModal: React.FC<QuickEntryModalProps> = ({
                         autoFocus={specimen === specimensToEdit[0]}
                         className="w-full pl-8 p-1.5 border border-concrete-300 rounded focus:border-safety-orange focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900"
                         placeholder="ex: 2400"
-                        value={specimen.weight || ''}
-                        onChange={(e) => handleChange(specimen.number, 'weight', e.target.value)}
+                        value={specimen.dryWeight || ''}
+                        onChange={(e) => handleChange(specimen.number, 'dryWeight', e.target.value)}
                       />
                     </div>
                   </div>

@@ -10,6 +10,7 @@ import Footer from './components/Footer';
 import MobileMenu from './components/MobileMenu';
 import MainContent from './components/MainContent';
 
+
 const App: React.FC = () => {
   const { currentUser, kickedOut, handleLogin, handleLogout, handleUserUpdate } = useAuth();
   const dbStatus = useDatabaseStatus();

@@ -17,10 +17,14 @@ const specimenSchema = new mongoose.Schema({
   surface: { type: Number },          // mm2 (Calculé)
 
   // Résultats (Béton Durci - rempli plus tard)
-  weight: { type: Number, default: null }, // g
+  dryWeight: { type: Number, default: null }, // g (Masse sèche)
   force: { type: Number, default: null },  // kN
   stress: { type: Number, default: null }, // MPa (Calculé)
-  density: { type: Number, default: null } // kg/m3 (Calculé)
+  density: { type: Number, default: null }, // kg/m3 (Calculé)
+  
+  // Nouveaux champs demandés
+  freshWeightWithMold: { type: Number, default: null }, // g (Masse fraîche + moule)
+  slumpTime: { type: String, default: null } // Heure d'affaissement
 });
 
 const concreteTestSchema = new mongoose.Schema({
@@ -136,9 +140,9 @@ concreteTestSchema.pre('save', async function(next) {
       // C. Calcul Masse Volumique (kg/m³) = Masse (kg) / Volume (m³)
       // Masse en g, Dimensions en mm.
       // Formule simplifiée : (Masse_g / (Surface_mm2 * Hauteur_mm)) * 1,000,000
-      if (s.weight !== null && s.weight !== undefined && s.height > 0 && s.surface > 0) {
+      if (s.dryWeight !== null && s.dryWeight !== undefined && s.height > 0 && s.surface > 0) {
         const volumeMm3 = s.surface * s.height;
-        s.density = (s.weight / volumeMm3) * 1000000;
+        s.density = (s.dryWeight / volumeMm3) * 1000000;
       } else {
         s.density = null;
       }

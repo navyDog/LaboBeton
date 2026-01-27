@@ -56,7 +56,7 @@ describe('GlobalProjectReport', () => {
         {
           number: 1,
           age: 7,
-          weight: 2400,
+          dryWeight: 2400,
           force: 600,
           crushingDate: '2023-01-08T00:00:00Z',
           stress: 25,
@@ -69,7 +69,7 @@ describe('GlobalProjectReport', () => {
         {
           number: 2,
           age: 7,
-          weight: 2450,
+          dryWeight: 2450,
           force: 610,
           crushingDate: '2023-01-08T00:00:00Z',
           stress: 25.5,
@@ -112,7 +112,7 @@ describe('GlobalProjectReport', () => {
         {
           number: 1,
           age: 28,
-          weight: 2500,
+          dryWeight: 2500,
           force: 700,
           crushingDate: '2023-02-12T00:00:00Z',
           stress: 28,

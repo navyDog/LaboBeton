@@ -190,7 +190,7 @@ export const GlobalProjectReport: React.FC<GlobalProjectReportProps> = ({ projec
                                                      )}
                                                      <td>#{s.number}</td>
                                                      <td>{new Date(s.crushingDate).toLocaleDateString()}</td>
-                                                     <td>{s.weight || '-'}</td>
+                                                     <td>{s.dryWeight || '-'}</td>
                                                      <td>{s.force || '-'}</td>
                                                      <td>{s.stress ? s.stress.toFixed(1) : '-'}</td>
                                                      {idx === 0 && (

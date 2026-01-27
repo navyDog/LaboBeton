@@ -10,7 +10,7 @@ describe('SpecimenModal', () => {
     specimenType: 'Cube',
     diameter: 150,
     height: 300,
-    weight: 2400,
+    dryWeight: 2400,
     force: 25,
     castingDate: '2023-10-01',
     crushingDate: '2023-10-01',
@@ -46,9 +46,9 @@ describe('SpecimenModal', () => {
     expect((heightInput as HTMLInputElement).value).toBe('310');
   });
 
-  it('updates the weight field correctly', () => {
+  it('updates the dryWeight field correctly', () => {
     render(<SpecimenModal specimen={defaultSpecimen} isOpen={true} onClose={onCloseMock} onSave={onSaveMock} />);
-    const weightInput = screen.getByLabelText('Masse (g)');
+    const weightInput = screen.getByLabelText('Masse sèche (g)');
     fireEvent.change(weightInput, { target: { value: '2500' } });
     expect((weightInput as HTMLInputElement).value).toBe('2500');
   });

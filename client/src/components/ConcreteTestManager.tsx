@@ -139,7 +139,7 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
     if (specimen.force && specimen.surface) specimen.stress = (specimen.force * 1000) / specimen.surface;
     else specimen.stress = undefined;
     const volume = specimen.surface * specimen.height;
-    if (specimen.weight && volume) specimen.density = (specimen.weight / volume) * 1000000;
+    if (specimen.dryWeight && volume) specimen.density = (specimen.dryWeight / volume) * 1000000;
     else specimen.density = undefined;
     updatedSpecimens[index] = specimen;
     setFormData({ ...formData, specimens: updatedSpecimens });
@@ -441,12 +441,12 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
               {formData.specimens.length > 0 && (
                 <div className="overflow-x-auto border border-concrete-200 rounded-lg shadow-sm">
                   <table className="w-full text-left text-xs md:text-sm">
-                    <thead className="bg-concrete-50 text-concrete-500 font-semibold border-b border-concrete-200"><tr><th className="px-3 py-2">N°</th><th className="px-3 py-2">Âge</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Dim.</th><th className="px-3 py-2 text-right">Masse</th><th className="px-3 py-2 text-right">Force</th><th className="px-3 py-2 text-right">MPa</th><th className="px-3 py-2"></th></tr></thead>
+                    <thead className="bg-concrete-50 text-concrete-500 font-semibold border-b border-concrete-200"><tr><th className="px-3 py-2">N°</th><th className="px-3 py-2">Âge</th><th className="px-3 py-2">Date</th><th className="px-3 py-2">Dim.</th><th className="px-3 py-2 text-right">Masse S.</th><th className="px-3 py-2 text-right">Force</th><th className="px-3 py-2 text-right">MPa</th><th className="px-3 py-2"></th></tr></thead>
                     <tbody className="divide-y divide-concrete-100 bg-white">
                       {formData.specimens.map((s, idx) => (
                         <tr key={idx} onClick={() => handleSpecimenClick(idx)} className="hover:bg-blue-50 cursor-pointer transition-colors">
                           <td className="px-3 py-2 font-mono font-bold text-concrete-600">#{s.number}</td><td className="px-3 py-2 font-bold">{s.age}j</td><td className="px-3 py-2 text-xs">{new Date(s.crushingDate).toLocaleDateString()}</td><td className="px-3 py-2 text-xs">{s.diameter}x{s.height}</td>
-                          <td className="px-3 py-2 text-right"><input type="number" placeholder="-" className="w-20 p-1 text-right border-transparent hover:border-concrete-300 bg-transparent" onClick={e=>e.stopPropagation()} value={s.weight ?? ''} onChange={e=>handleInlineChange(idx,'weight',e.target.value)}/></td>
+                          <td className="px-3 py-2 text-right"><input type="number" placeholder="-" className="w-20 p-1 text-right border-transparent hover:border-concrete-300 bg-transparent" onClick={e=>e.stopPropagation()} value={s.dryWeight ?? ''} onChange={e=>handleInlineChange(idx,'dryWeight',e.target.value)}/></td>
                           <td className="px-3 py-2 text-right"><input type="number" placeholder="-" className="w-20 p-1 text-right border-transparent hover:border-concrete-300 bg-transparent" onClick={e=>e.stopPropagation()} value={s.force ?? ''} onChange={e=>handleInlineChange(idx,'force',e.target.value)}/></td>
                           <td className="px-3 py-2 text-right font-mono font-bold text-safety-orange">{s.stress?.toFixed(1) || '-'}</td>
                           <td className="px-3 py-2 text-right"><button type="button" onClick={e=>handleRemoveSpecimen(idx,e)} className="text-concrete-300 hover:text-red-500"><Trash2 className="w-3 h-3"/></button></td>

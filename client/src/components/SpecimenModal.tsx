@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Hammer, Scale, Save } from 'lucide-react';
+import { X, Hammer, Scale, Save, Clock } from 'lucide-react';
 import { Specimen } from '../types';
 
 interface SpecimenModalProps {
@@ -18,18 +18,22 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
   const surface = data.specimenType.toLowerCase().includes('cube') ? data.diameter * data.diameter : Math.PI * Math.pow(data.diameter / 2, 2);
   const stress = (data.force && data.force > 0) ? (data.force * 1000) / surface : 0;
   const volume = surface * data.height;
-  const density = (data.weight && data.weight > 0) ? (data.weight / volume) * 1000000 : 0;
+  const density = (data.dryWeight && data.dryWeight > 0) ? (data.dryWeight / volume) * 1000000 : 0;
 
   const handleChange = (field: keyof Specimen, value: string) => {
     const numValue = Number.parseFloat(value);
     setData({ ...data, [field]: Number.isNaN(numValue) ? undefined : numValue });
+  };
+  
+  const handleStringChange = (field: keyof Specimen, value: string) => {
+    setData({ ...data, [field]: value });
   };
 
   const handleSaveClick = () => {
     const finalSurface = data.specimenType.toLowerCase().includes('cube') ? data.diameter * data.diameter : Math.PI * Math.pow(data.diameter / 2, 2);
     const finalStress = (data.force && data.force > 0) ? (data.force * 1000) / finalSurface : null;
     const finalVolume = finalSurface * data.height;
-    const finalDensity = (data.weight && data.weight > 0) ? (data.weight / finalVolume) * 1000000 : null;
+    const finalDensity = (data.dryWeight && data.dryWeight > 0) ? (data.dryWeight / finalVolume) * 1000000 : null;
     onSave({ ...data, surface: finalSurface, stress: finalStress || undefined, density: finalDensity || undefined });
   };
 
@@ -68,7 +72,9 @@ const SpecimenModal: React.FC<SpecimenModalProps> = ({ specimen, isOpen, onClose
             </div>
             <div className="space-y-4">
                <h4 className="text-xs font-bold text-safety-orange uppercase border-b border-orange-100 pb-1">Mesures Labo</h4>
-               <div><label htmlFor="weight" className="block text-sm font-medium mb-1 flex items-center gap-2"><Scale className="w-4 h-4 text-concrete-400" /> Masse (g)</label><input id="weight" type="number" step="1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900" value={data.weight || ''} onChange={e => handleChange('weight', e.target.value)} /></div>
+               <div><label htmlFor="freshWeightWithMold" className="block text-sm font-medium mb-1 flex items-center gap-2"><Scale className="w-4 h-4 text-concrete-400" /> Masse fraîche + moule (g)</label><input id="freshWeightWithMold" type="number" step="1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold" value={data.freshWeightWithMold || ''} onChange={e => handleChange('freshWeightWithMold', e.target.value)} /></div>
+               <div><label htmlFor="slumpTime" className="block text-sm font-medium mb-1 flex items-center gap-2"><Clock className="w-4 h-4 text-concrete-400" /> Heure d'affaissement</label><input id="slumpTime" type="text" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold" value={data.slumpTime || ''} onChange={e => handleStringChange('slumpTime', e.target.value)} /></div>
+               <div><label htmlFor="dryWeight" className="block text-sm font-medium mb-1 flex items-center gap-2"><Scale className="w-4 h-4 text-concrete-400" /> Masse sèche (g)</label><input id="dryWeight" type="number" step="1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900" value={data.dryWeight || ''} onChange={e => handleChange('dryWeight', e.target.value)} /></div>
                <div><label htmlFor="force" className="block text-sm font-medium mb-1 flex items-center gap-2"><Hammer className="w-4 h-4 text-concrete-400" /> Force (kN)</label><input id="force" type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded focus:ring-1 focus:ring-safety-orange font-bold text-concrete-900" value={data.force || ''} onChange={e => handleChange('force', e.target.value)} /></div>
             </div>
           </div>

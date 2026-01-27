@@ -58,7 +58,9 @@ export const createTest = async (req, res) => {
       diameter: Number(s.diameter),
       height: Number(s.height),
       surface: Number(s.surface),
-      weight: s.weight ? Number(s.weight) : null,
+      dryWeight: s.dryWeight ? Number(s.dryWeight) : null,
+      freshWeightWithMold: s.freshWeightWithMold ? Number(s.freshWeightWithMold) : null,
+      slumpTime: s.slumpTime ? String(s.slumpTime) : null,
       force: s.force ? Number(s.force) : null,
       stress: s.stress ? Number(s.stress) : null,
       density: s.density ? Number(s.density) : null
@@ -184,7 +186,9 @@ export const updateTest = async (req, res) => {
           diameter: Number(s.diameter),
           height: Number(s.height),
           surface: Number(s.surface),
-          weight: s.weight == null ? null : Number(s.weight),
+          dryWeight: s.dryWeight == null ? null : Number(s.dryWeight),
+          freshWeightWithMold: s.freshWeightWithMold == null ? null : Number(s.freshWeightWithMold),
+          slumpTime: s.slumpTime == null ? null : String(s.slumpTime),
           force: s.force == null ? null : Number(s.force),
           stress: s.stress == null ? null : Number(s.stress),
           density: s.density == null ? null : Number(s.density)
