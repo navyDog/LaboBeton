@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen, Waves, Thermometer, Hammer, Layers } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, X, Save, RotateCcw, Box, Truck, Factory, FlaskConical, Gauge, BookOpen, Waves, Thermometer, Hammer, Layers, Combine, Store } from 'lucide-react';
 import { Settings } from '../types';
 import { authenticatedFetch } from '../utils/api';
 
@@ -241,6 +241,24 @@ export const SettingsManager: React.FC<SettingsManagerProps> = ({ token }) => {
           placeholder="ex: Surfaçage Soufre"
           onChange={(items) => setSettings({...settings, preparations: items})}
           testId="preparations"
+        />
+
+        <ListEditor
+          title="Modes de Serrage"
+          icon={<Combine className="w-5 h-5" />}
+          items={settings.tighteningMethods || []}
+          placeholder="ex: Piquage"
+          onChange={(items) => setSettings({...settings, tighteningMethods: items})}
+          testId="tightening-methods"
+        />
+
+        <ListEditor
+          title="Fabricants de Béton"
+          icon={<Store className="w-5 h-5" />}
+          items={settings.manufacturers || []}
+          placeholder="ex: Lafarge"
+          onChange={(items) => setSettings({...settings, manufacturers: items})}
+          testId="manufacturers"
         />
 
         <ListEditor

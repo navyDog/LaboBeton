@@ -20,6 +20,8 @@ const mockSettings: Settings = {
   curingMethods: ['Eau 20°C'],
   testTypes: ['Compression'],
   preparations: ['Surfaçage Soufre'],
+  tighteningMethods: [],
+  manufacturers: [],
   deliveryMethods: ['Toupie'],
   manufacturingPlaces: ['Centrale BPE'],
   nfStandards: ['NF EN 206/CN'],

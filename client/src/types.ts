@@ -127,6 +127,8 @@ export interface Settings {
   curingMethods: string[];
   testTypes: string[];
   preparations: string[];
+  tighteningMethods: string[];
+  manufacturers: string[];
   nfStandards: string[];
 }
 

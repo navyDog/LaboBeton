@@ -21,7 +21,9 @@ export const getSettings = async (req, res) => {
         consistencyClasses: [], 
         curingMethods: [],
         testTypes: [], 
-        preparations: [], 
+        preparations: [],
+        tighteningMethods: [],
+        manufacturers: [],
         nfStandards: []
       };
     }
@@ -43,7 +45,7 @@ export const updateSettings = async (req, res) => {
     const allowedArrays = [
       'specimenTypes', 'deliveryMethods', 'manufacturingPlaces', 'mixTypes',
       'concreteClasses', 'consistencyClasses', 'curingMethods', 'testTypes',
-      'preparations', 'nfStandards'
+      'preparations', 'tighteningMethods', 'manufacturers', 'nfStandards'
     ];
     
     const updates = {};

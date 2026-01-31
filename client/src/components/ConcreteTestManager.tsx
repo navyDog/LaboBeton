@@ -379,8 +379,12 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                  </div>
                  <div className="lg:col-span-2">
                    <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Fabricant<input className="w-full p-2 border border-concrete-300 rounded"
-                            value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})} />
+                     Fabricant
+                     <select className="w-full p-2 border border-concrete-300 rounded bg-white"
+                             value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})}>
+                       <option value="">-- Choisir --</option>
+                       {settings?.manufacturers?.map(m => <option key={m} value={m}>{m}</option>)}
+                     </select>
                    </label>
                  </div>
                  <div>
@@ -392,20 +396,49 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
                    </label>
                  </div>
                  <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Livraison<select className="w-full p-2 border border-concrete-300 rounded"
-                             value={formData.deliveryMethod} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}>
-                       <option value="">-- Choisir --</option>{settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
-                     </select>
-                   </label>
-                 </div>
-                 <div className="lg:col-span-2">
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Info Formule<input className="w-full p-2 border border-concrete-300 rounded"
-                            value={formData.formulaInfo} onChange={e => setFormData({...formData, formulaInfo: e.target.value})} />
-                   </label>
-                 </div>
-                 <div className="lg:col-span-2">
+                                        <label className="block text-xs font-bold text-concrete-500 mb-1">
+                                        Livraison<select className="w-full p-2 border border-concrete-300 rounded"
+                                                value={formData.deliveryMethod} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}>
+                                          <option value="">-- Choisir --</option>{settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                      </label>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
+                                        Préparation/Surfaçage
+                                        <select className="w-full p-2 border border-concrete-300 rounded bg-white"
+                                                value={formData.preparation} onChange={e => setFormData({...formData, preparation: e.target.value})}>
+                                          <option value="">-- Choisir --</option>
+                                          {settings?.preparations?.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
+                                      </label>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
+                                        Mode de Conservation
+                                        <select className="w-full p-2 border border-concrete-300 rounded bg-white"
+                                                value={formData.curing} onChange={e => setFormData({...formData, curing: e.target.value})}>
+                                          <option value="">-- Choisir --</option>
+                                          {settings?.curingMethods?.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                      </label>
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
+                                        Mode de Serrage
+                                        <select className="w-full p-2 border border-concrete-300 rounded bg-white"
+                                                value={formData.tightening} onChange={e => setFormData({...formData, tightening: e.target.value})}>
+                                          <option value="">-- Choisir --</option>
+                                          {settings?.tighteningMethods?.map(t => <option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                      </label>
+                                    </div>
+                                    <div className="lg:col-span-2">
+                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
+                                        Info Formule<input className="w-full p-2 border border-concrete-300 rounded"
+                                               value={formData.formulaInfo} onChange={e => setFormData({...formData, formulaInfo: e.target.value})} />
+                                      </label>
+                                    </div>                 <div className="lg:col-span-2">
                    <label className="block text-xs font-bold text-concrete-500 mb-1">
                      Lieu Prélèvement<input className="w-full p-2 border border-concrete-300 rounded"
                             value={formData.samplingPlace} onChange={e => setFormData({...formData, samplingPlace: e.target.value})} />

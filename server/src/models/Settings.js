@@ -22,6 +22,8 @@ const settingsSchema = new mongoose.Schema({
   curingMethods: [{ type: String, trim: true }],      // ex: Eau 20°C, Salle Humide
   testTypes: [{ type: String, trim: true }],          // ex: Compression, Fendage
   preparations: [{ type: String, trim: true }],       // ex: Surfaçage Soufre, Rectification
+  tighteningMethods: [{ type: String, trim: true }], // ex: Piquage, Vibration
+  manufacturers: [{ type: String, trim: true }],     // ex: Lafarge, Cemex
 
   nfStandards: [{ type: String, trim: true }]         // ex: NF EN 206/CN
 }, { timestamps: true });
