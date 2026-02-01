@@ -371,7 +371,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ token, currentUser, on
               <div className="p-5 bg-red-50 rounded-xl border border-red-200">
                 <h4 className="font-bold text-red-800 mb-2 flex items-center gap-2">
                   <ShieldAlert className="w-5 h-5" />
-                  Zone de danger
+                  Déconnexion globale
                 </h4>
                 <p className="text-sm text-red-600 mb-4">Déconnecter tous vos appareils en cas de doute</p>
                 <button
