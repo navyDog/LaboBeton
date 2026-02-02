@@ -6,7 +6,7 @@ describe('Footer', () => {
   it('should render the footer with the correct content', () => {
     render(<Footer onNavigate={jest.fn()} />);
 
-    expect(screen.getByText(/LaboBéton v0.2.0-beta.1 - Normes NF EN/i)).toBeInTheDocument();
+    expect(screen.getByText(/LaboBéton v0.2.0-beta.2 - Normes NF EN/i)).toBeInTheDocument();
     expect(screen.getByText(/Developed by/i)).toBeInTheDocument();
     expect(screen.getByText(/VBM Solutions/i)).toBeInTheDocument();
     expect(screen.getByText(/CGU/i)).toBeInTheDocument();

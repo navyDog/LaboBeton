@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight, Zap, FlaskConical, Building, Briefcase, Settings, User } from 'lucide-react';
+import { Bell, AlertTriangle, Calendar, CheckCircle2, Clock, ArrowRight, Zap, FlaskConical, Building, Briefcase, Settings, User, Inbox } from 'lucide-react';
 import { ConcreteTest } from '../types';
 import { MenuCard } from './MenuCard';
 import { QuickEntryModal } from './QuickEntryModal';
@@ -13,12 +13,13 @@ interface DashboardHomeProps {
 
 interface NotificationTask {
   id: string;
+  kind: 'crushing' | 'reception';
   type: 'overdue' | 'today' | 'upcoming' | 'week';
   testId: string; 
   testRef: string;
   projectName: string;
-  count: number; 
-  age: number;
+  count?: number; 
+  age?: number;
   date: string;
 }
 
@@ -46,7 +47,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
   useEffect(() => { fetchData(); }, [token]);
 
   const handleTaskClick = (task: NotificationTask) => {
-    if (task.type === 'today' || task.type === 'overdue') {
+    if (task.kind === 'crushing' && (task.type === 'today' || task.type === 'overdue')) {
       setQuickEntryTask(task);
     } else {
       onNavigate('fresh_tests', task.testId);
@@ -58,6 +59,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // CRUSHING TASKS
     tests.forEach(test => {
       test.specimens.forEach(s => {
         if ((!s.stress && s.stress !== 0) && s.crushingDate) {
@@ -77,6 +79,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
           if (type) {
              list.push({
                id: `${test._id}-${s.number}`,
+               kind: 'crushing',
                type,
                testId: test._id,
                testRef: test.reference,
@@ -90,20 +93,55 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
       });
     });
 
-    // Consolidation
+    // RECEPTION TASKS
+    tests.forEach(test => {
+      if (test.receptionDate) {
+        const rDate = new Date(test.receptionDate);
+        rDate.setHours(0, 0, 0, 0);
+        const diffTime = rDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) { // Reception is for today
+          list.push({
+            id: test._id,
+            kind: 'reception',
+            type: 'today',
+            testId: test._id,
+            testRef: test.reference,
+            projectName: test.projectName || 'Projet Inconnu',
+            date: test.receptionDate
+          });
+        }
+      }
+    });
+
+    // Consolidation (only for crushing tasks)
     const consolidated: NotificationTask[] = [];
     list.forEach(item => {
+      if (item.kind === 'reception') {
+        consolidated.push(item);
+        return;
+      }
+      
       const dateKey = new Date(item.date).toISOString().split('T')[0];
       const existing = consolidated.find(c => 
+        c.kind === 'crushing' &&
         c.testId === item.testId && 
         new Date(c.date).toISOString().split('T')[0] === dateKey
       );
-      if (existing) existing.count += item.count;
-      else consolidated.push(item);
+      if (existing) {
+        existing.count = (existing.count || 0) + (item.count || 0);
+      } else {
+        consolidated.push(item);
+      }
     });
 
     return consolidated.sort((a, b) => {
       const priority = { overdue: 0, today: 1, upcoming: 2, week: 3 };
+      if (a.type === 'today' && b.type === 'today') {
+          if (a.kind === 'reception' && b.kind !== 'reception') return -1;
+          if (a.kind !== 'reception' && b.kind === 'reception') return 1;
+      }
       return priority[a.type] - priority[b.type];
     });
   }, [tests]);
@@ -174,7 +212,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                 <div className="p-12 text-center flex flex-col items-center justify-center mt-10">
                    <CheckCircle2 className="w-16 h-16 text-green-200 mb-4" />
                    <h4 className="text-lg font-bold text-concrete-800">Tout est à jour !</h4>
-                   <p className="text-concrete-500 text-sm mt-2">Aucun écrasement prévu prochainement.</p>
+                   <p className="text-concrete-500 text-sm mt-2">Aucun écrasement ou réception prévu.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-concrete-100 max-h-[500px] overflow-y-auto custom-scrollbar">
@@ -183,6 +221,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                       key={idx} 
                       onClick={() => handleTaskClick(task)}
                       className={`p-4 flex items-center gap-4 hover:bg-concrete-50 transition-colors cursor-pointer group border-l-4 ${
+                        task.kind === 'reception' ? 'border-l-green-500 bg-green-50/10' :
                         task.type === 'overdue' ? 'border-l-red-500 bg-red-50/10' : 
                         task.type === 'today' ? 'border-l-safety-orange bg-orange-50/10' : 
                         task.type === 'upcoming' ? 'border-l-blue-400' :
@@ -190,19 +229,21 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                       }`}
                     >
                       <div className="shrink-0">
-                        {task.type === 'overdue' && <AlertTriangle className="w-6 h-6 text-red-500" />}
-                        {task.type === 'today' && <Clock className="w-6 h-6 text-safety-orange" />}
-                        {(task.type === 'upcoming' || task.type === 'week') && <Calendar className="w-6 h-6 text-concrete-400" />}
+                        {task.kind === 'reception' && <Inbox className="w-6 h-6 text-green-500" />}
+                        {task.kind === 'crushing' && task.type === 'overdue' && <AlertTriangle className="w-6 h-6 text-red-500" />}
+                        {task.kind === 'crushing' && task.type === 'today' && <Clock className="w-6 h-6 text-safety-orange" />}
+                        {task.kind === 'crushing' && (task.type === 'upcoming' || task.type === 'week') && <Calendar className="w-6 h-6 text-concrete-400" />}
                       </div>
 
                       <div className="flex-grow">
                         <div className="flex justify-between items-start">
                            <h4 className="font-bold text-concrete-800 text-sm flex items-center gap-2">
-                             {task.type === 'overdue' ? 'En Retard' : 
+                             {task.kind === 'reception' ? 'Réception à faire' :
+                              task.type === 'overdue' ? 'En Retard' : 
                               task.type === 'today' ? 'À faire Aujourd\'hui' : 
                               task.type === 'upcoming' ? 'Demain' : 'Cette Semaine'}
                               
-                              {(task.type === 'today' || task.type === 'overdue') && (
+                              {(task.kind === 'crushing' && (task.type === 'today' || task.type === 'overdue')) && (
                                 <span className="bg-white border border-concrete-200 text-[10px] px-1.5 py-0.5 rounded text-concrete-500 uppercase tracking-wide flex items-center gap-1">
                                   <Zap className="w-3 h-3 text-yellow-500" /> Rapide
                                 </span>
@@ -210,9 +251,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({ token, userDisplay
                            </h4>
                            <span className="text-xs font-mono text-concrete-400">{task.testRef}</span>
                         </div>
-                        <p className="text-sm text-concrete-600">
-                          <span className="font-bold">{task.count} éprouvette(s)</span> de {task.age} jours.
-                        </p>
+                        {task.kind === 'crushing' ? (
+                          <p className="text-sm text-concrete-600">
+                            <span className="font-bold">{task.count} éprouvette(s)</span> de {task.age} jours.
+                          </p>
+                        ) : (
+                          <p className="text-sm text-concrete-600">
+                            Prélèvement à réceptionner en laboratoire.
+                          </p>
+                        )}
                         <p className="text-xs text-concrete-400 mt-1">Projet: {task.projectName}</p>
                       </div>
 

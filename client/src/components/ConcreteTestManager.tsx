@@ -344,118 +344,121 @@ export const ConcreteTestManager: React.FC<ConcreteTestManagerProps> = ({ token,
 
            <div className="space-y-4">
               <h3 className="text-lg font-bold text-concrete-800 flex items-center gap-2 border-b border-concrete-200 pb-2"><Factory className="w-5 h-5 text-safety-orange" /> Béton & Contexte</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Classe Résistance<select className="w-full p-2 border border-concrete-300 rounded bg-white"
-                             value={formData.concreteClass} onChange={e => setFormData({...formData, concreteClass: e.target.value})}>
-                       <option value="">-- Choisir --</option>{settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}
-                     </select>
-                   </label>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Slump (mm)<div className="relative">
-                       <input type="number" className="w-full p-2 pr-16 border border-concrete-300 rounded font-mono font-bold"
-                              value={formData.slump} onChange={e => setFormData({...formData, slump: Number.parseInt(e.target.value) || 0})} />
-                       <div className="absolute right-2 top-1.5 px-2 py-0.5 bg-concrete-100 text-xs font-bold rounded">{calculateConsistency(formData.slump) || '-'}
-                       </div>
-                     </div>
-                   </label>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Type Mélange<select className="w-full p-2 border border-concrete-300 rounded bg-white"
-                             value={formData.mixType} onChange={e => setFormData({...formData, mixType: e.target.value})}>
-                       <option value="">-- Choisir --</option>{settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}
-                     </select>
-                   </label>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Volume (m³)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded"
-                            value={formData.volume} onChange={e => setFormData({...formData, volume: Number.parseFloat(e.target.value)})} />
-                   </label>
-                 </div>
-                 <div className="lg:col-span-2">
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Fabricant
-                     <select className="w-full p-2 border border-concrete-300 rounded bg-white"
-                             value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})}>
-                       <option value="">-- Choisir --</option>
-                       {settings?.manufacturers?.map(m => <option key={m} value={m}>{m}</option>)}
-                     </select>
-                   </label>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Lieu Fab.<select className="w-full p-2 border border-concrete-300 rounded"
-                             value={formData.manufacturingPlace} onChange={e => setFormData({...formData, manufacturingPlace: e.target.value})}>
-                       <option value="">-- Choisir --</option>{settings?.manufacturingPlaces.map(c => <option key={c} value={c}>{c}</option>)}
-                     </select>
-                   </label>
-                 </div>
-                 <div>
-                                        <label className="block text-xs font-bold text-concrete-500 mb-1">
-                                        Livraison<select className="w-full p-2 border border-concrete-300 rounded"
-                                                value={formData.deliveryMethod} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}>
-                                          <option value="">-- Choisir --</option>{settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                      </label>
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
-                                        Préparation/Surfaçage
-                                        <select className="w-full p-2 border border-concrete-300 rounded bg-white"
-                                                value={formData.preparation} onChange={e => setFormData({...formData, preparation: e.target.value})}>
-                                          <option value="">-- Choisir --</option>
-                                          {settings?.preparations?.map(p => <option key={p} value={p}>{p}</option>)}
-                                        </select>
-                                      </label>
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
-                                        Mode de Conservation
-                                        <select className="w-full p-2 border border-concrete-300 rounded bg-white"
-                                                value={formData.curing} onChange={e => setFormData({...formData, curing: e.target.value})}>
-                                          <option value="">-- Choisir --</option>
-                                          {settings?.curingMethods?.map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                      </label>
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
-                                        Mode de Serrage
-                                        <select className="w-full p-2 border border-concrete-300 rounded bg-white"
-                                                value={formData.tightening} onChange={e => setFormData({...formData, tightening: e.target.value})}>
-                                          <option value="">-- Choisir --</option>
-                                          {settings?.tighteningMethods?.map(t => <option key={t} value={t}>{t}</option>)}
-                                        </select>
-                                      </label>
-                                    </div>
-                                    <div className="lg:col-span-2">
-                                      <label className="block text-xs font-bold text-concrete-500 mb-1">
-                                        Info Formule<input className="w-full p-2 border border-concrete-300 rounded"
-                                               value={formData.formulaInfo} onChange={e => setFormData({...formData, formulaInfo: e.target.value})} />
-                                      </label>
-                                    </div>                 <div className="lg:col-span-2">
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     Lieu Prélèvement<input className="w-full p-2 border border-concrete-300 rounded"
-                            value={formData.samplingPlace} onChange={e => setFormData({...formData, samplingPlace: e.target.value})} />
-                   </label>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1">
-                     T° Ext (°C)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded"
-                            value={formData.externalTemp} onChange={e => setFormData({...formData, externalTemp: Number.parseFloat(e.target.value)})} />
-                   </label>
-                 </div>
-                 <div>
-                   <label className="block text-xs font-bold text-concrete-500 mb-1 text-red-500">
-                     T° Béton (°C)<input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded"
-                            value={formData.concreteTemp} onChange={e => setFormData({...formData, concreteTemp: Number.parseFloat(e.target.value)})} />
-                   </label>
-                 </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6 pt-4">
+                
+                {/* --- COLONNE GAUCHE --- */}
+                <div className="space-y-6">
+                  {/* Caractéristiques */}
+                  <div>
+                    <h4 className="font-bold text-concrete-700 mb-3 text-sm border-b border-concrete-200 pb-2">Caractéristiques du Béton</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Classe Résistance</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.concreteClass} onChange={e => setFormData({...formData, concreteClass: e.target.value})}>
+                          <option value="">-- Choisir --</option>{settings?.concreteClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Slump (mm)</label>
+                        <div className="relative">
+                          <input type="number" className="w-full p-2 pr-16 border border-concrete-300 rounded font-mono font-bold" value={formData.slump} onChange={e => setFormData({...formData, slump: Number.parseInt(e.target.value) || 0})} />
+                          <div className="absolute right-2 top-1.5 px-2 py-0.5 bg-concrete-100 text-xs font-bold rounded">{calculateConsistency(formData.slump) || '-'}</div>
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Type Mélange</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.mixType} onChange={e => setFormData({...formData, mixType: e.target.value})}>
+                          <option value="">-- Choisir --</option>{settings?.mixTypes.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Info Formule</label>
+                        <input className="w-full p-2 border border-concrete-300 rounded" placeholder="ex: Ciment CEM II, adjuvant..." value={formData.formulaInfo} onChange={e => setFormData({...formData, formulaInfo: e.target.value})} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Production */}
+                  <div>
+                    <h4 className="font-bold text-concrete-700 mb-3 text-sm border-b border-concrete-200 pb-2">Production & Livraison</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Fabricant</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.manufacturer} onChange={e => setFormData({...formData, manufacturer: e.target.value})}>
+                          <option value="">-- Choisir --</option>
+                          {settings?.manufacturers?.map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Fab.</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded" value={formData.manufacturingPlace} onChange={e => setFormData({...formData, manufacturingPlace: e.target.value})}>
+                          <option value="">-- Choisir --</option>{settings?.manufacturingPlaces.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Livraison</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded" value={formData.deliveryMethod} onChange={e => setFormData({...formData, deliveryMethod: e.target.value})}>
+                          <option value="">-- Choisir --</option>{settings?.deliveryMethods.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* --- COLONNE DROITE --- */}
+                <div className="space-y-6">
+                  {/* Conditions */}
+                  <div>
+                    <h4 className="font-bold text-concrete-700 mb-3 text-sm border-b border-concrete-200 pb-2">Conditions de Prélèvement</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Lieu Prélèvement</label>
+                        <input className="w-full p-2 border border-concrete-300 rounded" placeholder="ex: Au camion, à la pompe..." value={formData.samplingPlace} onChange={e => setFormData({...formData, samplingPlace: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">T° Ext (°C)</label>
+                        <input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded" value={formData.externalTemp} onChange={e => setFormData({...formData, externalTemp: Number.parseFloat(e.target.value)})} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">T° Béton (°C)</label>
+                        <input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded" value={formData.concreteTemp} onChange={e => setFormData({...formData, concreteTemp: Number.parseFloat(e.target.value)})} />
+                      </div>
+                       <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Volume (m³)</label>
+                        <input type="number" step="0.1" className="w-full p-2 border border-concrete-300 rounded" value={formData.volume} onChange={e => setFormData({...formData, volume: Number.parseFloat(e.target.value)})} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mise en oeuvre */}
+                  <div>
+                    <h4 className="font-bold text-concrete-700 mb-3 text-sm border-b border-concrete-200 pb-2">Mise en Oeuvre & Conservation</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
+                       <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Mode de Serrage</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.tightening} onChange={e => setFormData({...formData, tightening: e.target.value})}>
+                          <option value="">-- Choisir --</option>
+                          {settings?.tighteningMethods?.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Préparation/Surfaçage</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.preparation} onChange={e => setFormData({...formData, preparation: e.target.value})}>
+                          <option value="">-- Choisir --</option>
+                          {settings?.preparations?.map(p => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-concrete-500 mb-1">Mode de Conservation</label>
+                        <select className="w-full p-2 border border-concrete-300 rounded bg-white" value={formData.curing} onChange={e => setFormData({...formData, curing: e.target.value})}>
+                          <option value="">-- Choisir --</option>
+                          {settings?.curingMethods?.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
            </div>
 
